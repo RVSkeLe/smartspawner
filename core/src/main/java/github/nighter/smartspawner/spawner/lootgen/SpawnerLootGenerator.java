@@ -14,24 +14,25 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpawnerLootGenerator {
     private final SmartSpawner plugin;
     private final SpawnerGuiViewManager spawnerGuiViewManager;
     private final SpawnerManager spawnerManager;
-    private final Random random;
+    private final ThreadLocalRandom random;
 
     public SpawnerLootGenerator(SmartSpawner plugin) {
         this.plugin = plugin;
         this.spawnerGuiViewManager = plugin.getSpawnerGuiViewManager();
         this.spawnerManager = plugin.getSpawnerManager();
-        this.random = new Random();
+        this.random = ThreadLocalRandom.current();
     }
 
     public LootResult generateLoot(int minMobs, int maxMobs, SpawnerData spawner) {
 
-        int mobCount = random.nextInt(maxMobs - minMobs + 1) + minMobs;
+        int mobCount = this.random.nextInt(maxMobs - minMobs + 1) + minMobs;
         int totalExperience = spawner.getEntityExperienceValue() * mobCount;
 
         // Get valid items from the spawner's EntityLootConfig
