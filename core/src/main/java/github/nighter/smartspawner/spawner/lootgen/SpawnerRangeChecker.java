@@ -1,18 +1,15 @@
 package github.nighter.smartspawner.spawner.lootgen;
 
-import com.google.common.collect.ImmutableList;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class SpawnerRangeChecker {
     private static final long CHECK_INTERVAL = 20L; // 1 second in ticks
@@ -20,77 +17,53 @@ public class SpawnerRangeChecker {
     private final SpawnerManager spawnerManager;
     private final SpawnerLootGenerator spawnerLootGenerator;
     private final Map<String, Scheduler.Task> spawnerTasks;
-    private final ExecutorService executor;
-    private final Object spawnerStateLock = new Object();
 
     public SpawnerRangeChecker(SmartSpawner plugin) {
         this.plugin = plugin;
         this.spawnerManager = plugin.getSpawnerManager();
         this.spawnerLootGenerator = plugin.getSpawnerLootGenerator();
         this.spawnerTasks = new ConcurrentHashMap<>();
-        this.executor = Executors.newSingleThreadExecutor();
         initializeRangeCheckTask();
     }
 
     private void initializeRangeCheckTask() {
         // Using the global scheduler, but only for coordinating region-specific checks
-        Scheduler.runTaskTimer(this::scheduleRegionSpecificCheck, CHECK_INTERVAL, CHECK_INTERVAL);
+        Scheduler.runTaskTimer(() ->
+                        spawnerManager.getAllSpawners().forEach(this::scheduleRegionSpecificCheck),
+                CHECK_INTERVAL, CHECK_INTERVAL);
     }
 
-    private void scheduleRegionSpecificCheck() {
-        final List<SpawnerData> allSpawners = spawnerManager.getAllSpawners();
-        final List<Player> onlinePlayers = ImmutableList.copyOf(Bukkit.getOnlinePlayers());
+    private void scheduleRegionSpecificCheck(SpawnerData spawner) {
+        Location spawnerLoc = spawner.getSpawnerLocation();
+        World world = spawnerLoc.getWorld();
+        if (world == null) return;
 
-        this.executor.execute(() -> {
-            final RangeMath rangeCheck = new RangeMath(onlinePlayers, allSpawners);
+        // Schedule the actual entity checking in the correct region
+        Scheduler.runLocationTask(spawnerLoc, () -> {
+            boolean playerFound = isPlayerInRange(spawner, spawnerLoc, world);
+            boolean shouldStop = !playerFound;
 
-            rangeCheck.updateActiveSpawners();
-
-            final boolean[] spawnersPlayerFound = rangeCheck.getActiveSpawners();
-
-            for (int i = 0; i < spawnersPlayerFound.length; i++) {
-                final boolean shouldStop = !spawnersPlayerFound[i];
-                final SpawnerData sd = allSpawners.get(i);
-                final String spawnerId = sd.getSpawnerId();
-
-                if (sd.getSpawnerStop().get() != shouldStop) {
-                    // Only use the scheduler here
-                    Scheduler.runLocationTask(sd.getSpawnerLocation(), () -> {
-                        if (!isSpawnerValid(sd)) {
-                            // plugin.debug("Skipping state change for removed spawner: " + spawnerId);
-                            cleanupRemovedSpawner(spawnerId);
-                            return;
-                        }
-                        sd.getSpawnerStop().set(shouldStop);
-                        handleSpawnerStateChange(sd, shouldStop);
-                    });
-                }
+            if (spawner.getSpawnerStop().get() != shouldStop) {
+                spawner.getSpawnerStop().set(shouldStop);
+                handleSpawnerStateChange(spawner, shouldStop);
             }
         });
     }
 
-    private boolean isSpawnerValid(SpawnerData spawner) {
-        // Check 1: Still in manager?
-        SpawnerData current = spawnerManager.getSpawnerById(spawner.getSpawnerId());
-        if (current == null) {
-            return false;
-        }
+    private boolean isPlayerInRange(SpawnerData spawner, Location spawnerLoc, World world) {
+        int range = spawner.getSpawnerRange();
+        double rangeSquared = range * range;
 
-        // Check 2: Same instance? (prevents processing stale copies)
-        if (current != spawner) {
-            return false;
-        }
+        // In Folia, we're now running this in the correct region thread,
+        // so we can safely check for nearby entities
+        Collection<Player> nearbyPlayers = world.getNearbyPlayers(spawnerLoc, range, range, range);
 
-        // Check 3: Location still valid?
-        Location loc = spawner.getSpawnerLocation();
-        return loc != null && loc.getWorld() != null;
-    }
-
-    private void cleanupRemovedSpawner(String spawnerId) {
-        Scheduler.Task task = spawnerTasks.remove(spawnerId);
-        if (task != null) {
-            task.cancel();
+        for (Player player : nearbyPlayers) {
+            if (player.getLocation().distanceSquared(spawnerLoc) <= rangeSquared) {
+                return true;
+            }
         }
+        return false;
     }
 
     private void handleSpawnerStateChange(SpawnerData spawner, boolean shouldStop) {
@@ -99,12 +72,10 @@ public class SpawnerRangeChecker {
             return;
         }
 
-        synchronized (spawnerStateLock) {
-            if (!shouldStop) {
-                activateSpawner(spawner);
-            } else {
-                deactivateSpawner(spawner);
-            }
+        if (!shouldStop) {
+            activateSpawner(spawner);
+        } else {
+            deactivateSpawner(spawner);
         }
 
         // Force GUI update when spawner state changes
@@ -155,15 +126,5 @@ public class SpawnerRangeChecker {
     public void cleanup() {
         spawnerTasks.values().forEach(Scheduler.Task::cancel);
         spawnerTasks.clear();
-
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
     }
 }
