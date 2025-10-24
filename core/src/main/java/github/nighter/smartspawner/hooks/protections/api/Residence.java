@@ -23,7 +23,9 @@ public class Residence {
 
     private static boolean check(Player player, Location location, String flagName) {
         ClaimedResidence claimedResidence = ResidenceApi.getResidenceManager().getByLoc(location);
+        if (claimedResidence == null) return true;
         Map<String, Boolean> flags = claimedResidence.getPermissions().getPlayerFlags(player.getUniqueId());
+        if (flags == null) return true;
         for (String flag : flags.keySet()) {
             if (flag.equalsIgnoreCase(flagName) && flags.get(flag))
                 return true;
