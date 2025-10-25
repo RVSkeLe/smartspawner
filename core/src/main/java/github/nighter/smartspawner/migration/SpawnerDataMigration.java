@@ -19,6 +19,8 @@ public class SpawnerDataMigration {
     private static final int DEFAULT_MAX_STACK_SIZE = 10;
     private static final int VERSION_3_SETTINGS_FIELD_COUNT = 13;
     private static final int VERSION_2_SETTINGS_FIELD_COUNT = 11;
+    // Version 2 has first 10 fields before maxStackSize is inserted
+    private static final int VERSION_2_FIELDS_BEFORE_MAX_STACK = 10;
     private final int CURRENT_VERSION;
 
     public SpawnerDataMigration(SmartSpawner plugin) {
@@ -161,6 +163,8 @@ public class SpawnerDataMigration {
 
     private boolean migrateData(FileConfiguration oldConfig, File dataFile) {
         try {
+            // Default to 0 to indicate no version set (older than version 1)
+            // This ensures all unversioned data goes through migration
             int oldVersion = oldConfig.getInt(MIGRATION_FLAG, 0);
             
             // Check if this is a version 2 to version 3 migration
@@ -218,7 +222,7 @@ public class SpawnerDataMigration {
                         
                         // Build new settings string with maxStackSize inserted at position 10
                         StringBuilder newSettingsBuilder = new StringBuilder();
-                        for (int i = 0; i < 10; i++) {
+                        for (int i = 0; i < VERSION_2_FIELDS_BEFORE_MAX_STACK; i++) {
                             if (i > 0) newSettingsBuilder.append(",");
                             newSettingsBuilder.append(settings[i]);
                         }
