@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.migration;
 
 import github.nighter.smartspawner.SmartSpawner;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -55,7 +56,7 @@ public class SpawnerDataMigration {
             if (needsMigration && config.contains("spawners")) {
                 // Double-check by validating the spawners section structure
                 boolean hasNewFormat = true;
-                var spawnersSection = config.getConfigurationSection("spawners");
+                ConfigurationSection spawnersSection = config.getConfigurationSection("spawners");
                 if (spawnersSection != null) {
                     for (String spawnerId : spawnersSection.getKeys(false)) {
                         String spawnerPath = "spawners." + spawnerId;
