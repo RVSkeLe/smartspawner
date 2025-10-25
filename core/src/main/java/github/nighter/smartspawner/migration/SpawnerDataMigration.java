@@ -18,7 +18,9 @@ public class SpawnerDataMigration {
     private static final String MIGRATION_FLAG = "data_version";
     private static final int DEFAULT_MAX_STACK_SIZE = 10;
     private static final int VERSION_3_SETTINGS_FIELD_COUNT = 13;
-    private static final int VERSION_2_SETTINGS_FIELD_COUNT = 11;
+    // Version 2 can have 11 or 12 fields (12 if allowEquipmentItems was included)
+    private static final int VERSION_2_MIN_SETTINGS_FIELD_COUNT = 11;
+    private static final int VERSION_2_MAX_SETTINGS_FIELD_COUNT = 12;
     // Version 2 has first 10 fields before maxStackSize is inserted
     private static final int VERSION_2_FIELDS_BEFORE_MAX_STACK = 10;
     private final int CURRENT_VERSION;
@@ -211,11 +213,13 @@ public class SpawnerDataMigration {
                 if (settingsString != null) {
                     String[] settings = settingsString.split(",");
                     
-                    // Version 2 has 11 fields, version 3 has 13 fields
-                    if (settings.length == VERSION_2_SETTINGS_FIELD_COUNT) {
-                        // Migrate version 2 (11 fields) to version 3 (13 fields)
-                        // Version 2: exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,lastSpawnTime
-                        // Version 3: exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,maxStack,lastSpawnTime,isAtCapacity
+                    // Version 2 can have 11 or 12 fields (12 if allowEquipmentItems was included)
+                    if (settings.length >= VERSION_2_MIN_SETTINGS_FIELD_COUNT && 
+                        settings.length <= VERSION_2_MAX_SETTINGS_FIELD_COUNT) {
+                        // Migrate version 2 (11-12 fields) to version 3 (13 fields)
+                        // Version 2 (11): exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,lastSpawnTime
+                        // Version 2 (12): exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,lastSpawnTime,allowEquipmentItems
+                        // Version 3 (13): exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,maxStack,lastSpawnTime,isAtCapacity
                         
                         // Get the default maxStackSize from config or use constant
                         int defaultMaxStackSize = plugin.getConfig().getInt("spawner.max_stack_size", DEFAULT_MAX_STACK_SIZE);
@@ -226,9 +230,11 @@ public class SpawnerDataMigration {
                             if (i > 0) newSettingsBuilder.append(",");
                             newSettingsBuilder.append(settings[i]);
                         }
-                        newSettingsBuilder.append(",").append(defaultMaxStackSize);  // maxStackSize (NEW)
-                        newSettingsBuilder.append(",").append(settings[10]);          // lastSpawnTime
-                        newSettingsBuilder.append(",").append(false);                 // isAtCapacity (NEW)
+                        newSettingsBuilder.append(",").append(defaultMaxStackSize);  // maxStackSize (NEW at position 10)
+                        newSettingsBuilder.append(",").append(settings[10]);          // lastSpawnTime (moved from 10 to 11)
+                        // For isAtCapacity, use allowEquipmentItems if it exists (position 11 in 12-field version), otherwise false
+                        boolean isAtCapacity = settings.length == 12 ? Boolean.parseBoolean(settings[11]) : false;
+                        newSettingsBuilder.append(",").append(isAtCapacity);          // isAtCapacity (NEW at position 12)
                         
                         config.set(settingsPath, newSettingsBuilder.toString());
                         migratedCount++;
