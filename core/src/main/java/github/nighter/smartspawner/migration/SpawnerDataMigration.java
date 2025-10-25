@@ -55,14 +55,17 @@ public class SpawnerDataMigration {
             if (needsMigration && config.contains("spawners")) {
                 // Double-check by validating the spawners section structure
                 boolean hasNewFormat = true;
-                for (String spawnerId : config.getConfigurationSection("spawners").getKeys(false)) {
-                    String spawnerPath = "spawners." + spawnerId;
-                    // Check if the spawner data is in the new format
-                    if (!config.contains(spawnerPath + ".location") ||
-                            !config.contains(spawnerPath + ".settings") ||
-                            !config.contains(spawnerPath + ".inventory")) {
-                        hasNewFormat = false;
-                        break;
+                var spawnersSection = config.getConfigurationSection("spawners");
+                if (spawnersSection != null) {
+                    for (String spawnerId : spawnersSection.getKeys(false)) {
+                        String spawnerPath = "spawners." + spawnerId;
+                        // Check if the spawner data is in the new format
+                        if (!config.contains(spawnerPath + ".location") ||
+                                !config.contains(spawnerPath + ".settings") ||
+                                !config.contains(spawnerPath + ".inventory")) {
+                            hasNewFormat = false;
+                            break;
+                        }
                     }
                 }
                 
