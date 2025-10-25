@@ -1,11 +1,11 @@
 package github.nighter.smartspawner.spawner.lootgen;
 
-import com.google.common.collect.ImmutableList;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -21,14 +21,13 @@ public class SpawnerRangeChecker {
     private final SpawnerLootGenerator spawnerLootGenerator;
     private final Map<String, Scheduler.Task> spawnerTasks;
     private final ExecutorService executor;
-    private final Object spawnerStateLock = new Object();
 
     public SpawnerRangeChecker(SmartSpawner plugin) {
         this.plugin = plugin;
         this.spawnerManager = plugin.getSpawnerManager();
         this.spawnerLootGenerator = plugin.getSpawnerLootGenerator();
         this.spawnerTasks = new ConcurrentHashMap<>();
-        this.executor = Executors.newSingleThreadExecutor();
+        this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "SmartSpawner-RangeCheck"));
         initializeRangeCheckTask();
     }
 
@@ -38,35 +37,56 @@ public class SpawnerRangeChecker {
     }
 
     private void scheduleRegionSpecificCheck() {
-        final List<SpawnerData> allSpawners = spawnerManager.getAllSpawners();
-        final List<Player> onlinePlayers = ImmutableList.copyOf(Bukkit.getOnlinePlayers());
+        PlayerRangeWrapper[] rangePlayers = getRangePlayers();
 
         this.executor.execute(() -> {
-            final RangeMath rangeCheck = new RangeMath(onlinePlayers, allSpawners);
+            final List<SpawnerData> allSpawners = spawnerManager.getAllSpawners();
 
-            rangeCheck.updateActiveSpawners();
-
+            final RangeMath rangeCheck = new RangeMath(rangePlayers, allSpawners);
             final boolean[] spawnersPlayerFound = rangeCheck.getActiveSpawners();
 
             for (int i = 0; i < spawnersPlayerFound.length; i++) {
-                final boolean shouldStop = !spawnersPlayerFound[i];
+                final boolean expectedStop = !spawnersPlayerFound[i];
                 final SpawnerData sd = allSpawners.get(i);
                 final String spawnerId = sd.getSpawnerId();
 
-                if (sd.getSpawnerStop().get() != shouldStop) {
-                    // Only use the scheduler here
+                // Atomically update spawner stop flag only if it has changed
+                if (sd.getSpawnerStop().compareAndSet(!expectedStop, expectedStop)) {
+                    // Schedule main-thread task for actual state change
                     Scheduler.runLocationTask(sd.getSpawnerLocation(), () -> {
                         if (!isSpawnerValid(sd)) {
-                            // plugin.debug("Skipping state change for removed spawner: " + spawnerId);
                             cleanupRemovedSpawner(spawnerId);
                             return;
                         }
-                        sd.getSpawnerStop().set(shouldStop);
-                        handleSpawnerStateChange(sd, shouldStop);
+
+                        // Double-check atomic boolean before applying
+                        if (sd.getSpawnerStop().get() == expectedStop) {
+                            handleSpawnerStateChange(sd, expectedStop);
+                        }
                     });
                 }
             }
         });
+    }
+
+    private PlayerRangeWrapper[] getRangePlayers() {
+        final Collection<? extends Player> onlinePlayers = Bukkit.getOnlinePlayers();
+        final PlayerRangeWrapper[] rangePlayers = new PlayerRangeWrapper[onlinePlayers.size()];
+        int i = 0;
+
+        for (Player p : onlinePlayers) {
+
+            boolean conditions = p.isConnected() && !p.isDead()
+                    && p.getGameMode() != GameMode.SPECTATOR;
+
+            // Store data in wrapper for faster access
+            rangePlayers[i++] = new PlayerRangeWrapper(p.getWorld().getUID(),
+                    p.getX(), p.getY(), p.getZ(),
+                    conditions
+            );
+        }
+
+        return rangePlayers;
     }
 
     private boolean isSpawnerValid(SpawnerData spawner) {
@@ -94,12 +114,10 @@ public class SpawnerRangeChecker {
     }
 
     private void handleSpawnerStateChange(SpawnerData spawner, boolean shouldStop) {
-        synchronized (spawnerStateLock) {
-            if (!shouldStop) {
-                activateSpawner(spawner);
-            } else {
-                deactivateSpawner(spawner);
-            }
+        if (!shouldStop) {
+            activateSpawner(spawner);
+        } else {
+            deactivateSpawner(spawner);
         }
 
         // Force GUI update when spawner state changes
