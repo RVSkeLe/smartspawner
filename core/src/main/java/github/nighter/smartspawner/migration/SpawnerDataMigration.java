@@ -38,27 +38,44 @@ public class SpawnerDataMigration {
         try {
             needsMigration = false;
 
-            // Check if data_version exists
-            if (!config.contains(MIGRATION_FLAG)) {
-                config.set(MIGRATION_FLAG, CURRENT_VERSION);
-                try {
-                    config.save(dataFile);
-                } catch (IOException e) {
-                    plugin.getLogger().warning("Could not save data_version flag: " + e.getMessage());
-                }
+            // Check if data_version exists and compare with current version
+            int dataVersion = config.getInt(MIGRATION_FLAG, 0);
+            
+            if (dataVersion == 0) {
+                // data_version doesn't exist, check the structure to determine if migration is needed
+                plugin.getLogger().info("No data_version found. Checking data structure...");
+                needsMigration = true;
+            } else if (dataVersion < CURRENT_VERSION) {
+                // data_version exists but is outdated
+                plugin.getLogger().info("Data version " + dataVersion + " is outdated. Current version is " + CURRENT_VERSION + ".");
+                needsMigration = true;
             }
 
-            // Validate the spawners section
-            if (config.contains("spawners")) {
+            // If version check indicates migration is needed, validate by checking structure
+            if (needsMigration && config.contains("spawners")) {
+                // Double-check by validating the spawners section structure
+                boolean hasNewFormat = true;
                 for (String spawnerId : config.getConfigurationSection("spawners").getKeys(false)) {
                     String spawnerPath = "spawners." + spawnerId;
                     // Check if the spawner data is in the new format
                     if (!config.contains(spawnerPath + ".location") ||
                             !config.contains(spawnerPath + ".settings") ||
                             !config.contains(spawnerPath + ".inventory")) {
-                        needsMigration = true;
+                        hasNewFormat = false;
                         break;
                     }
+                }
+                
+                // If structure is already in new format, just update version
+                if (hasNewFormat) {
+                    plugin.getLogger().info("Data structure is already in current format. Updating version flag...");
+                    config.set(MIGRATION_FLAG, CURRENT_VERSION);
+                    try {
+                        config.save(dataFile);
+                    } catch (IOException e) {
+                        plugin.getLogger().warning("Could not save data_version flag: " + e.getMessage());
+                    }
+                    needsMigration = false;
                 }
             }
 
