@@ -1,6 +1,5 @@
 package github.nighter.smartspawner.logging.discord;
 
-import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.logging.SpawnerLogEntry;
 
@@ -10,6 +9,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -25,7 +27,7 @@ public class DiscordWebhookLogger {
     private final AtomicBoolean isShuttingDown;
     private final AtomicLong lastWebhookTime;
     private final AtomicLong webhooksSentThisMinute;
-    private Scheduler.Task webhookTask;
+    private final ScheduledExecutorService executorDiscordWebhook;
     
     // Discord rate limits: 30 requests per minute per webhook
     private static final int MAX_REQUESTS_PER_MINUTE = 25; // Leave some buffer
@@ -38,6 +40,7 @@ public class DiscordWebhookLogger {
         this.isShuttingDown = new AtomicBoolean(false);
         this.lastWebhookTime = new AtomicLong(System.currentTimeMillis());
         this.webhooksSentThisMinute = new AtomicLong(0);
+        this.executorDiscordWebhook = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "SmartSpawner-Discord"));
         
         if (config.isEnabled()) {
             startWebhookTask();
@@ -57,12 +60,12 @@ public class DiscordWebhookLogger {
     
     private void startWebhookTask() {
         // Process webhook queue every 2 seconds (always async)
-        webhookTask = Scheduler.runTaskTimerAsync(() -> {
+        executorDiscordWebhook.scheduleAtFixedRate(() -> {
             if (isShuttingDown.get()) {
                 return;
             }
             processWebhookQueue();
-        }, 40L, 40L);
+        }, 2, 2, TimeUnit.SECONDS);
     }
     
     private void processWebhookQueue() {
@@ -107,7 +110,7 @@ public class DiscordWebhookLogger {
             String jsonPayload = embed.toJson();
             
             // Send async HTTP request
-            Scheduler.runTaskAsync(() -> {
+            executorDiscordWebhook.execute(() -> {
                 try {
                     sendHttpRequest(webhookUrl, jsonPayload);
                 } catch (IOException e) {
@@ -157,24 +160,34 @@ public class DiscordWebhookLogger {
      */
     public void shutdown() {
         isShuttingDown.set(true);
-        
-        if (webhookTask != null) {
-            webhookTask.cancel();
+
+        if (executorDiscordWebhook == null || executorDiscordWebhook.isShutdown()) {
+            return;
         }
-        
-        // Attempt to flush remaining entries (with limit to prevent blocking)
-        int flushed = 0;
-        while (!webhookQueue.isEmpty() && flushed < 10) {
-            SpawnerLogEntry entry = webhookQueue.poll();
-            if (entry != null) {
-                sendWebhook(entry);
-                flushed++;
+
+        plugin.getLogger().info("Shutting down Discord webhook thread...");
+
+        executorDiscordWebhook.shutdown();
+
+        try {
+            if (!executorDiscordWebhook.awaitTermination(5, TimeUnit.SECONDS)) {
+                plugin.getLogger().warning("Forcing Discord webhook thread shutdown...");
+                executorDiscordWebhook.shutdownNow();
+
+                if (!executorDiscordWebhook.awaitTermination(3, TimeUnit.SECONDS)) {
+                    plugin.getLogger().severe("Discord webhook executor did not terminate cleanly.");
+                }
             }
+        } catch (InterruptedException e) {
+            executorDiscordWebhook.shutdownNow();
+            Thread.currentThread().interrupt();
         }
         
         if (!webhookQueue.isEmpty()) {
             plugin.getLogger().warning("Discord webhook queue had " + webhookQueue.size() + 
-                    " pending entries at shutdown (flushed " + flushed + ")");
+                    " pending entries at shutdown");
+        } else {
+            plugin.getLogger().info("Discord webhook thread shut down cleanly.");
         }
     }
 }
