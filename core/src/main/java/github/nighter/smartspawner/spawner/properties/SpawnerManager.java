@@ -6,11 +6,10 @@ import github.nighter.smartspawner.Scheduler;
 import org.bukkit.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 public class SpawnerManager {
     private final SmartSpawner plugin;
-    private final Map<String, SpawnerData> spawners = new HashMap<>();
+    private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final Map<LocationKey, SpawnerData> locationIndex = new HashMap<>();
     private final Map<String, Set<SpawnerData>> worldIndex = new HashMap<>();
     private final SpawnerFileHandler spawnerFileHandler;
