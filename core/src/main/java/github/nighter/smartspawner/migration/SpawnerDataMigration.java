@@ -67,6 +67,17 @@ public class SpawnerDataMigration {
                             hasNewFormat = false;
                             break;
                         }
+                        
+                        // Also check if settings string has the correct number of fields for version 3
+                        String settingsString = config.getString(spawnerPath + ".settings");
+                        if (settingsString != null) {
+                            String[] settings = settingsString.split(",");
+                            // Version 3 requires 13 fields (including maxStackSize and isAtCapacity)
+                            if (settings.length < 13) {
+                                hasNewFormat = false;
+                                break;
+                            }
+                        }
                     }
                 }
                 
@@ -147,6 +158,15 @@ public class SpawnerDataMigration {
 
     private boolean migrateData(FileConfiguration oldConfig, File dataFile) {
         try {
+            int oldVersion = oldConfig.getInt(MIGRATION_FLAG, 1);
+            
+            // Check if this is a version 2 to version 3 migration
+            if (oldVersion == 2 && oldConfig.contains("spawners")) {
+                plugin.getLogger().info("Migrating from version 2 to version 3...");
+                return migrateVersion2ToVersion3(oldConfig, dataFile);
+            }
+            
+            // Otherwise, handle old format to new format migration
             // Create new data file
             FileConfiguration newConfig = new YamlConfiguration();
 
@@ -163,6 +183,70 @@ public class SpawnerDataMigration {
             return true;
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to migrate data: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    private boolean migrateVersion2ToVersion3(FileConfiguration config, File dataFile) {
+        try {
+            ConfigurationSection spawnersSection = config.getConfigurationSection("spawners");
+            if (spawnersSection == null) {
+                plugin.getLogger().warning("No spawners section found in version 2 data");
+                return false;
+            }
+            
+            int migratedCount = 0;
+            for (String spawnerId : spawnersSection.getKeys(false)) {
+                String settingsPath = "spawners." + spawnerId + ".settings";
+                String settingsString = config.getString(settingsPath);
+                
+                if (settingsString != null) {
+                    String[] settings = settingsString.split(",");
+                    
+                    // Version 2 has 11 fields, version 3 has 13 fields
+                    if (settings.length == 11) {
+                        // Migrate version 2 (11 fields) to version 3 (13 fields)
+                        // Version 2: exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,lastSpawnTime
+                        // Version 3: exp,active,range,stop,delay,maxLoot,maxExp,minMobs,maxMobs,stack,maxStack,lastSpawnTime,isAtCapacity
+                        
+                        // Get the default maxStackSize from config
+                        int defaultMaxStackSize = plugin.getConfig().getInt("spawner.max_stack_size", 10);
+                        
+                        // Build new settings string with maxStackSize inserted at position 10
+                        String newSettings = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d,%s,%b",
+                                settings[0],  // spawnerExp
+                                settings[1],  // spawnerActive
+                                settings[2],  // spawnerRange
+                                settings[3],  // spawnerStop
+                                settings[4],  // spawnDelay
+                                settings[5],  // maxSpawnerLootSlots
+                                settings[6],  // maxStoredExp
+                                settings[7],  // minMobs
+                                settings[8],  // maxMobs
+                                settings[9],  // stackSize
+                                defaultMaxStackSize,  // maxStackSize (NEW)
+                                settings[10], // lastSpawnTime
+                                false         // isAtCapacity (NEW)
+                        );
+                        
+                        config.set(settingsPath, newSettings);
+                        migratedCount++;
+                    }
+                }
+            }
+            
+            // Update version flag
+            config.set(MIGRATION_FLAG, CURRENT_VERSION);
+            
+            // Save the updated config
+            config.save(dataFile);
+            
+            plugin.getLogger().info("Successfully migrated " + migratedCount + " spawners from version 2 to version 3");
+            return true;
+            
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to migrate from version 2 to version 3: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
