@@ -19,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class FilterConfigUI implements Listener {
     private static final int INVENTORY_SIZE = 27;
@@ -27,6 +28,7 @@ public class FilterConfigUI implements Listener {
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
     private final SpawnerStorageUI storageUI;
+    private final Random random;
 
     // Precomputed buttons for better performance
     private final Map<String, ItemStack> staticButtons;
@@ -39,6 +41,7 @@ public class FilterConfigUI implements Listener {
         this.languageManager = plugin.getLanguageManager();
         this.storageUI = plugin.getSpawnerStorageUI();
         this.staticButtons = new HashMap<>();
+        this.random = ThreadLocalRandom.current();
 
         initializeStaticButtons();
 
@@ -137,7 +140,7 @@ public class FilterConfigUI implements Listener {
 
         // Categorize items based on filter status
         for (LootItem lootItem : allLootItems) {
-            ItemStack displayItem = lootItem.createItemStack(new Random());
+            ItemStack displayItem = lootItem.createItemStack(random);
             if (displayItem == null) continue;
 
             Material itemType = displayItem.getType();

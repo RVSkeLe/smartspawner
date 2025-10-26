@@ -14,6 +14,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpawnerLootGenerator {
@@ -26,7 +27,7 @@ public class SpawnerLootGenerator {
         this.plugin = plugin;
         this.spawnerGuiViewManager = plugin.getSpawnerGuiViewManager();
         this.spawnerManager = plugin.getSpawnerManager();
-        this.random = new Random();
+        this.random = ThreadLocalRandom.current();
     }
 
     public LootResult generateLoot(int minMobs, int maxMobs, SpawnerData spawner) {
@@ -46,53 +47,75 @@ public class SpawnerLootGenerator {
 
         // Process mobs in batch rather than individually
         for (LootItem lootItem : validItems) {
-            // Calculate the probability for the entire mob batch at once
-            int successfulDrops = 0;
+            int totalAmount;
 
-            // Calculate binomial distribution - how many mobs will drop this item
-            for (int i = 0; i < mobCount; i++) {
-                if (random.nextDouble() * 100 <= lootItem.getChance()) {
-                    successfulDrops++;
-                }
+            if (shouldUseExpected(lootItem.getChance(), mobCount)) {
+                // O(1) expected-value approach
+                totalAmount = generateExpectedLoot(lootItem, mobCount);
+            } else {
+                // O(n) exact simulation
+                totalAmount = generateExactLoot(lootItem, mobCount);
             }
 
-            if (successfulDrops > 0) {
-                // Create item just once per loot type
+            if (totalAmount > 0) {
                 ItemStack prototype = lootItem.createItemStack(random);
                 if (prototype != null) {
-                    // Total amount across all mobs
-                    int totalAmount = 0;
-                    for (int i = 0; i < successfulDrops; i++) {
-                        totalAmount += lootItem.generateAmount(random);
-                    }
-
-                    if (totalAmount > 0) {
-                        // Add to consolidated map
-                        consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
-                    }
+                    consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
                 }
             }
         }
 
         // Convert consolidated map to item stacks
-        List<ItemStack> finalLoot = new ArrayList<>(consolidatedLoot.size());
+        List<ItemStack> finalLoot = new ArrayList<>();
         for (Map.Entry<ItemStack, Integer> entry : consolidatedLoot.entrySet()) {
             ItemStack item = entry.getKey().clone();
-            item.setAmount(Math.min(entry.getValue(), item.getMaxStackSize()));
-            finalLoot.add(item);
+            int remaining = entry.getValue();
 
             // Handle amounts exceeding max stack size
-            int remaining = entry.getValue() - item.getMaxStackSize();
             while (remaining > 0) {
-                ItemStack extraStack = item.clone();
-                extraStack.setAmount(Math.min(remaining, item.getMaxStackSize()));
-                finalLoot.add(extraStack);
-                remaining -= extraStack.getAmount();
+                int stackAmount = Math.min(remaining, item.getMaxStackSize());
+                ItemStack stack = item.clone();
+                stack.setAmount(stackAmount);
+                finalLoot.add(stack);
+                remaining -= stackAmount;
             }
         }
 
         return new LootResult(finalLoot, totalExperience);
     }
+
+    // Determines whether to use expected-value approximation
+    private boolean shouldUseExpected(double chance, int mobCount) {
+        // simple heuristic: use expected if atleast one item can be generated
+        return mobCount > 97.5D / chance;
+    }
+
+    // O(n) simulation: exact per-mob drop calculation
+    private int generateExactLoot(LootItem lootItem, int mobCount) {
+        int successfulDrops = 0;
+        for (int i = 0; i < mobCount; i++) {
+            if (random.nextDouble() * 100D <= lootItem.getChance()) {
+                successfulDrops++;
+            }
+        }
+        int totalAmount = 0;
+        for (int i = 0; i < successfulDrops; i++) {
+            totalAmount += lootItem.generateAmount(random);
+        }
+        return totalAmount;
+    }
+
+    // O(1) expected-value calculation with small jitter
+    private int generateExpectedLoot(LootItem lootItem, int mobCount) {
+        double p = lootItem.getChance() / 100.0;
+        double expectedDrops = mobCount * p;
+        double avgAmount = lootItem.getAverageAmount();
+        double jitter = p != 1.0
+                ? 0.95 + random.nextDouble() * 0.10
+                : 1.0;
+        return (int) Math.round(expectedDrops * avgAmount * jitter);
+    }
+
 
     public void spawnLootToSpawner(SpawnerData spawner) {
         // Try to acquire the lock, but don't block if it's already locked

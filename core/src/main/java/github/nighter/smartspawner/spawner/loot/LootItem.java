@@ -1,6 +1,5 @@
 package github.nighter.smartspawner.spawner.loot;
 
-import github.nighter.smartspawner.nms.MaterialWrapper;
 import lombok.Getter;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -21,6 +20,7 @@ public class LootItem {
     private final Integer maxDurability;
     private final PotionType potionType;
     private final double sellPrice;
+    private final double averageAmount;
 
     public LootItem(Material material, int minAmount, int maxAmount, double chance,
                     Integer minDurability, Integer maxDurability, PotionType potionType,
@@ -28,11 +28,12 @@ public class LootItem {
         this.material = material;
         this.minAmount = minAmount;
         this.maxAmount = maxAmount;
-        this.chance = chance;
+        this.chance = Math.max(chance, 0.0001); // Safeguarding division by zero
         this.minDurability = minDurability;
         this.maxDurability = maxDurability;
         this.potionType = potionType;
         this.sellPrice = sellPrice;
+        this.averageAmount = (minAmount + maxAmount) / 2.0D;
     }
 
     public ItemStack createItemStack(Random random) {
@@ -45,9 +46,9 @@ public class LootItem {
         // Apply durability if needed
         if (minDurability != null && maxDurability != null) {
             ItemMeta meta = item.getItemMeta();
-            if (meta instanceof Damageable) {
+            if (meta instanceof Damageable dmg) {
                 int durability = random.nextInt(maxDurability - minDurability + 1) + minDurability;
-                ((Damageable) meta).setDamage(durability);
+                dmg.setDamage(durability);
                 item.setItemMeta(meta);
             }
         }

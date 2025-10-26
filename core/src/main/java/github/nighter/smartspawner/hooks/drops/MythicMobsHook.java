@@ -3,6 +3,7 @@ package github.nighter.smartspawner.hooks.drops;
 import github.nighter.smartspawner.SmartSpawner;
 import io.lumine.mythic.bukkit.adapters.item.ItemComponentBukkitItemStack;
 import io.lumine.mythic.bukkit.events.MythicDropLoadEvent;
+import io.lumine.mythic.bukkit.utils.lib.jooq.impl.ThreadLocalTransactionProvider;
 import io.lumine.mythic.core.drops.droppables.VanillaItemDrop;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.EntityType;
@@ -11,13 +12,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 public class MythicMobsHook implements Listener {
     private final Random random;
 
     public MythicMobsHook() {
-        random = new Random();
+        random = ThreadLocalRandom.current();
     }
 
     @EventHandler
