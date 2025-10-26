@@ -14,6 +14,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -99,6 +100,7 @@ public class SpawnerData {
     // Sort preference for spawner storage
     @Getter @Setter
     private Material preferredSortItem;
+    private final Random random;
 
     public SpawnerData(String id, Location location, EntityType type, SmartSpawner plugin) {
         super();
@@ -107,6 +109,7 @@ public class SpawnerData {
         this.spawnerLocation = location;
         this.entityType = type;
         this.lootRegistry = plugin.getEntityLootRegistry();
+        this.random = ThreadLocalRandom.current();
 
         initializeDefaults();
         loadConfigurationValues();
@@ -343,7 +346,7 @@ public class SpawnerData {
     }
 
     private boolean isLootItemValid(LootItem item) {
-        ItemStack example = item.createItemStack(new Random());
+        ItemStack example = item.createItemStack(random);
         return example != null && !filteredItems.contains(example.getType());
     }
 

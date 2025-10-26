@@ -39,6 +39,7 @@ import org.bukkit.entity.Item;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class SpawnerStorageAction implements Listener {
     private final SmartSpawner plugin;
@@ -57,7 +58,7 @@ public class SpawnerStorageAction implements Listener {
     private final Map<ClickType, ItemClickHandler> clickHandlers;
     private final Map<UUID, Inventory> openStorageInventories = new HashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
-    private Random random = new Random();
+    private final Random random = ThreadLocalRandom.current();
     private GuiLayout layout;
 
     public SpawnerStorageAction(SmartSpawner plugin) {
