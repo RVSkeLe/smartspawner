@@ -60,7 +60,7 @@ public class DiscordWebhookLogger {
     
     private void startWebhookTask() {
         // Process webhook queue every 2 seconds (always async)
-        executorDiscordWebhook.scheduleAtFixedRate(() -> {
+        executorDiscordWebhook.scheduleWithFixedDelay(() -> {
             if (isShuttingDown.get()) {
                 return;
             }
@@ -109,14 +109,12 @@ public class DiscordWebhookLogger {
             DiscordEmbed embed = DiscordEmbedBuilder.buildEmbed(entry, config, plugin);
             String jsonPayload = embed.toJson();
             
-            // Send async HTTP request
-            executorDiscordWebhook.execute(() -> {
-                try {
-                    sendHttpRequest(webhookUrl, jsonPayload);
-                } catch (IOException e) {
-                    plugin.getLogger().log(Level.WARNING, "Failed to send Discord webhook", e);
-                }
-            });
+            // Already async
+            try {
+                sendHttpRequest(webhookUrl, jsonPayload);
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to send Discord webhook", e);
+            }
             
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Error building Discord embed", e);
