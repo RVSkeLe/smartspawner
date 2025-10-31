@@ -50,9 +50,9 @@ jar {
     archiveVersion.set("${version}")
 
     from { project(':api').sourceSets.main.output }
-    from { project(':NMS:v1_21').sourceSets.main.output }
-    from { project(':NMS:v1_21_4').sourceSets.main.output }
-    from { project(':NMS:v1_21_6').sourceSets.main.output }
+    from { project(':nms:v1_21').sourceSets.main.output }
+    from { project(':nms:v1_21_4').sourceSets.main.output }
+    from { project(':nms:v1_21_6').sourceSets.main.output }
     from sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
