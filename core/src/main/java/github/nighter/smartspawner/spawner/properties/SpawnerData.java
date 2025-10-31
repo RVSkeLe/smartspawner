@@ -27,8 +27,16 @@ public class SpawnerData {
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
+    
+    // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
+    @Getter
+    private final ReentrantLock lootGenerationLock = new ReentrantLock();  // For loot spawning
+    @Getter
+    private final ReentrantLock sellLock = new ReentrantLock();  // For selling operations
+    @Getter
+    private final ReentrantLock dataLock = new ReentrantLock();  // For metadata changes (exp, stack size, etc.)
 
     // Base values from config (immutable after load)
     private int baseMaxStoredExp;
@@ -185,11 +193,20 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
-        lock.lock();
+        // Acquire locks in consistent order to prevent deadlocks:
+        // 1. dataLock - for metadata changes
+        // 2. inventoryLock - to prevent inventory operations during virtual inventory replacement
+        // Note: We don't acquire lootGenerationLock here to avoid blocking loot generation cycles
+        dataLock.lock();
         try {
-            updateStackSize(stackSize);
+            inventoryLock.lock();
+            try {
+                updateStackSize(stackSize);
+            } finally {
+                inventoryLock.unlock();
+            }
         } finally {
-            lock.unlock();
+            dataLock.unlock();
         }
     }
 
@@ -215,6 +232,7 @@ public class SpawnerData {
         transferItemsToNewInventory(currentItems, newInventory);
         this.virtualInventory = newInventory;
 
+        // Reset lastSpawnTime to prevent exploit where players break spawners to trigger immediate loot
         this.lastSpawnTime = System.currentTimeMillis();
         updateHologramData();
 

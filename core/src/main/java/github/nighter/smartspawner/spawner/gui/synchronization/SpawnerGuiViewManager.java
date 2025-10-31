@@ -1349,8 +1349,8 @@ public class SpawnerGuiViewManager implements Listener {
         // If the timer has expired, handle spawn timing
         if (timeUntilNextSpawn <= 0) {
             try {
-                // Try to acquire lock with timeout to prevent deadlock
-                if (spawner.getLock().tryLock(100, TimeUnit.MILLISECONDS)) {
+                // Try to acquire dataLock with timeout to prevent deadlock
+                if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {
                     try {
                         // Re-check timing after acquiring lock
                         currentTime = System.currentTimeMillis();
@@ -1374,7 +1374,7 @@ public class SpawnerGuiViewManager implements Listener {
 
                         return cachedDelay - timeElapsed;
                     } finally {
-                        spawner.getLock().unlock();
+                        spawner.getDataLock().unlock();
                     }
                 } else {
                     // If can't acquire lock, return minimal time to try again soon

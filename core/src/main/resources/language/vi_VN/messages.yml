@@ -190,6 +190,18 @@ sell_success:
   message: "&#e6e6fađã ʙáɴ  &#e67e22%amount% ᴠậᴛ ᴘʜẩᴍ&#e6e6fa ᴠớɪ ɢɪá &a+$%price%"
   sound: block.note_block.bell
 
+action_in_progress:
+  action_bar: "&#f0c857ᴍộᴛ ʜᴏạᴛ độɴɢ ᴋʜáᴄ đᴀɴɢ đɪềɴ ʀᴀ. Vᴜɪ ʟòɴɢ ᴛʜử ʟạɪ ꜱᴀᴜ ɢɪâʏ ʟáᴛ."
+  sound: block.note_block.pling
+
+action_failed:
+  action_bar: "&#ff5252ʜᴀɴʜ độɴɢ ᴛʜấᴛ ʙạɪ. Vᴜɪ ʟòɴɢ ᴛʜử ʟạɪ."
+  sound: block.note_block.pling
+
+please_wait:
+  action_bar: "&#3498dbđᴀɴɢ xử ʟý... Vᴜɪ ʟòɴɢ đợɪ."
+  sound: block.note_block.harp
+
 # ------------------------------------------------------
 #                Plugin command messages
 # ------------------------------------------------------

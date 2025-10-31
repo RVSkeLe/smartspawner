@@ -97,41 +97,69 @@ public class SpawnerLootGenerator {
     public void spawnLootToSpawner(SpawnerData spawner) {
         // Try to acquire the lock, but don't block if it's already locked
         // This ensures we don't block the server thread while waiting for the lock
-        boolean lockAcquired = spawner.getLock().tryLock();
+        boolean lockAcquired = spawner.getLootGenerationLock().tryLock();
         if (!lockAcquired) {
-            // Lock is already held, which means stack size change is happening
+            // Lock is already held, which means another loot generation is happening
             // Skip this loot generation cycle
             return;
         }
 
         try {
-            long currentTime = System.currentTimeMillis();
-            long lastSpawnTime = spawner.getLastSpawnTime();
-            long spawnDelay = spawner.getSpawnDelay();
-
-            if (currentTime - lastSpawnTime < spawnDelay) {
+            // Acquire dataLock to safely read spawn timing and configuration values
+            // Use tryLock with short timeout to avoid blocking
+            boolean dataLockAcquired = false;
+            try {
+                dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
             }
-
-            // Get exact inventory slot usage
-            AtomicInteger usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
-            AtomicInteger maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
-
-            // Check if both inventory and exp are full, only then skip loot generation
-            if (usedSlots.get() >= maxSlots.get() && spawner.getSpawnerExp() >= spawner.getMaxStoredExp()) {
-                if (!spawner.getIsAtCapacity()) {
-                    spawner.setIsAtCapacity(true);
-                }
-                return; // Skip generation if both exp and inventory are full
+            
+            if (!dataLockAcquired) {
+                // dataLock is held (likely stack size change), skip this cycle
+                return;
             }
+            
+            // Declare variables outside the try block so they're accessible in the async lambda
+            final long currentTime = System.currentTimeMillis();
+            final long spawnTime;
+            final EntityType entityType;
+            final int minMobs;
+            final int maxMobs;
+            final String spawnerId;
+            final AtomicInteger usedSlots;
+            final AtomicInteger maxSlots;
+            
+            try {
+                long lastSpawnTime = spawner.getLastSpawnTime();
+                long spawnDelay = spawner.getSpawnDelay();
 
-            // Important: Store the current values we need for async processing
-            final EntityType entityType = spawner.getEntityType();
-            final int minMobs = spawner.getMinMobs();
-            final int maxMobs = spawner.getMaxMobs();
-            final String spawnerId = spawner.getSpawnerId();
-            // Store currentTime to update lastSpawnTime after successful loot addition
-            final long spawnTime = currentTime;
+                if (currentTime - lastSpawnTime < spawnDelay) {
+                    return;
+                }
+
+                // Get exact inventory slot usage
+                usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
+                maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
+
+                // Check if both inventory and exp are full, only then skip loot generation
+                if (usedSlots.get() >= maxSlots.get() && spawner.getSpawnerExp() >= spawner.getMaxStoredExp()) {
+                    if (!spawner.getIsAtCapacity()) {
+                        spawner.setIsAtCapacity(true);
+                    }
+                    return; // Skip generation if both exp and inventory are full
+                }
+
+                // Important: Store the current values we need for async processing
+                entityType = spawner.getEntityType();
+                minMobs = spawner.getMinMobs();
+                maxMobs = spawner.getMaxMobs();
+                spawnerId = spawner.getSpawnerId();
+                // Store currentTime to update lastSpawnTime after successful loot addition
+                spawnTime = currentTime;
+            } finally {
+                spawner.getDataLock().unlock();
+            }
 
             // Run heavy calculations async and batch updates using the Scheduler
             Scheduler.runTaskAsync(() -> {
@@ -148,7 +176,7 @@ public class SpawnerLootGenerator {
                     // Re-acquire the lock for the update phase
                     // This ensures the spawner hasn't been modified (like stack size changes)
                     // between our async calculations and now
-                    boolean updateLockAcquired = spawner.getLock().tryLock();
+                    boolean updateLockAcquired = spawner.getLootGenerationLock().tryLock();
                     if (!updateLockAcquired) {
                         // Lock is held, stack size is changing, skip this update
                         return;
@@ -198,7 +226,15 @@ public class SpawnerLootGenerator {
 
                         // Update spawn time only after successful loot addition
                         // This prevents skipped spawns when the lock fails
-                        spawner.setLastSpawnTime(spawnTime);
+                        // Must acquire dataLock to safely update lastSpawnTime
+                        boolean updateDataLockAcquired = spawner.getDataLock().tryLock();
+                        if (updateDataLockAcquired) {
+                            try {
+                                spawner.setLastSpawnTime(spawnTime);
+                            } finally {
+                                spawner.getDataLock().unlock();
+                            }
+                        }
 
                         // Check if spawner is now at capacity and update status if needed
                         spawner.updateCapacityStatus();
@@ -209,12 +245,12 @@ public class SpawnerLootGenerator {
                         // Mark for saving only once
                         spawnerManager.markSpawnerModified(spawner.getSpawnerId());
                     } finally {
-                        spawner.getLock().unlock();
+                        spawner.getLootGenerationLock().unlock();
                     }
                 });
             });
         } finally {
-            spawner.getLock().unlock();
+            spawner.getLootGenerationLock().unlock();
         }
     }
 
