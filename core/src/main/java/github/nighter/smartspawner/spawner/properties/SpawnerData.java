@@ -193,9 +193,23 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
+        // Acquire locks in consistent order to prevent deadlocks:
+        // 1. dataLock - for metadata changes
+        // 2. lootGenerationLock - to prevent loot generation from reading inconsistent state
+        // 3. inventoryLock - to prevent inventory operations during virtual inventory replacement
         dataLock.lock();
         try {
-            updateStackSize(stackSize);
+            lootGenerationLock.lock();
+            try {
+                inventoryLock.lock();
+                try {
+                    updateStackSize(stackSize);
+                } finally {
+                    inventoryLock.unlock();
+                }
+            } finally {
+                lootGenerationLock.unlock();
+            }
         } finally {
             dataLock.unlock();
         }
@@ -223,7 +237,7 @@ public class SpawnerData {
         transferItemsToNewInventory(currentItems, newInventory);
         this.virtualInventory = newInventory;
 
-        this.lastSpawnTime = System.currentTimeMillis();
+        // Don't reset lastSpawnTime - let the spawner continue its normal spawn cycle
         updateHologramData();
 
         // Invalidate GUI cache when stack size changes
