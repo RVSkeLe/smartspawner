@@ -5,6 +5,12 @@ import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.loot.LootItem;
+import io.papermc.paper.datacomponent.DataComponentType;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
@@ -196,7 +202,7 @@ public class SpawnerItemFactory {
             }
 
             // Hide enchants and attributes
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
 
             // Add hidden tag to identify as smart spawner
 //            meta.getPersistentDataContainer().set(
@@ -204,7 +210,6 @@ public class SpawnerItemFactory {
 //                    PersistentDataType.BOOLEAN,
 //                    true
 //            );
-
             spawner.setItemMeta(meta);
         }
 
@@ -233,7 +238,9 @@ public class SpawnerItemFactory {
                 }
             }
         }
-
+        Set<DataComponentType> hiddenComponent = new HashSet<>();
+        hiddenComponent.add(RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA));
+        spawner.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay().hiddenComponents(hiddenComponent).build());
         return spawner;
     }
 
@@ -280,8 +287,7 @@ public class SpawnerItemFactory {
                 meta.setLore(lore);
 
                 // If we have custom lore, then also add the item flags to hide attributes
-                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,
-                        ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_UNBREAKABLE);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             }
 
             // Add hidden tag to identify as vanilla spawner
@@ -293,7 +299,9 @@ public class SpawnerItemFactory {
 
             spawner.setItemMeta(meta);
         }
-
+        Set<DataComponentType> hiddenComponent = new HashSet<>();
+        hiddenComponent.add(RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA));
+        spawner.setData(DataComponentTypes.TOOLTIP_DISPLAY, TooltipDisplay.tooltipDisplay().hiddenComponents(hiddenComponent).build());
         return spawner;
     }
 }
