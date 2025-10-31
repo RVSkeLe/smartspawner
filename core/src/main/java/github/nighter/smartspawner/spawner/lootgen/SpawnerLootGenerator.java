@@ -120,8 +120,17 @@ public class SpawnerLootGenerator {
                 return;
             }
             
+            // Declare variables outside the try block so they're accessible in the async lambda
+            final long currentTime = System.currentTimeMillis();
+            final long spawnTime;
+            final EntityType entityType;
+            final int minMobs;
+            final int maxMobs;
+            final String spawnerId;
+            final AtomicInteger usedSlots;
+            final AtomicInteger maxSlots;
+            
             try {
-                long currentTime = System.currentTimeMillis();
                 long lastSpawnTime = spawner.getLastSpawnTime();
                 long spawnDelay = spawner.getSpawnDelay();
 
@@ -130,8 +139,8 @@ public class SpawnerLootGenerator {
                 }
 
                 // Get exact inventory slot usage
-                AtomicInteger usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
-                AtomicInteger maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
+                usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
+                maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
 
                 // Check if both inventory and exp are full, only then skip loot generation
                 if (usedSlots.get() >= maxSlots.get() && spawner.getSpawnerExp() >= spawner.getMaxStoredExp()) {
@@ -142,12 +151,12 @@ public class SpawnerLootGenerator {
                 }
 
                 // Important: Store the current values we need for async processing
-                final EntityType entityType = spawner.getEntityType();
-                final int minMobs = spawner.getMinMobs();
-                final int maxMobs = spawner.getMaxMobs();
-                final String spawnerId = spawner.getSpawnerId();
+                entityType = spawner.getEntityType();
+                minMobs = spawner.getMinMobs();
+                maxMobs = spawner.getMaxMobs();
+                spawnerId = spawner.getSpawnerId();
                 // Store currentTime to update lastSpawnTime after successful loot addition
-                final long spawnTime = currentTime;
+                spawnTime = currentTime;
             } finally {
                 spawner.getDataLock().unlock();
             }
@@ -218,8 +227,8 @@ public class SpawnerLootGenerator {
                         // Update spawn time only after successful loot addition
                         // This prevents skipped spawns when the lock fails
                         // Must acquire dataLock to safely update lastSpawnTime
-                        boolean dataLockAcquired = spawner.getDataLock().tryLock();
-                        if (dataLockAcquired) {
+                        boolean updateDataLockAcquired = spawner.getDataLock().tryLock();
+                        if (updateDataLockAcquired) {
                             try {
                                 spawner.setLastSpawnTime(spawnTime);
                             } finally {
