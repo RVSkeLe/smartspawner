@@ -5,7 +5,6 @@ import github.nighter.smartspawner.api.events.SpawnerPlaceEvent;
 import github.nighter.smartspawner.extras.HopperHandler;
 import github.nighter.smartspawner.hooks.protections.CheckStackBlock;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.nms.ParticleWrapper;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.SpawnerManager;
@@ -16,6 +15,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -302,7 +302,7 @@ public class SpawnerPlaceListener implements Listener {
             Location particleLocation = block.getLocation().clone().add(
                     PARTICLE_OFFSET, PARTICLE_OFFSET, PARTICLE_OFFSET);
             block.getWorld().spawnParticle(
-                    ParticleWrapper.SPELL_WITCH,
+                    Particle.WITCH,
                     particleLocation,
                     50, PARTICLE_OFFSET, PARTICLE_OFFSET, PARTICLE_OFFSET, 0
             );

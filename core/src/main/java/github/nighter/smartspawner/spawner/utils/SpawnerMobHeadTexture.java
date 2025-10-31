@@ -1,7 +1,7 @@
 package github.nighter.smartspawner.spawner.utils;
 
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.nms.TextureWrapper;
+import github.nighter.smartspawner.config.MobHeadConfig;
 import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
@@ -31,10 +31,6 @@ public class SpawnerMobHeadTexture {
         RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
     );
 
-    static {
-        TextureWrapper.initializeCommonTextures();
-    }
-
     private static boolean isBedrockPlayer(Player player) {
         SmartSpawner plugin = SmartSpawner.getInstance();
         if (plugin == null || plugin.getIntegrationManager() == null || 
@@ -53,72 +49,51 @@ public class SpawnerMobHeadTexture {
         if (entityType == null) {
             return createItemStack(Material.SPAWNER);
         }
-        switch (entityType) {
-            case ZOMBIE:
-                return new ItemStack(Material.ZOMBIE_HEAD);
-            case SKELETON:
-                return new ItemStack(Material.SKELETON_SKULL);
-            case WITHER_SKELETON:
-                return new ItemStack(Material.WITHER_SKELETON_SKULL);
-            case CREEPER:
-                return new ItemStack(Material.CREEPER_HEAD);
-            case PIGLIN, PIGLIN_BRUTE:
-                return new ItemStack(Material.PIGLIN_HEAD);
-        }
+        
         if (isBedrockPlayer(player)) {
-            return new ItemStack(Material.SPAWNER);
+            return new ItemStack(getMaterialForEntity(entityType));
         }
-        if (HEAD_CACHE.containsKey(entityType)) {
-            return HEAD_CACHE.get(entityType).clone();
-        }
-        if (!TextureWrapper.hasTexture(entityType)) {
-            return new ItemStack(Material.SPAWNER);
-        }
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        try {
-            String texture = TextureWrapper.getTexture(entityType);
-            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
-            PlayerTextures textures = profile.getTextures();
-            URL url = new URL("http://textures.minecraft.net/texture/" + texture);
-            textures.setSkin(url);
-            profile.setTextures(textures);
-            meta.setOwnerProfile(profile);
-            head.setItemMeta(meta);
-            HEAD_CACHE.put(entityType, head.clone());
-            return head;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return createItemStack(Material.SPAWNER);
-        }
+        
+        return getCustomHead(entityType);
     }
 
     public static ItemStack getCustomHead(EntityType entityType) {
         if (entityType == null) {
             return createItemStack(Material.SPAWNER);
         }
-        switch (entityType) {
-            case ZOMBIE:
-                return new ItemStack(Material.ZOMBIE_HEAD);
-            case SKELETON:
-                return new ItemStack(Material.SKELETON_SKULL);
-            case WITHER_SKELETON:
-                return new ItemStack(Material.WITHER_SKELETON_SKULL);
-            case CREEPER:
-                return new ItemStack(Material.CREEPER_HEAD);
-            case PIGLIN, PIGLIN_BRUTE:
-                return new ItemStack(Material.PIGLIN_HEAD);
+        
+        SmartSpawner plugin = SmartSpawner.getInstance();
+        if (plugin == null) {
+            return createItemStack(Material.SPAWNER);
         }
+        
+        MobHeadConfig mobHeadConfig = plugin.getMobHeadConfig();
+        if (mobHeadConfig == null) {
+            return createItemStack(Material.SPAWNER);
+        }
+        
+        // Get material from config
+        Material material = mobHeadConfig.getMaterial(entityType);
+        
+        // If it's not a player head, return the vanilla head
+        if (material != Material.PLAYER_HEAD) {
+            return new ItemStack(material);
+        }
+        
+        // Check cache for player heads
         if (HEAD_CACHE.containsKey(entityType)) {
             return HEAD_CACHE.get(entityType).clone();
         }
-        if (!TextureWrapper.hasTexture(entityType)) {
-            return new ItemStack(Material.SPAWNER);
+        
+        // Check if we have a custom texture
+        if (!mobHeadConfig.hasCustomTexture(entityType)) {
+            return new ItemStack(material);
         }
+        
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         try {
-            String texture = TextureWrapper.getTexture(entityType);
+            String texture = mobHeadConfig.getCustomTexture(entityType);
             PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
             PlayerTextures textures = profile.getTextures();
             URL url = new URL("http://textures.minecraft.net/texture/" + texture);
@@ -130,8 +105,16 @@ public class SpawnerMobHeadTexture {
             return head;
         } catch (Exception e) {
             e.printStackTrace();
-            return createItemStack(Material.SPAWNER);
+            return createItemStack(material);
         }
+    }
+
+    private static Material getMaterialForEntity(EntityType entityType) {
+        SmartSpawner plugin = SmartSpawner.getInstance();
+        if (plugin != null && plugin.getMobHeadConfig() != null) {
+            return plugin.getMobHeadConfig().getMaterial(entityType);
+        }
+        return Material.SPAWNER;
     }
 
     public static ItemStack createItemStack(Material material) {

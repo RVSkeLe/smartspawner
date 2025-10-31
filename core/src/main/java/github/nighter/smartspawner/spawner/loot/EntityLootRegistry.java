@@ -2,7 +2,6 @@ package github.nighter.smartspawner.spawner.loot;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
-import github.nighter.smartspawner.nms.MaterialWrapper;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -68,8 +67,14 @@ public class EntityLootRegistry {
                     if (itemSection == null) continue;
 
                     try {
-                        // Use MaterialWrapper to get the material with version compatibility
-                        Material material = MaterialWrapper.getMaterial(itemKey);
+                        // Try to get the material by name
+                        Material material;
+                        try {
+                            material = Material.valueOf(itemKey.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            material = null;
+                        }
+                        
                         if (material == null) {
                             plugin.getLogger().warning("Material '" + itemKey + "' is not available in server version " +
                                     plugin.getServer().getBukkitVersion() + " - skipping for entity " + entityName);
