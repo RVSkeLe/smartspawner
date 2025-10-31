@@ -51,7 +51,7 @@ public class MythicMobsHook implements Listener {
             return;
         }
 
-        ItemStack iS = SmartSpawner.getInstance().getSpawnerItemFactory().createSpawnerItem(entityType, amount);
+        ItemStack iS = SmartSpawner.getInstance().getSpawnerItemFactory().createSmartSpawnerItem(entityType, amount);
         if (iS == null) return;
 
         e.register(new VanillaItemDrop(e.getContainer().getLine(), e.getConfig(), new ItemComponentBukkitItemStack(iS)));

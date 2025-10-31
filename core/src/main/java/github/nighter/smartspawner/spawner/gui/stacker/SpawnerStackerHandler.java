@@ -624,7 +624,7 @@ public class SpawnerStackerHandler implements Listener {
 
             while (remainingAmount > 0) {
                 int stackSize = Math.min(MAX_STACK_SIZE, remainingAmount);
-                ItemStack spawnerItem = spawnerItemFactory.createSpawnerItem(entityType, stackSize);
+                ItemStack spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, stackSize);
                 newStacks.add(spawnerItem);
                 remainingAmount -= stackSize;
             }

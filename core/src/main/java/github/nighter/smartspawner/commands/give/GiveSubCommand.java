@@ -132,7 +132,7 @@ public class GiveSubCommand extends BaseSubCommand {
                 spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType, amount);
             } else {
                 // Use spawner item factory for smart spawners
-                spawnerItem = spawnerItemFactory.createSpawnerItem(entityType, amount);
+                spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, amount);
             }
 
             // Give the item to the player

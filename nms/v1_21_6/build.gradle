@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
 }
 
-group 'NMS:v1_21_6'
+group 'nms:v1_21_6'
 
 dependencies {
     implementation project(':core')

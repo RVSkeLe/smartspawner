@@ -27,7 +27,7 @@ public class SpawnerProvider implements ExternalSpawnerProvider {
 
     @Override
     public ItemStack getSpawnerItem(EntityType entityType) {
-        return spawnerItemFactory.createSpawnerItem(entityType);
+        return spawnerItemFactory.createSmartSpawnerItem(entityType);
     }
 
     @Override

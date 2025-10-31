@@ -81,11 +81,11 @@ public class SpawnerItemFactory {
             TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
     }
 
-    public ItemStack createSpawnerItem(EntityType entityType) {
-        return createSpawnerItem(entityType, 1);
+    public ItemStack createSmartSpawnerItem(EntityType entityType) {
+        return createSmartSpawnerItem(entityType, 1);
     }
 
-    public ItemStack createSpawnerItem(EntityType entityType, int amount) {
+    public ItemStack createSmartSpawnerItem(EntityType entityType, int amount) {
         cleanupCacheIfNeeded();
         if (amount == 1) {
             ItemStack cachedItem = spawnerItemCache.get(entityType);

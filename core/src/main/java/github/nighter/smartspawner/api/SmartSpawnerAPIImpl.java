@@ -24,12 +24,12 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
 
     @Override
     public ItemStack createSpawnerItem(EntityType entityType) {
-        return itemFactory.createSpawnerItem(entityType);
+        return itemFactory.createSmartSpawnerItem(entityType);
     }
 
     @Override
     public ItemStack createSpawnerItem(EntityType entityType, int amount) {
-        return itemFactory.createSpawnerItem(entityType, amount);
+        return itemFactory.createSmartSpawnerItem(entityType, amount);
     }
 
     @Override

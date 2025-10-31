@@ -1,8 +1,6 @@
 package github.nighter.smartspawner;
 
-import github.nighter.smartspawner.api.SmartSpawnerAPI;
-import github.nighter.smartspawner.api.SmartSpawnerPlugin;
-import github.nighter.smartspawner.api.SmartSpawnerAPIImpl;
+import github.nighter.smartspawner.api.*;
 import github.nighter.smartspawner.bstats.Metrics;
 import github.nighter.smartspawner.commands.BrigadierCommandManager;
 import github.nighter.smartspawner.commands.list.ListSubCommand;
@@ -15,7 +13,6 @@ import github.nighter.smartspawner.commands.prices.PricesGUI;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
-import github.nighter.smartspawner.logging.SpawnerEventType;
 import github.nighter.smartspawner.spawner.natural.NaturalSpawnerListener;
 import github.nighter.smartspawner.utils.TimeFormatter;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
@@ -60,7 +57,6 @@ import github.nighter.smartspawner.utils.SpawnerTypeChecker;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -446,15 +442,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             return false;
         }
         return itemPriceManager.hasSellIntegration();
-    }
-
-    public boolean hasShopIntegration() {
-        if (itemPriceManager == null) {
-            return false;
-        }
-
-        return itemPriceManager.getShopIntegrationManager() != null &&
-                itemPriceManager.getShopIntegrationManager().hasActiveProvider();
     }
 
     public long getTimeFromConfig(String path, String defaultValue) {
