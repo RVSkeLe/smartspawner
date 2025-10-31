@@ -27,8 +27,16 @@ public class SpawnerData {
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
+    
+    // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
+    @Getter
+    private final ReentrantLock lootGenerationLock = new ReentrantLock();  // For loot spawning
+    @Getter
+    private final ReentrantLock sellLock = new ReentrantLock();  // For selling operations
+    @Getter
+    private final ReentrantLock dataLock = new ReentrantLock();  // For metadata changes (exp, stack size, etc.)
 
     // Base values from config (immutable after load)
     private int baseMaxStoredExp;
@@ -185,11 +193,11 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
-        lock.lock();
+        dataLock.lock();
         try {
             updateStackSize(stackSize);
         } finally {
-            lock.unlock();
+            dataLock.unlock();
         }
     }
 

@@ -30,7 +30,6 @@ public class HopperHandler implements Listener {
     private final Map<Location, Scheduler.Task> activeHoppers = new ConcurrentHashMap<>();
     private final SpawnerManager spawnerManager;
     private final SpawnerGuiViewManager spawnerGuiViewManager;
-    private final Map<String, ReentrantLock> spawnerLocks = new ConcurrentHashMap<>();
 
     public HopperHandler(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -113,7 +112,6 @@ public class HopperHandler implements Listener {
     public void cleanup() {
         activeHoppers.values().forEach(Scheduler.Task::cancel);
         activeHoppers.clear();
-        spawnerLocks.clear();
     }
 
     @EventHandler
@@ -132,10 +130,6 @@ public class HopperHandler implements Listener {
         if (event.getBlock().getType() == Material.HOPPER) {
             stopHopperTask(event.getBlock().getLocation());
         }
-    }
-
-    private ReentrantLock getOrCreateLock(SpawnerData spawner) {
-        return spawnerLocks.computeIfAbsent(spawner.getSpawnerId(), k -> new ReentrantLock());
     }
 
     public void startHopperTask(Location hopperLoc, Location spawnerLoc) {
@@ -191,7 +185,8 @@ public class HopperHandler implements Listener {
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
 
-        ReentrantLock lock = getOrCreateLock(spawner);
+        // Use inventoryLock for hopper transfers
+        ReentrantLock lock = spawner.getInventoryLock();
         if (!lock.tryLock()) return; // Skip this tick if we can't get the lock
 
         try {

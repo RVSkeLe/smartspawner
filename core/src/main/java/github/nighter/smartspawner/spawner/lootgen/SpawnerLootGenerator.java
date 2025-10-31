@@ -97,9 +97,9 @@ public class SpawnerLootGenerator {
     public void spawnLootToSpawner(SpawnerData spawner) {
         // Try to acquire the lock, but don't block if it's already locked
         // This ensures we don't block the server thread while waiting for the lock
-        boolean lockAcquired = spawner.getLock().tryLock();
+        boolean lockAcquired = spawner.getLootGenerationLock().tryLock();
         if (!lockAcquired) {
-            // Lock is already held, which means stack size change is happening
+            // Lock is already held, which means another loot generation or stack size change is happening
             // Skip this loot generation cycle
             return;
         }
@@ -148,7 +148,7 @@ public class SpawnerLootGenerator {
                     // Re-acquire the lock for the update phase
                     // This ensures the spawner hasn't been modified (like stack size changes)
                     // between our async calculations and now
-                    boolean updateLockAcquired = spawner.getLock().tryLock();
+                    boolean updateLockAcquired = spawner.getLootGenerationLock().tryLock();
                     if (!updateLockAcquired) {
                         // Lock is held, stack size is changing, skip this update
                         return;
@@ -209,12 +209,12 @@ public class SpawnerLootGenerator {
                         // Mark for saving only once
                         spawnerManager.markSpawnerModified(spawner.getSpawnerId());
                     } finally {
-                        spawner.getLock().unlock();
+                        spawner.getLootGenerationLock().unlock();
                     }
                 });
             });
         } finally {
-            spawner.getLock().unlock();
+            spawner.getLootGenerationLock().unlock();
         }
     }
 
