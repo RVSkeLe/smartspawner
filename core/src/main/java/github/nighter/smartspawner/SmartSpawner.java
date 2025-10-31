@@ -10,6 +10,7 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
+import github.nighter.smartspawner.config.MobHeadConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
@@ -50,6 +51,7 @@ import github.nighter.smartspawner.spawner.events.WorldEventHandler;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.updates.ConfigUpdater;
 import github.nighter.smartspawner.nms.VersionInitializer;
+import github.nighter.smartspawner.nms.TextureWrapper;
 import github.nighter.smartspawner.updates.LanguageUpdater;
 import github.nighter.smartspawner.updates.UpdateChecker;
 import github.nighter.smartspawner.utils.SpawnerTypeChecker;
@@ -79,6 +81,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
+    private MobHeadConfig mobHeadConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -226,6 +229,11 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageManager = new LanguageManager(this);
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
+        
+        // Initialize mob head config and wire it to TextureWrapper
+        this.mobHeadConfig = new MobHeadConfig(this);
+        this.mobHeadConfig.load();
+        TextureWrapper.setMobHeadConfig(this.mobHeadConfig);
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -377,6 +385,14 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         integrationManager.reload();
         spawnerMenuAction.reload();
         timeFormatter.clearCache();
+        
+        // Reload mob head config
+        if (mobHeadConfig != null) {
+            mobHeadConfig.reload();
+            TextureWrapper.setMobHeadConfig(mobHeadConfig);
+            // Clear head cache to force regeneration with new textures
+            SpawnerMobHeadTexture.clearCache();
+        }
         
         // Reload logging system
         loggingConfig.loadConfig();
