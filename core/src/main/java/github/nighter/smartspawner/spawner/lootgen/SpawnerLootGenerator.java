@@ -3,7 +3,7 @@ package github.nighter.smartspawner.spawner.lootgen;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.spawner.loot.LootItem;

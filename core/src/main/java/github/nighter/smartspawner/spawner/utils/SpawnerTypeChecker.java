@@ -1,4 +1,4 @@
-package github.nighter.smartspawner.utils;
+package github.nighter.smartspawner.spawner.utils;
 
 import github.nighter.smartspawner.SmartSpawner;
 import org.bukkit.NamespacedKey;

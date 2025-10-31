@@ -1,4 +1,4 @@
-package github.nighter.smartspawner.config;
+package github.nighter.smartspawner.spawner.config;
 
 import github.nighter.smartspawner.SmartSpawner;
 import org.bukkit.Material;
@@ -121,7 +121,7 @@ public class MobHeadConfig {
             }
         }
         
-        plugin.getLogger().info("Loaded " + mobHeadMap.size() + " mob head configurations");
+        // plugin.getLogger().info("Loaded " + mobHeadMap.size() + " mob head configurations");
     }
     
     /**
@@ -156,16 +156,7 @@ public class MobHeadConfig {
         MobHeadData data = mobHeadMap.get(entityType);
         return data != null && data.customTexture != null && !data.customTexture.isEmpty();
     }
-    
-    /**
-     * Get the default material for mobs without custom configuration
-     * 
-     * @return Default material
-     */
-    public Material getDefaultMaterial() {
-        return defaultMaterial;
-    }
-    
+
     /**
      * Reload the configuration
      */

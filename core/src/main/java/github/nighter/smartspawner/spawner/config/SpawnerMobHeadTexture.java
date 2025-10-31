@@ -1,7 +1,6 @@
-package github.nighter.smartspawner.spawner.utils;
+package github.nighter.smartspawner.spawner.config;
 
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.config.MobHeadConfig;
 import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;

@@ -1,12 +1,11 @@
-package github.nighter.smartspawner.spawner.properties;
+package github.nighter.smartspawner.spawner.data;
 
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
 import github.nighter.smartspawner.Scheduler;
+import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 public class SpawnerManager {
     private final SmartSpawner plugin;

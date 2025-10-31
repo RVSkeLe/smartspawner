@@ -2,7 +2,7 @@ package github.nighter.smartspawner.spawner.lootgen;
 
 import com.google.common.collect.ImmutableList;
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
 import org.bukkit.Bukkit;

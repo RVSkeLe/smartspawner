@@ -11,7 +11,7 @@ import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
