@@ -1,7 +1,6 @@
 package github.nighter.smartspawner.spawner.lootgen;
 
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.nms.ParticleWrapper;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.SpawnerManager;
@@ -354,7 +353,7 @@ public class SpawnerLootGenerator {
             World world = loc.getWorld();
             if (world != null) {
                 Scheduler.runLocationTask(loc, () -> {
-                    world.spawnParticle(ParticleWrapper.VILLAGER_HAPPY,
+                    world.spawnParticle(Particle.HAPPY_VILLAGER,
                             loc.clone().add(0.5, 0.5, 0.5),
                             10, 0.3, 0.3, 0.3, 0);
                 });

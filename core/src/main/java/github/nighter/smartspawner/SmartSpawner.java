@@ -10,6 +10,7 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
+import github.nighter.smartspawner.config.MobHeadConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
@@ -79,6 +80,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
+    private MobHeadConfig mobHeadConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -226,6 +228,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageManager = new LanguageManager(this);
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
+        
+        // Initialize mob head config
+        this.mobHeadConfig = new MobHeadConfig(this);
+        this.mobHeadConfig.load();
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -377,6 +383,13 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         integrationManager.reload();
         spawnerMenuAction.reload();
         timeFormatter.clearCache();
+        
+        // Reload mob head config
+        if (mobHeadConfig != null) {
+            mobHeadConfig.reload();
+            // Clear head cache to force regeneration with new textures
+            SpawnerMobHeadTexture.clearCache();
+        }
         
         // Reload logging system
         loggingConfig.loadConfig();

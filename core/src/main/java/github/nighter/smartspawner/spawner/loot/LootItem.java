@@ -1,6 +1,5 @@
 package github.nighter.smartspawner.spawner.loot;
 
-import github.nighter.smartspawner.nms.MaterialWrapper;
 import lombok.Getter;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
