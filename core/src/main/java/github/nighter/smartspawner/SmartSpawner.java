@@ -51,7 +51,6 @@ import github.nighter.smartspawner.spawner.events.WorldEventHandler;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.updates.ConfigUpdater;
 import github.nighter.smartspawner.nms.VersionInitializer;
-import github.nighter.smartspawner.nms.TextureWrapper;
 import github.nighter.smartspawner.updates.LanguageUpdater;
 import github.nighter.smartspawner.updates.UpdateChecker;
 import github.nighter.smartspawner.utils.SpawnerTypeChecker;
@@ -230,10 +229,9 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
         
-        // Initialize mob head config and wire it to TextureWrapper
+        // Initialize mob head config
         this.mobHeadConfig = new MobHeadConfig(this);
         this.mobHeadConfig.load();
-        TextureWrapper.setMobHeadConfig(this.mobHeadConfig);
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -389,7 +387,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         // Reload mob head config
         if (mobHeadConfig != null) {
             mobHeadConfig.reload();
-            TextureWrapper.setMobHeadConfig(mobHeadConfig);
             // Clear head cache to force regeneration with new textures
             SpawnerMobHeadTexture.clearCache();
         }

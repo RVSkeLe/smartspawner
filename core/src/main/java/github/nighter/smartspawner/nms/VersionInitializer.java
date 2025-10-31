@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 /**
  * VersionInitializer is kept for future compatibility if version-specific
  * initialization is needed. Currently, all initialization is done dynamically
- * through MaterialWrapper and TextureWrapper static initializers.
+ * through MobHeadConfig.
  */
 public class VersionInitializer {
     private final SmartSpawner plugin;
@@ -24,10 +24,7 @@ public class VersionInitializer {
      */
     public void initialize() {
         plugin.debug("Server version: " + serverVersion);
-        plugin.debug("Using dynamic material and texture detection");
-        
-        // Initialize common textures (version-independent)
-        TextureWrapper.initializeCommonTextures();
+        plugin.debug("Using dynamic detection with MobHeadConfig");
         
         plugin.getLogger().info("Initialized dynamic detection for version: " + serverVersion);
     }

@@ -6,7 +6,6 @@ import github.nighter.smartspawner.api.events.SpawnerExpClaimEvent;
 import github.nighter.smartspawner.hooks.rpg.AuraSkillsIntegration;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.nms.ParticleWrapper;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
 import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
@@ -15,6 +14,7 @@ import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
 import github.nighter.smartspawner.utils.DynamicMaterialDetector;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
@@ -389,7 +389,7 @@ public class SpawnerMenuAction implements Listener {
 
             // Visual and sound effects for mending
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 0.5f, 1.0f);
-            player.spawnParticle(ParticleWrapper.VILLAGER_HAPPY, player.getLocation().add(0, 1, 0), 5);
+            player.spawnParticle(Particle.HAPPY_VILLAGER, player.getLocation().add(0, 1, 0), 5);
         }
 
         return expUsed;
