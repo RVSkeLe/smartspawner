@@ -1,0 +1,43 @@
+# SmartSpawner - Mob Head Texture Configuration
+# Players can customize mob head textures for spawner GUI
+# Supports both player heads and mob skulls
+
+# Default material for unknown mobs
+default_material: "SPAWNER"
+
+# Custom mob head configurations
+mob_heads:
+  # Vanilla Minecraft Mobs with Skulls/Heads
+  ZOMBIE:
+    material: "ZOMBIE_HEAD"
+    custom_texture: null  # Use vanilla texture
+    
+  SKELETON:
+    material: "SKELETON_SKULL"
+    custom_texture: null
+    
+  CREEPER:
+    material: "CREEPER_HEAD"
+    custom_texture: null
+    
+  WITHER_SKELETON:
+    material: "WITHER_SKELETON_SKULL"
+    custom_texture: null
+    
+  PIGLIN:
+    material: "PIGLIN_HEAD"
+    custom_texture: null
+    
+  # Custom Player Head Textures (Base64 texture value)
+  # Format: Base64 encoded texture data from minecraft-heads.com or similar
+  ENDERMAN:
+    material: "PLAYER_HEAD"
+    custom_texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTZjMGIzNmQ1M2ZmZjY5YTQ5YzdkNmY3MTg5YTg2MDMyZGQ0NzFjNjMyMTI0NGJlZDQ5NTc5ZTM1ZjA5YjUifX19"
+    
+  BLAZE:
+    material: "PLAYER_HEAD"
+    custom_texture: "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjc4ZWYyZTRjZjU4MGU1OWI0Zjk1MzBhMDFlZDhiYjY0ZjlhNGQ1OTRhZTk3MjA2ODQyZDZhNzFmMmRjODAifX19"
+    
+  # Add more custom mob heads as needed
+  # To get texture values, visit: https://minecraft-heads.com/
+  # Copy the "Value" field from the give command

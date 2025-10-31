@@ -1,13 +1,22 @@
 package github.nighter.smartspawner.nms;
 
+import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.config.MobHeadConfig;
 import org.bukkit.entity.EntityType;
 import java.util.EnumMap;
 import java.util.Map;
 
+/**
+ * Wrapper for entity textures, supporting both hardcoded textures and
+ * player-configurable custom textures from mob_heads.yml
+ */
 public class TextureWrapper {
     private static final Map<EntityType, String> TEXTURE_MAP = new EnumMap<>(EntityType.class);
-    private static final Map<EntityType, String> VERSION_SPECIFIC_TEXTURES = new EnumMap<>(EntityType.class);
+    private static MobHeadConfig mobHeadConfig;
 
+    /**
+     * Initialize common textures that work across all supported versions
+     */
     public static void initializeCommonTextures() {
         TEXTURE_MAP.put(EntityType.ALLAY, "df5de940bfe499c59ee8dac9f9c3919e7535eff3a9acb16f4842bf290f4c679f");
         TEXTURE_MAP.put(EntityType.AXOLOTL, "21c3aa0d539208b47972bf8e72f0505cdcfb8d7796b2fcf85911ce94fd0193d0");
@@ -76,20 +85,82 @@ public class TextureWrapper {
         TEXTURE_MAP.put(EntityType.ZOMBIE_HORSE, "171ce469cba4426c811f69be5d958a09bfb9b1b2bb649d3577a0c2161ad2f524");
         TEXTURE_MAP.put(EntityType.ZOMBIE_VILLAGER, "37e838ccc26776a217c678386f6a65791fe8cdab8ce9ca4ac6b28397a4d81c22");
         TEXTURE_MAP.put(EntityType.ZOMBIFIED_PIGLIN, "e935842af769380f78e8b8a88d1ea6ca2807c1e5693c2cf797456620833e936f");
+        
+        // Add version-specific textures that may exist in newer versions
+        addVersionSpecificTexturesIfExist();
     }
 
-    public static String getTexture(EntityType type) {
-        if (VERSION_SPECIFIC_TEXTURES.containsKey(type)) {
-            return VERSION_SPECIFIC_TEXTURES.get(type);
+    /**
+     * Add version-specific textures for entities that may not exist in all versions
+     */
+    private static void addVersionSpecificTexturesIfExist() {
+        try {
+            // Try to add newer mob textures, will only work if the entity exists
+            addTextureIfEntityExists("ARMADILLO", "9164ed0e0ef69b0ce7815e4300b4413a4828fcb0092918543545a418a48e0c3c");
+            addTextureIfEntityExists("BOGGED", "a3b9003ba2d05562c75119b8a62185c67130e9282f7acbac4bc2824c21eb95d9");
+            addTextureIfEntityExists("BREEZE", "a275728af7e6a29c88125b675a39d88ae9919bb61fdc200337fed6ab0c49d65c");
+            addTextureIfEntityExists("MOOSHROOM", "45603d539f666fdf0f7a0fe20b81dfef3abe6c51da34b9525a5348432c5523b2");
+            addTextureIfEntityExists("SNOW_GOLEM", "1fdfd1f7538c040258be7a91446da89ed845cc5ef728eb5e690543378fcf4");
+            addTextureIfEntityExists("CREAKING", "ac91c87bbe7f4c586e0f8b60f9b76d173a41daa302944531703be9ff4fd117f8");
+            addTextureIfEntityExists("HAPPY_GHAST", "a1a36cb93d01675c4622dd5c8d872110911ec12c372e89afa8ba03862867f6fb");
+        } catch (Exception e) {
+            // Silently ignore - these entities don't exist in this version
         }
+    }
+    
+    /**
+     * Add texture for entity type if it exists in the current version
+     */
+    private static void addTextureIfEntityExists(String entityName, String texture) {
+        try {
+            EntityType type = EntityType.valueOf(entityName);
+            TEXTURE_MAP.put(type, texture);
+        } catch (IllegalArgumentException e) {
+            // Entity doesn't exist in this version, skip it
+        }
+    }
+
+    /**
+     * Get texture for an entity type, prioritizing custom config over defaults
+     * 
+     * @param type Entity type
+     * @return Texture hash or null if not found
+     */
+    public static String getTexture(EntityType type) {
+        // Check for custom texture from config first
+        if (mobHeadConfig != null && mobHeadConfig.hasCustomTexture(type)) {
+            return mobHeadConfig.getCustomTexture(type);
+        }
+        
+        // Fall back to default texture
         return TEXTURE_MAP.get(type);
     }
 
-    public static void addVersionSpecificTexture(EntityType type, String texture) {
-        VERSION_SPECIFIC_TEXTURES.put(type, texture);
+    /**
+     * Check if texture exists for entity type
+     * 
+     * @param type Entity type
+     * @return true if texture exists
+     */
+    public static boolean hasTexture(EntityType type) {
+        return (mobHeadConfig != null && mobHeadConfig.hasCustomTexture(type)) || TEXTURE_MAP.containsKey(type);
     }
 
-    public static boolean hasTexture(EntityType type) {
-        return TEXTURE_MAP.containsKey(type) || VERSION_SPECIFIC_TEXTURES.containsKey(type);
+    /**
+     * Set the mob head config for custom textures
+     * 
+     * @param config MobHeadConfig instance
+     */
+    public static void setMobHeadConfig(MobHeadConfig config) {
+        mobHeadConfig = config;
+    }
+    
+    /**
+     * @deprecated Use dynamic texture detection instead.
+     * This method is kept for backward compatibility with version-specific modules.
+     */
+    @Deprecated
+    public static void addVersionSpecificTexture(EntityType type, String texture) {
+        TEXTURE_MAP.put(type, texture);
     }
 }

@@ -12,6 +12,7 @@ import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
+import github.nighter.smartspawner.utils.DynamicMaterialDetector;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -32,15 +33,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SpawnerMenuAction implements Listener {
-    private static final Set<Material> SPAWNER_INFO_MATERIALS = EnumSet.of(
-            Material.PLAYER_HEAD,
-            Material.SPAWNER,
-            Material.ZOMBIE_HEAD,
-            Material.SKELETON_SKULL,
-            Material.WITHER_SKELETON_SKULL,
-            Material.CREEPER_HEAD,
-            Material.PIGLIN_HEAD
-    );
+    private static final Set<Material> SPAWNER_INFO_MATERIALS = 
+        DynamicMaterialDetector.getSpawnerInfoMaterials();
     private final SmartSpawner plugin;
     private final SpawnerMenuUI spawnerMenuUI;
     private final SpawnerStackerUI spawnerStackerUI;
