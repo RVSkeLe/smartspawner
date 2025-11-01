@@ -180,6 +180,30 @@ public class HopperHandler implements Listener {
         }
     }
 
+    /**
+     * Restart hopper task for a spawner location.
+     * This is called when spawner stack size changes to ensure hopper continues working.
+     * @param spawnerLoc The location of the spawner
+     */
+    public void restartHopperForSpawner(Location spawnerLoc) {
+        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        
+        // Find hopper below the spawner
+        Block spawnerBlock = spawnerLoc.getBlock();
+        if (spawnerBlock.getType() != Material.SPAWNER) return;
+        
+        Block hopperBlock = spawnerBlock.getRelative(BlockFace.DOWN);
+        if (hopperBlock.getType() != Material.HOPPER) return;
+        
+        Location hopperLoc = hopperBlock.getLocation();
+        
+        // Stop existing hopper task if any
+        stopHopperTask(hopperLoc);
+        
+        // Start new hopper task
+        startHopperTask(hopperLoc, spawnerLoc);
+    }
+
     private void transferItems(Location hopperLoc, Location spawnerLoc) {
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
