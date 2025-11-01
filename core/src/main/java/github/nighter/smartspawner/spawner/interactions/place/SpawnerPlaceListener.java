@@ -232,7 +232,7 @@ public class SpawnerPlaceListener implements Listener {
             return;
         }
 
-        CreatureSpawner spawner = (CreatureSpawner) block.getState(false);
+        CreatureSpawner spawner = (CreatureSpawner) block.getState();
 
         if (isVanillaSpawner) {
             spawner.setSpawnedType(entityType);
@@ -245,7 +245,7 @@ public class SpawnerPlaceListener implements Listener {
                 return;
             }
 
-            CreatureSpawner delayedSpawner = (CreatureSpawner) block.getState(false);
+            CreatureSpawner delayedSpawner = (CreatureSpawner) block.getState();
             EntityType finalEntityType = getEntityType(entityType, delayedSpawner);
 
             delayedSpawner.setSpawnedType(finalEntityType);
@@ -272,7 +272,7 @@ public class SpawnerPlaceListener implements Listener {
     private void createSmartSpawner(Block block, Player player, EntityType entityType, int stackSize) {
         String spawnerId = UUID.randomUUID().toString().substring(0, 8);
 
-        BlockState state = block.getState(false);
+        BlockState state = block.getState();
         if (state instanceof CreatureSpawner spawner) {
             spawner.setSpawnedType(entityType);
             spawner.update(true, false);

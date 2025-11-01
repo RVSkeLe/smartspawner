@@ -163,7 +163,7 @@ public class SpawnerClickManager implements Listener {
 
         // Handle spawn egg usage
         if (isSpawnEgg(itemType)) {
-            spawnEggHandler.handleSpawnEggUse(player, (CreatureSpawner) block.getState(false), spawner, heldItem);
+            spawnEggHandler.handleSpawnEggUse(player, (CreatureSpawner) block.getState(), spawner, heldItem);
             return;
         }
 
