@@ -10,7 +10,6 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,15 +17,11 @@ public class SpawnerRangeChecker {
     private static final long CHECK_INTERVAL = 20L; // 1 second in ticks
     private final SmartSpawner plugin;
     private final SpawnerManager spawnerManager;
-    private final SpawnerLootGenerator spawnerLootGenerator;
-    private final Map<String, Scheduler.Task> spawnerTasks;
     private final ExecutorService executor;
 
     public SpawnerRangeChecker(SmartSpawner plugin) {
         this.plugin = plugin;
         this.spawnerManager = plugin.getSpawnerManager();
-        this.spawnerLootGenerator = plugin.getSpawnerLootGenerator();
-        this.spawnerTasks = new ConcurrentHashMap<>();
         this.executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "SmartSpawner-RangeCheck"));
         initializeRangeCheckTask();
     }
@@ -107,9 +102,10 @@ public class SpawnerRangeChecker {
     }
 
     private void cleanupRemovedSpawner(String spawnerId) {
-        Scheduler.Task task = spawnerTasks.remove(spawnerId);
-        if (task != null) {
-            task.cancel();
+        // Clear any pre-generated loot when spawner is removed
+        SpawnerData spawner = spawnerManager.getSpawnerById(spawnerId);
+        if (spawner != null) {
+            spawner.clearPreGeneratedLoot();
         }
     }
 
@@ -129,7 +125,7 @@ public class SpawnerRangeChecker {
     public void activateSpawner(SpawnerData spawner) {
         deactivateSpawner(spawner);
 
-        // Check if spawner is actually active before starting countdown
+        // Check if spawner is actually active before starting
         if (!spawner.getSpawnerActive()) {
             return;
         }
@@ -138,16 +134,6 @@ public class SpawnerRangeChecker {
         long currentTime = System.currentTimeMillis();
         spawner.setLastSpawnTime(currentTime);
 
-        // Timer manages the spawner active state - actual loot spawning triggered by SpawnerGuiViewManager
-        Scheduler.Task task = Scheduler.runTaskTimer(() -> {
-            // Verify spawner is still active on each tick
-            if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
-                return;
-            }
-        }, spawner.getSpawnDelay(), spawner.getSpawnDelay());
-
-        spawnerTasks.put(spawner.getSpawnerId(), task);
-
         // Immediately update any open GUIs to show the countdown
         if (plugin.getSpawnerGuiViewManager().hasViewers(spawner)) {
             plugin.getSpawnerGuiViewManager().updateSpawnerMenuViewers(spawner);
@@ -155,16 +141,11 @@ public class SpawnerRangeChecker {
     }
 
     public void deactivateSpawner(SpawnerData spawner) {
-        Scheduler.Task task = spawnerTasks.remove(spawner.getSpawnerId());
-        if (task != null) {
-            task.cancel();
-        }
+        // Clear any pre-generated loot when deactivating
+        spawner.clearPreGeneratedLoot();
     }
 
     public void cleanup() {
-        spawnerTasks.values().forEach(Scheduler.Task::cancel);
-        spawnerTasks.clear();
-
         executor.shutdown();
         try {
             if (!executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -176,3 +157,4 @@ public class SpawnerRangeChecker {
         }
     }
 }
+

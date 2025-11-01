@@ -41,26 +41,21 @@ public class SpawnerLootGenerator {
         try {
             // Acquire dataLock to safely read spawn timing and configuration values
             // Use tryLock with short timeout to avoid blocking
-            boolean dataLockAcquired = false;
             try {
-                dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (!spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    // dataLock is held (likely stack size change), skip this cycle
+                    return;
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
             }
-            
-            if (!dataLockAcquired) {
-                // dataLock is held (likely stack size change), skip this cycle
-                return;
-            }
-            
+
             // Declare variables outside the try block so they're accessible in the async lambda
             final long currentTime = System.currentTimeMillis();
             final long spawnTime;
-            final EntityType entityType;
             final int minMobs;
             final int maxMobs;
-            final String spawnerId;
             final AtomicInteger usedSlots;
             final AtomicInteger maxSlots;
             
@@ -81,10 +76,8 @@ public class SpawnerLootGenerator {
                 }
 
                 // Important: Store the current values we need for async processing
-                entityType = spawner.getEntityType();
                 minMobs = spawner.getMinMobs();
                 maxMobs = spawner.getMaxMobs();
-                spawnerId = spawner.getSpawnerId();
                 // Store currentTime to update lastSpawnTime after successful loot addition
                 spawnTime = currentTime;
             } finally {
@@ -289,7 +282,7 @@ public class SpawnerLootGenerator {
                 int remainingSlots = maxSlots - calculateSlots(simulatedInventory);
                 if (remainingSlots > 0) {
                     // Maximum items we can add in the remaining slots
-                    long maxAddAmount = remainingSlots * maxStackSize - (currentAmount % maxStackSize);
+                    long maxAddAmount = (long) remainingSlots * maxStackSize - (currentAmount % maxStackSize);
                     if (maxAddAmount > 0) {
                         // Create a partial item
                         ItemStack partialItem = item.clone();
@@ -348,11 +341,9 @@ public class SpawnerLootGenerator {
             Location loc = spawner.getSpawnerLocation();
             World world = loc.getWorld();
             if (world != null) {
-                Scheduler.runLocationTask(loc, () -> {
-                    world.spawnParticle(Particle.HAPPY_VILLAGER,
-                            loc.clone().add(0.5, 0.5, 0.5),
-                            10, 0.3, 0.3, 0.3, 0);
-                });
+                Scheduler.runLocationTask(loc, () -> world.spawnParticle(Particle.HAPPY_VILLAGER,
+                        loc.clone().add(0.5, 0.5, 0.5),
+                        10, 0.3, 0.3, 0.3, 0));
             }
         }
 
@@ -385,16 +376,13 @@ public class SpawnerLootGenerator {
         }
 
         try {
-            boolean dataLockAcquired = false;
             try {
-                dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (!spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    callback.onLootGenerated(Collections.emptyList(), 0);
+                    return;
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                callback.onLootGenerated(Collections.emptyList(), 0);
-                return;
-            }
-            
-            if (!dataLockAcquired) {
                 callback.onLootGenerated(Collections.emptyList(), 0);
                 return;
             }
@@ -465,15 +453,12 @@ public class SpawnerLootGenerator {
             }
 
             try {
-                boolean dataLockAcquired = false;
                 try {
-                    dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    if (!spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        return;
+                    }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    return;
-                }
-                
-                if (!dataLockAcquired) {
                     return;
                 }
 
