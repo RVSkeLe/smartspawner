@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SpawnerManager {
     private final SmartSpawner plugin;
-    private final Map<String, SpawnerData> spawners = new HashMap<>();
+    private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final Map<LocationKey, SpawnerData> locationIndex = new HashMap<>();
     private final Map<String, Set<SpawnerData>> worldIndex = new HashMap<>();
     private final SpawnerFileHandler spawnerFileHandler;
