@@ -66,7 +66,7 @@ public class SpawnerLootGenerator {
             
             try {
                 long lastSpawnTime = spawner.getLastSpawnTime();
-                long spawnDelay = spawner.getSpawnDelay();
+                long spawnDelay = spawner.getSpawnDelay() * 50L; // Convert ticks to milliseconds
 
                 if (currentTime - lastSpawnTime < spawnDelay) {
                     return;
