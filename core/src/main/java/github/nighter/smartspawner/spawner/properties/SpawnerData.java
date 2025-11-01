@@ -112,6 +112,11 @@ public class SpawnerData {
     // Sort preference for spawner storage
     @Getter @Setter
     private Material preferredSortItem;
+    
+    // CRITICAL: Pre-generated loot storage for better UX - access must be synchronized via lootGenerationLock
+    private volatile List<ItemStack> preGeneratedItems;
+    private volatile int preGeneratedExperience;
+    private volatile boolean isPreGenerating;
 
     public SpawnerData(String id, Location location, EntityType type, SmartSpawner plugin) {
         super();
@@ -602,5 +607,40 @@ public class SpawnerData {
         }
 
         return removed;
+    }
+    
+    public synchronized void storePreGeneratedLoot(List<ItemStack> items, int experience) {
+        this.preGeneratedItems = items;
+        this.preGeneratedExperience = experience;
+    }
+    
+    public synchronized List<ItemStack> getAndClearPreGeneratedItems() {
+        List<ItemStack> items = preGeneratedItems;
+        preGeneratedItems = null;
+        return items;
+    }
+    
+    public synchronized int getAndClearPreGeneratedExperience() {
+        int exp = preGeneratedExperience;
+        preGeneratedExperience = 0;
+        return exp;
+    }
+    
+    public synchronized boolean hasPreGeneratedLoot() {
+        return (preGeneratedItems != null && !preGeneratedItems.isEmpty()) || preGeneratedExperience > 0;
+    }
+    
+    public synchronized void setPreGenerating(boolean generating) {
+        this.isPreGenerating = generating;
+    }
+    
+    public synchronized boolean isPreGenerating() {
+        return isPreGenerating;
+    }
+    
+    public synchronized void clearPreGeneratedLoot() {
+        preGeneratedItems = null;
+        preGeneratedExperience = 0;
+        isPreGenerating = false;
     }
 }

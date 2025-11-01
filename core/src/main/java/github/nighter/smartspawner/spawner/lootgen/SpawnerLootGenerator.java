@@ -364,22 +364,27 @@ public class SpawnerLootGenerator {
     }
     
     /**
-     * Pre-generate loot asynchronously without adding it to the spawner.
-     * This improves UX by preparing loot before the timer expires.
+     * Pre-generates loot asynchronously for improved UX.
+     * Loot is calculated in background before timer expires, then added instantly when ready.
      * 
-     * @param spawner The spawner to generate loot for
-     * @param callback Callback to receive the generated items and experience
+     * <p>This method:
+     * <ul>
+     *   <li>Checks spawner capacity before generation</li>
+     *   <li>Generates loot asynchronously to avoid blocking</li>
+     *   <li>Invokes callback with generated items and experience</li>
+     *   <li>Handles thread-safety with proper locking</li>
+     * </ul>
+     * 
+     * @param spawner The spawner to pre-generate loot for
+     * @param callback Callback invoked with generated loot (items, experience)
      */
     public void preGenerateLoot(SpawnerData spawner, LootGenerationCallback callback) {
-        // Acquire lock to prevent concurrent generation
-        boolean lockAcquired = spawner.getLootGenerationLock().tryLock();
-        if (!lockAcquired) {
+        if (!spawner.getLootGenerationLock().tryLock()) {
             callback.onLootGenerated(Collections.emptyList(), 0);
             return;
         }
 
         try {
-            // Check if spawner is at capacity
             boolean dataLockAcquired = false;
             try {
                 dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -396,13 +401,14 @@ public class SpawnerLootGenerator {
 
             final int minMobs;
             final int maxMobs;
+            final boolean atCapacity;
             
             try {
-                // Check capacity
                 int usedSlots = spawner.getVirtualInventory().getUsedSlots();
                 int maxSlots = spawner.getMaxSpawnerLootSlots();
+                atCapacity = usedSlots >= maxSlots && spawner.getSpawnerExp() >= spawner.getMaxStoredExp();
                 
-                if (usedSlots >= maxSlots && spawner.getSpawnerExp() >= spawner.getMaxStoredExp()) {
+                if (atCapacity) {
                     callback.onLootGenerated(Collections.emptyList(), 0);
                     return;
                 }
@@ -413,17 +419,12 @@ public class SpawnerLootGenerator {
                 spawner.getDataLock().unlock();
             }
 
-            // Generate loot asynchronously
             Scheduler.runTaskAsync(() -> {
                 LootResult loot = generateLoot(minMobs, maxMobs, spawner);
-                
-                // Convert to list format for callback
-                List<ItemStack> items = new ArrayList<>();
-                if (loot.getItems() != null) {
-                    items.addAll(loot.getItems());
-                }
-                
-                callback.onLootGenerated(items, loot.getExperience());
+                callback.onLootGenerated(
+                    loot.getItems() != null ? new ArrayList<>(loot.getItems()) : Collections.emptyList(),
+                    loot.getExperience()
+                );
             });
         } finally {
             spawner.getLootGenerationLock().unlock();
@@ -431,113 +432,128 @@ public class SpawnerLootGenerator {
     }
     
     /**
-     * Add pre-generated loot to the spawner immediately.
-     * This is called when the timer expires and loot has been pre-generated.
+     * Adds pre-generated loot to spawner instantly when timer expires.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Validates pre-generated loot is not empty</li>
+     *   <li>Rechecks capacity (may have changed since pre-generation)</li>
+     *   <li>Adds items and experience to spawner</li>
+     *   <li>Updates lastSpawnTime to maintain cycle timing</li>
+     *   <li>Triggers GUI updates and marks spawner for persistence</li>
+     * </ul>
+     * 
+     * <p><b>Thread Safety:</b> All Bukkit API calls are scheduled on main thread via Scheduler.runLocationTask
      * 
      * @param spawner The spawner to add loot to
-     * @param items Pre-generated items
-     * @param experience Pre-generated experience
+     * @param items Pre-generated items list
+     * @param experience Pre-generated experience amount
      */
     public void addPreGeneratedLoot(SpawnerData spawner, List<ItemStack> items, int experience) {
-        if (items == null || (items.isEmpty() && experience == 0)) {
+        if ((items == null || items.isEmpty()) && experience == 0) {
             return;
         }
 
-        // Acquire lock
-        boolean lockAcquired = spawner.getLootGenerationLock().tryLock();
-        if (!lockAcquired) {
+        Location spawnerLocation = spawner.getSpawnerLocation();
+        if (spawnerLocation == null) {
             return;
         }
 
-        try {
-            boolean dataLockAcquired = false;
-            try {
-                dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-            
-            if (!dataLockAcquired) {
+        Scheduler.runLocationTask(spawnerLocation, () -> {
+            if (!spawner.getLootGenerationLock().tryLock()) {
                 return;
             }
 
-            final long spawnTime = System.currentTimeMillis();
-            final AtomicInteger usedSlots;
-            final AtomicInteger maxSlots;
-            
             try {
-                usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
-                maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
-                
-                // Recheck capacity (in case it changed since pre-generation)
-                if (usedSlots.get() >= maxSlots.get() && spawner.getSpawnerExp() >= spawner.getMaxStoredExp()) {
+                boolean dataLockAcquired = false;
+                try {
+                    dataLockAcquired = spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     return;
                 }
-            } finally {
-                spawner.getDataLock().unlock();
-            }
-
-            // Add items and exp to spawner
-            Scheduler.runTaskAsync(() -> {
-                boolean changed = false;
                 
-                // Add experience
-                if (experience > 0) {
-                    int added = spawner.addExperience(experience);
-                    if (added > 0) {
-                        changed = true;
-                    }
+                if (!dataLockAcquired) {
+                    return;
                 }
 
-                // Add items
-                if (!items.isEmpty()) {
-                    List<ItemStack> itemsToAdd = new ArrayList<>();
-                    for (ItemStack item : items) {
-                        if (item != null && item.getType() != Material.AIR) {
-                            itemsToAdd.add(item.clone());
+                final long spawnTime = System.currentTimeMillis();
+                final boolean capacityCheck;
+                
+                try {
+                    int usedSlots = spawner.getVirtualInventory().getUsedSlots();
+                    int maxSlots = spawner.getMaxSpawnerLootSlots();
+                    capacityCheck = usedSlots >= maxSlots && spawner.getSpawnerExp() >= spawner.getMaxStoredExp();
+                    
+                    if (capacityCheck) {
+                        return;
+                    }
+                } finally {
+                    spawner.getDataLock().unlock();
+                }
+
+                Scheduler.runTaskAsync(() -> {
+                    boolean changed = false;
+                    
+                    if (experience > 0 && spawner.getSpawnerExp() < spawner.getMaxStoredExp()) {
+                        int currentExp = spawner.getSpawnerExp();
+                        int maxExp = spawner.getMaxStoredExp();
+                        int newExp = Math.min(currentExp + experience, maxExp);
+                        
+                        if (newExp != currentExp) {
+                            spawner.setSpawnerExp(newExp);
+                            changed = true;
                         }
                     }
 
-                    if (!itemsToAdd.isEmpty()) {
-                        spawner.addItemsAndUpdateSellValue(itemsToAdd);
-                        changed = true;
+                    if (items != null && !items.isEmpty()) {
+                        List<ItemStack> validItems = new ArrayList<>();
+                        for (ItemStack item : items) {
+                            if (item != null && item.getType() != Material.AIR) {
+                                validItems.add(item.clone());
+                            }
+                        }
+
+                        if (!validItems.isEmpty()) {
+                            spawner.addItemsAndUpdateSellValue(validItems);
+                            changed = true;
+                        }
                     }
-                }
 
-                if (!changed) {
-                    return;
-                }
-
-                // Update lastSpawnTime after successful addition
-                boolean updateLockAcquired = spawner.getDataLock().tryLock();
-                if (updateLockAcquired) {
-                    try {
-                        spawner.setLastSpawnTime(spawnTime);
-                    } finally {
-                        spawner.getDataLock().unlock();
+                    if (!changed) {
+                        return;
                     }
-                }
 
-                // Update capacity status
-                spawner.updateCapacityStatus();
+                    if (spawner.getDataLock().tryLock()) {
+                        try {
+                            spawner.setLastSpawnTime(spawnTime);
+                        } finally {
+                            spawner.getDataLock().unlock();
+                        }
+                    }
 
-                // Update GUIs
-                handleGuiUpdates(spawner);
-
-                // Mark for saving
-                spawnerManager.markSpawnerModified(spawner.getSpawnerId());
-            });
-        } finally {
-            spawner.getLootGenerationLock().unlock();
-        }
+                    spawner.updateCapacityStatus();
+                    handleGuiUpdates(spawner);
+                    spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+                });
+            } finally {
+                spawner.getLootGenerationLock().unlock();
+            }
+        });
     }
     
     /**
-     * Callback interface for pre-generation
+     * Callback interface for asynchronous loot pre-generation.
+     * Invoked when loot generation completes with the generated items and experience.
      */
     @FunctionalInterface
     public interface LootGenerationCallback {
+        /**
+         * Called when loot generation completes.
+         * 
+         * @param items Generated items list (never null, may be empty)
+         * @param experience Generated experience amount
+         */
         void onLootGenerated(List<ItemStack> items, int experience);
     }
 }
