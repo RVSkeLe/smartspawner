@@ -204,7 +204,6 @@ public class HopperHandler implements Listener {
         startHopperTask(hopperLoc, spawnerLoc);
     }
 
-
     private void transferItems(Location hopperLoc, Location spawnerLoc) {
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
@@ -215,7 +214,7 @@ public class HopperHandler implements Listener {
 
         try {
             VirtualInventory virtualInv = spawner.getVirtualInventory();
-            Hopper hopper = (Hopper) hopperLoc.getBlock().getState();
+            Hopper hopper = (Hopper) hopperLoc.getBlock().getState(false);
 
             int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
             int transferred = 0;

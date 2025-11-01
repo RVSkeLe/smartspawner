@@ -54,6 +54,16 @@ public class EntityLootRegistry {
                 continue;
             }
 
+            // Validate entity type exists in current version
+            EntityType entityType;
+            try {
+                entityType = EntityType.valueOf(entityName.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Entity type '" + entityName + "' is not available in server version " +
+                        plugin.getServer().getBukkitVersion() + " - skipping");
+                continue;
+            }
+
             ConfigurationSection entitySection = lootConfig.getConfigurationSection(entityName);
             if (entitySection == null) continue;
 
