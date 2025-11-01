@@ -198,6 +198,10 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
+        setStackSize(stackSize, true);
+    }
+
+    public void setStackSize(int stackSize, boolean restartHopper) {
         // Acquire locks in consistent order to prevent deadlocks:
         // 1. dataLock - for metadata changes
         // 2. inventoryLock - to prevent inventory operations during virtual inventory replacement
@@ -206,7 +210,7 @@ public class SpawnerData {
         try {
             inventoryLock.lock();
             try {
-                updateStackSize(stackSize);
+                updateStackSize(stackSize, restartHopper);
             } finally {
                 inventoryLock.unlock();
             }
@@ -215,7 +219,7 @@ public class SpawnerData {
         }
     }
 
-    private void updateStackSize(int newStackSize) {
+    private void updateStackSize(int newStackSize, boolean restartHopper) {
         if (newStackSize <= 0) {
             this.stackSize = 1;
             plugin.getLogger().warning("Invalid stack size. Setting to 1");
@@ -251,7 +255,8 @@ public class SpawnerData {
 
         // Restart hopper task if hopper integration is enabled
         // This ensures hopper continues to work after stack size changes
-        if (plugin.getHopperHandler() != null) {
+        // Skip during batch loading to avoid performance bottleneck
+        if (restartHopper && plugin.getHopperHandler() != null) {
             plugin.getHopperHandler().restartHopperForSpawner(this.spawnerLocation);
         }
     }
