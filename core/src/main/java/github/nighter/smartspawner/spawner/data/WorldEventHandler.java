@@ -149,13 +149,6 @@ public class WorldEventHandler implements Listener {
         
         // Initialize chunk spawner limits after spawners are loaded
         plugin.getChunkSpawnerLimiter().reloadConfig();
-        
-        // Restart all hoppers after batch loading is complete
-        // This is more efficient than restarting hopper for each spawner individually
-        if (loadedCount > 0 && plugin.getHopperHandler() != null) {
-            plugin.getHopperHandler().restartAllHoppers();
-            plugin.debug("Restarted all hoppers after batch spawner load");
-        }
     }
 
     /**
@@ -192,11 +185,10 @@ public class WorldEventHandler implements Listener {
             
             // Reinitialize chunk spawner limits after loading pending spawners
             plugin.getChunkSpawnerLimiter().reloadConfig();
-            
+
             // Restart hoppers for the spawners in this world
             if (plugin.getHopperHandler() != null) {
                 plugin.getHopperHandler().restartAllHoppers();
-                plugin.debug("Restarted hoppers after loading pending spawners for world: " + worldName);
             }
         }
     }
