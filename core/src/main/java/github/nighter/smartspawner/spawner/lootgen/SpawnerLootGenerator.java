@@ -65,13 +65,9 @@ public class SpawnerLootGenerator {
             final AtomicInteger maxSlots;
             
             try {
-                long lastSpawnTime = spawner.getLastSpawnTime();
-                long spawnDelay = spawner.getSpawnDelay() * 50L; // Convert ticks to milliseconds
-
-                if (currentTime - lastSpawnTime < spawnDelay) {
-                    return;
-                }
-
+                // Timing is now managed by SpawnerRangeChecker (timer) and SpawnerGuiViewManager (spawn trigger)
+                // No need for time check here since spawn is only called when timer expires
+                
                 // Get exact inventory slot usage
                 usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
                 maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());

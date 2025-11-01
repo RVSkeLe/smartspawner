@@ -1346,7 +1346,7 @@ public class SpawnerGuiViewManager implements Listener {
         // Ensure we don't go below 0 or above the delay
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));
 
-        // If the timer has expired, handle spawn timing
+        // If the timer has expired, trigger loot spawn
         if (timeUntilNextSpawn <= 0) {
             try {
                 // Try to acquire dataLock with timeout to prevent deadlock
@@ -1358,15 +1358,13 @@ public class SpawnerGuiViewManager implements Listener {
                         timeElapsed = currentTime - lastSpawnTime;
 
                         if (timeElapsed >= cachedDelay) {
-                            // Update last spawn time to current time for next cycle
-                            spawner.setLastSpawnTime(currentTime);
-
                             // Get the spawner location to schedule on the right region
                             Location spawnerLocation = spawner.getSpawnerLocation();
                             if (spawnerLocation != null) {
-                                // Schedule activation on the appropriate region thread for Folia compatibility
+                                // Schedule loot spawn on the appropriate region thread for Folia compatibility
+                                // SpawnerRangeChecker manages the timer, SpawnerGuiViewManager triggers the spawn
                                 Scheduler.runLocationTask(spawnerLocation, () -> {
-                                    plugin.getRangeChecker().activateSpawner(spawner);
+                                    plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
                                 });
                             }
                             return cachedDelay; // Start new cycle with full delay
