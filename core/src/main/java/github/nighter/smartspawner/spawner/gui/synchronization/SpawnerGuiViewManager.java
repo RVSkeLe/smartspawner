@@ -1345,11 +1345,20 @@ public class SpawnerGuiViewManager implements Listener {
         
         if (timeUntilNextSpawn > 0 && timeUntilNextSpawn <= PRE_GENERATION_THRESHOLD) {
             if (!spawner.isPreGenerating() && !spawner.hasPreGeneratedLoot()) {
+                if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                    return timeUntilNextSpawn;
+                }
+                
                 spawner.setPreGenerating(true);
                 
                 Location spawnerLocation = spawner.getSpawnerLocation();
                 if (spawnerLocation != null) {
                     Scheduler.runLocationTask(spawnerLocation, () -> {
+                        if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                            spawner.setPreGenerating(false);
+                            return;
+                        }
+                        
                         plugin.getSpawnerLootGenerator().preGenerateLoot(spawner, (items, experience) -> {
                             spawner.storePreGeneratedLoot(items, experience);
                             spawner.setPreGenerating(false);
@@ -1368,9 +1377,19 @@ public class SpawnerGuiViewManager implements Listener {
                         timeElapsed = currentTime - lastSpawnTime;
 
                         if (timeElapsed >= cachedDelay) {
+                            if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                spawner.clearPreGeneratedLoot();
+                                return cachedDelay;
+                            }
+                            
                             Location spawnerLocation = spawner.getSpawnerLocation();
                             if (spawnerLocation != null) {
                                 Scheduler.runLocationTask(spawnerLocation, () -> {
+                                    if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                        spawner.clearPreGeneratedLoot();
+                                        return;
+                                    }
+                                    
                                     if (spawner.hasPreGeneratedLoot()) {
                                         List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
                                         int exp = spawner.getAndClearPreGeneratedExperience();
