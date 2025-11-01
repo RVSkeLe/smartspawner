@@ -1,19 +1,11 @@
 package github.nighter.smartspawner.spawner.config;
 
 import github.nighter.smartspawner.SmartSpawner;
-import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.TooltipDisplay;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.profile.PlayerTextures;
 import org.bukkit.profile.PlayerProfile;
@@ -21,14 +13,11 @@ import org.bukkit.profile.PlayerProfile;
 import java.net.URL;
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public class SpawnerMobHeadTexture {
     private static final Map<EntityType, ItemStack> HEAD_CACHE = new EnumMap<>(EntityType.class);
-    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
-        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
-    );
+    private static final ItemStack DEFAULT_SPAWNER_BLOCK = new ItemStack(Material.SPAWNER);
 
     private static boolean isBedrockPlayer(Player player) {
         SmartSpawner plugin = SmartSpawner.getInstance();
@@ -39,18 +28,13 @@ public class SpawnerMobHeadTexture {
         return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);
     }
 
-    private static void hideTooltip(ItemStack item) {
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
-            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
-    }
-
     public static ItemStack getCustomHead(EntityType entityType, Player player) {
         if (entityType == null) {
-            return createItemStack(Material.SPAWNER);
+            return DEFAULT_SPAWNER_BLOCK;
         }
         
         if (isBedrockPlayer(player)) {
-            return new ItemStack(getMaterialForEntity(entityType));
+            return DEFAULT_SPAWNER_BLOCK;
         }
         
         return getCustomHead(entityType);
@@ -58,17 +42,17 @@ public class SpawnerMobHeadTexture {
 
     public static ItemStack getCustomHead(EntityType entityType) {
         if (entityType == null) {
-            return createItemStack(Material.SPAWNER);
+            return DEFAULT_SPAWNER_BLOCK;
         }
         
         SmartSpawner plugin = SmartSpawner.getInstance();
         if (plugin == null) {
-            return createItemStack(Material.SPAWNER);
+            return DEFAULT_SPAWNER_BLOCK;
         }
         
         MobHeadConfig mobHeadConfig = plugin.getMobHeadConfig();
         if (mobHeadConfig == null) {
-            return createItemStack(Material.SPAWNER);
+            return DEFAULT_SPAWNER_BLOCK;
         }
         
         // Get material from config
@@ -104,25 +88,8 @@ public class SpawnerMobHeadTexture {
             return head;
         } catch (Exception e) {
             e.printStackTrace();
-            return createItemStack(material);
+            return new ItemStack(material);
         }
-    }
-
-    private static Material getMaterialForEntity(EntityType entityType) {
-        SmartSpawner plugin = SmartSpawner.getInstance();
-        if (plugin != null && plugin.getMobHeadConfig() != null) {
-            return plugin.getMobHeadConfig().getMaterial(entityType);
-        }
-        return Material.SPAWNER;
-    }
-
-    public static ItemStack createItemStack(Material material) {
-        ItemStack itemStack = new ItemStack(material);
-        ItemMeta meta = itemStack.getItemMeta();
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
-        itemStack.setItemMeta(meta);
-        hideTooltip(itemStack);
-        return itemStack;
     }
 
     public static void clearCache() {

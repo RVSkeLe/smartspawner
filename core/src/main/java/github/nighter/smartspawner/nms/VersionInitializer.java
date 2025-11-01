@@ -24,8 +24,5 @@ public class VersionInitializer {
      */
     public void initialize() {
         plugin.debug("Server version: " + serverVersion);
-        plugin.debug("Using dynamic detection with MobHeadConfig");
-        
-        plugin.getLogger().info("Initialized dynamic detection for version: " + serverVersion);
     }
 }
