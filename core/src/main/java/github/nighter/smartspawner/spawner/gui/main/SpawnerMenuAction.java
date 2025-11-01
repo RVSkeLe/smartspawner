@@ -31,8 +31,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SpawnerMenuAction implements Listener {
-    // Spawner info materials - manually defined to avoid Material.values() iteration
-    // which can trigger CraftLegacy initialization
     private static final Set<Material> SPAWNER_INFO_MATERIALS = Set.of(
         Material.PLAYER_HEAD,
         Material.SPAWNER,

@@ -180,11 +180,6 @@ public class HopperHandler implements Listener {
         }
     }
 
-    /**
-     * Restart hopper task for a spawner location.
-     * This is called when spawner stack size changes to ensure hopper continues working.
-     * @param spawnerLoc The location of the spawner
-     */
     public void restartHopperForSpawner(Location spawnerLoc) {
         if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
         

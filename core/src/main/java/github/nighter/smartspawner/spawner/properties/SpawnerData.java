@@ -98,6 +98,11 @@ public class SpawnerData {
     // Accumulated sell value for optimization
     @Getter
     private volatile double accumulatedSellValue;
+    /**
+     * -- GETTER --
+     *  Checks if sell value needs recalculation
+     */
+    @Getter
     private volatile boolean sellValueDirty;
 
     private SpawnerHologram hologram;
@@ -567,13 +572,6 @@ public class SpawnerData {
         }
 
         return key.toString();
-    }
-
-    /**
-     * Checks if sell value needs recalculation
-     */
-    public boolean isSellValueDirty() {
-        return sellValueDirty;
     }
 
     /**
