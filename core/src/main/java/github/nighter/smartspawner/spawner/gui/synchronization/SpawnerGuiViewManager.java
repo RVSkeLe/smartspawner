@@ -90,6 +90,8 @@ public class SpawnerGuiViewManager implements Listener {
     
     // Cache for storage title format to avoid repeated language lookups
     private String cachedStorageTitleFormat = null;
+    
+    private static final long PRE_GENERATION_THRESHOLD = 2000L;
 
     // Static class to hold viewer info more efficiently
     private static class SpawnerViewerInfo {
@@ -1320,7 +1322,6 @@ public class SpawnerGuiViewManager implements Listener {
     }
 
     private long calculateTimeUntilNextSpawn(SpawnerData spawner) {
-        // Cache spawn delay calculation outside of lock
         long cachedDelay = spawner.getCachedSpawnDelay();
         if (cachedDelay == 0) {
             cachedDelay = spawner.getSpawnDelay() * 50L;
@@ -1331,45 +1332,75 @@ public class SpawnerGuiViewManager implements Listener {
         long lastSpawnTime = spawner.getLastSpawnTime();
         long timeElapsed = currentTime - lastSpawnTime;
 
-        // Check if spawner is truly inactive (not just in initial stopped state)
-        // This mirrors the logic from SpawnerMenuUI.calculateInitialTimerValue() to ensure consistency
-        // between initial display and ongoing timer updates
         boolean isSpawnerInactive = !spawner.getSpawnerActive() ||
-            (spawner.getSpawnerStop().get() && timeElapsed > cachedDelay * 2); // Only inactive if stopped for more than 2 cycles
+            (spawner.getSpawnerStop().get() && timeElapsed > cachedDelay * 2);
 
         if (isSpawnerInactive) {
+            spawner.clearPreGeneratedLoot();
             return -1;
         }
 
         long timeUntilNextSpawn = cachedDelay - timeElapsed;
-
-        // Ensure we don't go below 0 or above the delay
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));
+        
+        if (timeUntilNextSpawn > 0 && timeUntilNextSpawn <= PRE_GENERATION_THRESHOLD) {
+            if (!spawner.isPreGenerating() && !spawner.hasPreGeneratedLoot()) {
+                if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                    return timeUntilNextSpawn;
+                }
+                
+                spawner.setPreGenerating(true);
+                
+                Location spawnerLocation = spawner.getSpawnerLocation();
+                if (spawnerLocation != null) {
+                    Scheduler.runLocationTask(spawnerLocation, () -> {
+                        if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                            spawner.setPreGenerating(false);
+                            return;
+                        }
+                        
+                        plugin.getSpawnerLootGenerator().preGenerateLoot(spawner, (items, experience) -> {
+                            spawner.storePreGeneratedLoot(items, experience);
+                            spawner.setPreGenerating(false);
+                        });
+                    });
+                }
+            }
+        }
 
-        // If the timer has expired, handle spawn timing
         if (timeUntilNextSpawn <= 0) {
             try {
-                // Try to acquire dataLock with timeout to prevent deadlock
                 if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {
                     try {
-                        // Re-check timing after acquiring lock
                         currentTime = System.currentTimeMillis();
                         lastSpawnTime = spawner.getLastSpawnTime();
                         timeElapsed = currentTime - lastSpawnTime;
 
                         if (timeElapsed >= cachedDelay) {
-                            // Update last spawn time to current time for next cycle
-                            spawner.setLastSpawnTime(currentTime);
-
-                            // Get the spawner location to schedule on the right region
+                            if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                spawner.clearPreGeneratedLoot();
+                                return cachedDelay;
+                            }
+                            
                             Location spawnerLocation = spawner.getSpawnerLocation();
                             if (spawnerLocation != null) {
-                                // Schedule activation on the appropriate region thread for Folia compatibility
                                 Scheduler.runLocationTask(spawnerLocation, () -> {
-                                    plugin.getRangeChecker().activateSpawner(spawner);
+                                    if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                        spawner.clearPreGeneratedLoot();
+                                        return;
+                                    }
+                                    
+                                    if (spawner.hasPreGeneratedLoot()) {
+                                        List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
+                                        int exp = spawner.getAndClearPreGeneratedExperience();
+                                        plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
+                                    } else {
+                                        plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
+                                    }
                                 });
                             }
-                            return cachedDelay; // Start new cycle with full delay
+                            
+                            return cachedDelay;
                         }
 
                         return cachedDelay - timeElapsed;
@@ -1377,13 +1408,11 @@ public class SpawnerGuiViewManager implements Listener {
                         spawner.getDataLock().unlock();
                     }
                 } else {
-                    // If can't acquire lock, return minimal time to try again soon
-                    return 1000; // 1 second
+                    return 1000;
                 }
             } catch (InterruptedException e) {
-                // Handle interruption
                 Thread.currentThread().interrupt();
-                return 1000; // 1 second
+                return 1000;
             }
         }
 
