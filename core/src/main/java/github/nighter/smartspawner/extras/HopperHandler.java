@@ -265,14 +265,17 @@ public class HopperHandler implements Listener {
             Hopper hopper = (Hopper) hopperBlock.getState(false);
             if (hopper == null) return;
 
-            int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
-            int transferred = 0;
-            boolean inventoryChanged = false;
-
             Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
             if (displayItems == null || displayItems.isEmpty()) return;
 
-            List<ItemStack> itemsToRemove = new ArrayList<>();
+            int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
+            
+            org.bukkit.inventory.Inventory hopperInv = hopper.getInventory();
+            ItemStack[] hopperContents = hopperInv.getContents();
+            
+            List<ItemStack> itemsToRemove = new ArrayList<>(itemsPerTransfer);
+            int transferred = 0;
+            boolean inventoryChanged = false;
 
             for (Map.Entry<Integer, ItemStack> entry : displayItems.entrySet()) {
                 if (transferred >= itemsPerTransfer) break;
@@ -280,31 +283,35 @@ public class HopperHandler implements Listener {
                 ItemStack item = entry.getValue();
                 if (item == null || item.getType() == Material.AIR) continue;
 
-                ItemStack[] hopperContents = hopper.getInventory().getContents();
-                for (int i = 0; i < hopperContents.length; i++) {
-                    if (transferred >= itemsPerTransfer) break;
-
+                boolean itemTransferred = false;
+                for (int i = 0; i < hopperContents.length && !itemTransferred; i++) {
                     ItemStack hopperItem = hopperContents[i];
+                    
                     if (hopperItem == null || hopperItem.getType() == Material.AIR) {
-                        hopper.getInventory().setItem(i, item.clone());
+                        hopperInv.setItem(i, item.clone());
+                        hopperContents[i] = hopperInv.getItem(i);
                         itemsToRemove.add(item);
                         transferred++;
                         inventoryChanged = true;
-                        break;
-                    } else if (hopperItem.isSimilar(item) &&
-                            hopperItem.getAmount() < hopperItem.getMaxStackSize()) {
-                        int space = hopperItem.getMaxStackSize() - hopperItem.getAmount();
-                        int toTransfer = Math.min(space, item.getAmount());
+                        itemTransferred = true;
+                    } else if (hopperItem.isSimilar(item)) {
+                        int currentAmount = hopperItem.getAmount();
+                        int maxStackSize = hopperItem.getMaxStackSize();
+                        
+                        if (currentAmount < maxStackSize) {
+                            int space = maxStackSize - currentAmount;
+                            int toTransfer = Math.min(space, item.getAmount());
 
-                        hopperItem.setAmount(hopperItem.getAmount() + toTransfer);
+                            hopperItem.setAmount(currentAmount + toTransfer);
 
-                        ItemStack toRemove = item.clone();
-                        toRemove.setAmount(toTransfer);
-                        itemsToRemove.add(toRemove);
+                            ItemStack toRemove = item.clone();
+                            toRemove.setAmount(toTransfer);
+                            itemsToRemove.add(toRemove);
 
-                        transferred++;
-                        inventoryChanged = true;
-                        break;
+                            transferred++;
+                            inventoryChanged = true;
+                            itemTransferred = true;
+                        }
                     }
                 }
             }
