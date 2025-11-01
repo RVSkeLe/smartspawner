@@ -3,6 +3,12 @@ package github.nighter.smartspawner.commands.list.gui.adminstacker;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.language.LanguageManager;
+import io.papermc.paper.datacomponent.DataComponentType;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -13,11 +19,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.Arrays;
 
-/**
- * Admin version of the spawner stacker GUI that doesn't require actual spawner items
- */
 public class AdminStackerUI {
     private static final int GUI_SIZE = 27;
     private static final int[] DECREASE_SLOTS = {9, 10, 11};
@@ -25,6 +29,9 @@ public class AdminStackerUI {
     private static final int SPAWNER_INFO_SLOT = 13;
     private static final int BACK_SLOT = 22;
     private static final int[] STACK_AMOUNTS = {64, 10, 1};
+    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
+        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
+    );
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
@@ -38,42 +45,28 @@ public class AdminStackerUI {
         if (player == null || spawner == null) {
             return;
         }
-
         String title = languageManager.getGuiTitle("gui_title_stacker");
         Inventory gui = Bukkit.createInventory(new AdminStackerHolder(spawner, worldName, listPage), GUI_SIZE, title);
-
-        // Fill GUI with modifier buttons and spawner info
         populateStackerGui(gui, spawner);
-
         player.openInventory(gui);
     }
 
     private void populateStackerGui(Inventory gui, SpawnerData spawner) {
-        // Add decrease buttons
         for (int i = 0; i < STACK_AMOUNTS.length; i++) {
             gui.setItem(DECREASE_SLOTS[i], createActionButton("remove", spawner, STACK_AMOUNTS[i]));
         }
-
-        // Add increase buttons
         for (int i = 0; i < STACK_AMOUNTS.length; i++) {
             gui.setItem(INCREASE_SLOTS[i], createActionButton("add", spawner, STACK_AMOUNTS[i]));
         }
-
-        // Add spawner info button
         gui.setItem(SPAWNER_INFO_SLOT, createSpawnerInfoButton(spawner));
-        
-        // Add back button to return to management GUI
         gui.setItem(BACK_SLOT, createBackButton());
     }
 
     private ItemStack createActionButton(String action, SpawnerData spawner, int amount) {
         Map<String, String> placeholders = createPlaceholders(spawner, amount);
-
         String name = languageManager.getGuiItemName("button_" + action + ".name", placeholders);
         String[] lore = languageManager.getGuiItemLore("button_" + action + ".lore", placeholders);
-
         Material material = action.equals("add") ? Material.LIME_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE;
-
         ItemStack button = createButton(material, name, lore);
         button.setAmount(Math.max(1, Math.min(amount, 64)));
         return button;
@@ -81,17 +74,14 @@ public class AdminStackerUI {
 
     private ItemStack createSpawnerInfoButton(SpawnerData spawner) {
         Map<String, String> placeholders = createPlaceholders(spawner, 0);
-
         String name = languageManager.getGuiItemName("button_spawner.name", placeholders);
         String[] lore = languageManager.getGuiItemLore("button_spawner.lore", placeholders);
-
         return createButton(Material.SPAWNER, name, lore);
     }
     
     private ItemStack createBackButton() {
         String name = languageManager.getGuiItemName("spawner_management.back.name");
         String[] lore = languageManager.getGuiItemLore("spawner_management.back.lore");
-        
         return createButton(Material.RED_STAINED_GLASS_PANE, name, lore);
     }
 
@@ -106,20 +96,23 @@ public class AdminStackerUI {
         return placeholders;
     }
 
+    private static void hideTooltip(ItemStack item) {
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
+            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
+    }
+
     private ItemStack createButton(Material material, String name, String[] lore) {
         ItemStack button = new ItemStack(material);
         ItemMeta meta = button.getItemMeta();
-
         if (meta != null) {
             meta.setDisplayName(name);
             if (lore != null && lore.length > 0) {
                 meta.setLore(Arrays.asList(lore));
             }
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,
-                    ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_UNBREAKABLE);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             button.setItemMeta(meta);
         }
-
+        hideTooltip(button);
         return button;
     }
 }

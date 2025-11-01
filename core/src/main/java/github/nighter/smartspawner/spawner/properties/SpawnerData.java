@@ -27,8 +27,16 @@ public class SpawnerData {
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
+    
+    // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
+    @Getter
+    private final ReentrantLock lootGenerationLock = new ReentrantLock();  // For loot spawning
+    @Getter
+    private final ReentrantLock sellLock = new ReentrantLock();  // For selling operations
+    @Getter
+    private final ReentrantLock dataLock = new ReentrantLock();  // For metadata changes (exp, stack size, etc.)
 
     // Base values from config (immutable after load)
     private int baseMaxStoredExp;
@@ -90,6 +98,11 @@ public class SpawnerData {
     // Accumulated sell value for optimization
     @Getter
     private volatile double accumulatedSellValue;
+    /**
+     * -- GETTER --
+     *  Checks if sell value needs recalculation
+     */
+    @Getter
     private volatile boolean sellValueDirty;
 
     private SpawnerHologram hologram;
@@ -185,15 +198,28 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
-        lock.lock();
+        setStackSize(stackSize, true);
+    }
+
+    public void setStackSize(int stackSize, boolean restartHopper) {
+        // Acquire locks in consistent order to prevent deadlocks:
+        // 1. dataLock - for metadata changes
+        // 2. inventoryLock - to prevent inventory operations during virtual inventory replacement
+        // Note: We don't acquire lootGenerationLock here to avoid blocking loot generation cycles
+        dataLock.lock();
         try {
-            updateStackSize(stackSize);
+            inventoryLock.lock();
+            try {
+                updateStackSize(stackSize, restartHopper);
+            } finally {
+                inventoryLock.unlock();
+            }
         } finally {
-            lock.unlock();
+            dataLock.unlock();
         }
     }
 
-    private void updateStackSize(int newStackSize) {
+    private void updateStackSize(int newStackSize, boolean restartHopper) {
         if (newStackSize <= 0) {
             this.stackSize = 1;
             plugin.getLogger().warning("Invalid stack size. Setting to 1");
@@ -215,6 +241,7 @@ public class SpawnerData {
         transferItemsToNewInventory(currentItems, newInventory);
         this.virtualInventory = newInventory;
 
+        // Reset lastSpawnTime to prevent exploit where players break spawners to trigger immediate loot
         this.lastSpawnTime = System.currentTimeMillis();
         updateHologramData();
 
@@ -224,6 +251,13 @@ public class SpawnerData {
         }
         if (plugin.getSpawnerMenuFormUI() != null) {
             plugin.getSpawnerMenuFormUI().invalidateSpawnerCache(this.spawnerId);
+        }
+
+        // Restart hopper task if hopper integration is enabled
+        // This ensures hopper continues to work after stack size changes
+        // Skip during batch loading to avoid performance bottleneck
+        if (restartHopper && plugin.getHopperHandler() != null) {
+            plugin.getHopperHandler().restartHopperForSpawner(this.spawnerLocation);
         }
     }
 
@@ -543,13 +577,6 @@ public class SpawnerData {
         }
 
         return key.toString();
-    }
-
-    /**
-     * Checks if sell value needs recalculation
-     */
-    public boolean isSellValueDirty() {
-        return sellValueDirty;
     }
 
     /**

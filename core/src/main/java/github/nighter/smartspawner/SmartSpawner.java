@@ -1,8 +1,6 @@
 package github.nighter.smartspawner;
 
-import github.nighter.smartspawner.api.SmartSpawnerAPI;
-import github.nighter.smartspawner.api.SmartSpawnerPlugin;
-import github.nighter.smartspawner.api.SmartSpawnerAPIImpl;
+import github.nighter.smartspawner.api.*;
 import github.nighter.smartspawner.bstats.Metrics;
 import github.nighter.smartspawner.commands.BrigadierCommandManager;
 import github.nighter.smartspawner.commands.list.ListSubCommand;
@@ -12,10 +10,10 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
+import github.nighter.smartspawner.spawner.config.MobHeadConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
-import github.nighter.smartspawner.logging.SpawnerEventType;
 import github.nighter.smartspawner.spawner.natural.NaturalSpawnerListener;
 import github.nighter.smartspawner.utils.TimeFormatter;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
@@ -44,23 +42,22 @@ import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
-import github.nighter.smartspawner.spawner.utils.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerLootGenerator;
-import github.nighter.smartspawner.spawner.events.WorldEventHandler;
+import github.nighter.smartspawner.spawner.data.WorldEventHandler;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.updates.ConfigUpdater;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.updates.LanguageUpdater;
 import github.nighter.smartspawner.updates.UpdateChecker;
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -83,6 +80,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
+    private MobHeadConfig mobHeadConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -230,6 +228,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageManager = new LanguageManager(this);
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
+        
+        // Initialize mob head config
+        this.mobHeadConfig = new MobHeadConfig(this);
+        this.mobHeadConfig.load();
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -382,6 +384,13 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         spawnerMenuAction.reload();
         timeFormatter.clearCache();
         
+        // Reload mob head config
+        if (mobHeadConfig != null) {
+            mobHeadConfig.reload();
+            // Clear head cache to force regeneration with new textures
+            SpawnerMobHeadTexture.clearCache();
+        }
+        
         // Reload logging system
         loggingConfig.loadConfig();
         spawnerActionLogger.shutdown();
@@ -446,15 +455,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             return false;
         }
         return itemPriceManager.hasSellIntegration();
-    }
-
-    public boolean hasShopIntegration() {
-        if (itemPriceManager == null) {
-            return false;
-        }
-
-        return itemPriceManager.getShopIntegrationManager() != null &&
-                itemPriceManager.getShopIntegrationManager().hasActiveProvider();
     }
 
     public long getTimeFromConfig(String path, String defaultValue) {

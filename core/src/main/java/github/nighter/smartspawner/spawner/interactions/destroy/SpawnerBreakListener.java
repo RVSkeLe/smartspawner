@@ -5,10 +5,10 @@ import github.nighter.smartspawner.api.events.SpawnerPlayerBreakEvent;
 import github.nighter.smartspawner.extras.HopperHandler;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.hooks.protections.CheckBreakBlock;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import lombok.Getter;
 import org.bukkit.*;
@@ -136,7 +136,7 @@ public class SpawnerBreakListener implements Listener {
         EntityType entityType = creatureSpawner.getSpawnedType();
         ItemStack spawnerItem;
         if (plugin.getConfig().getBoolean("natural_spawner.convert_to_smart_spawner", false)) {
-            spawnerItem = spawnerItemFactory.createSpawnerItem(entityType);
+            spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType);
         } else {
             spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType);
         }
@@ -197,7 +197,7 @@ public class SpawnerBreakListener implements Listener {
         }
 
         EntityType entityType = spawner.getEntityType();
-        ItemStack template = spawnerItemFactory.createSpawnerItem(entityType);
+        ItemStack template = spawnerItemFactory.createSmartSpawnerItem(entityType);
 
         int dropAmount;
         boolean shouldDeleteSpawner = false;

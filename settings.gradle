@@ -1,6 +1,3 @@
 rootProject.name = 'SmartSpawner'
 include 'core'
 include 'api'
-include 'NMS:v1_21'
-include 'NMS:v1_21_4'
-include 'NMS:v1_21_6'

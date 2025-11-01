@@ -12,9 +12,15 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
-import github.nighter.smartspawner.spawner.utils.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
+import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.datacomponent.DataComponentType;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -27,6 +33,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ListSubCommand extends BaseSubCommand {
+    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
+        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
+    );
     private final SpawnerManager spawnerManager;
     private final LanguageManager languageManager;
     private final MessageService messageService;
@@ -447,8 +456,12 @@ public class ListSubCommand extends BaseSubCommand {
         return button;
     }
 
+    private static void hideTooltip(ItemStack item) {
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
+            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
+    }
+
     private ItemStack createSpawnerInfoItem(SpawnerData spawner) {
-        // Get the custom head for the spawner's entity type
         EntityType entityType = spawner.getEntityType();
         ItemStack spawnerItem;
         ItemMeta meta;
@@ -456,27 +469,18 @@ public class ListSubCommand extends BaseSubCommand {
             spawnerItem = new ItemStack(Material.SPAWNER);
             meta = spawnerItem.getItemMeta();
             if (meta == null) return spawnerItem;
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,
-                    ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_UNBREAKABLE);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         } else {
             spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType);
             meta = spawnerItem.getItemMeta();
             if (meta == null) return spawnerItem;
         }
         Location loc = spawner.getSpawnerLocation();
-
-        // Set display name with formatted spawner ID
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("id", String.valueOf(spawner.getSpawnerId()));
         meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
-
-        // Add entity type
         placeholders.put("entity", languageManager.getFormattedMobName(entityType));
-
-        // Add stack size
         placeholders.put("size", String.valueOf(spawner.getStackSize()));
-
-        // Add status
         if (spawner.getSpawnerStop().get()) {
             placeholders.put("status_color", "&#ff6b6b");
             placeholders.put("status_text", "Inactive");
@@ -484,35 +488,21 @@ public class ListSubCommand extends BaseSubCommand {
             placeholders.put("status_color", "&#00E689");
             placeholders.put("status_text", "Active");
         }
-
-        // Add location
         placeholders.put("x", String.valueOf(loc.getBlockX()));
         placeholders.put("y", String.valueOf(loc.getBlockY()));
         placeholders.put("z", String.valueOf(loc.getBlockZ()));
-        
-        // Add last interacted player
         String lastPlayer = spawner.getLastInteractedPlayer();
         placeholders.put("last_player", lastPlayer != null ? lastPlayer : "None");
-
-        // Get the lore with placeholders replaced
         List<String> lore = Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders));
-
-        // Set lore and apply meta
         meta.setLore(lore);
         spawnerItem.setItemMeta(meta);
+        hideTooltip(spawnerItem);
         return spawnerItem;
     }
 
-    /**
-     * Opens the spawner management GUI for a specific spawner
-     */
     public void openSpawnerManagementGUI(Player player, String spawnerId, String worldName, int listPage) {
         spawnerManagementGUI.openManagementMenu(player, spawnerId, worldName, listPage);
     }
-
-    /**
-     * Gets the user's current filter preference for a world
-     */
     public FilterOption getUserFilter(Player player, String worldName) {
         return userPreferenceCache.getUserFilter(player, worldName);
     }

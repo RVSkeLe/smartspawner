@@ -3,8 +3,7 @@ package github.nighter.smartspawner.extras;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
-import github.nighter.smartspawner.language.LanguageManager;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.*;
@@ -30,7 +29,6 @@ public class HopperHandler implements Listener {
     private final Map<Location, Scheduler.Task> activeHoppers = new ConcurrentHashMap<>();
     private final SpawnerManager spawnerManager;
     private final SpawnerGuiViewManager spawnerGuiViewManager;
-    private final Map<String, ReentrantLock> spawnerLocks = new ConcurrentHashMap<>();
 
     public HopperHandler(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -113,7 +111,6 @@ public class HopperHandler implements Listener {
     public void cleanup() {
         activeHoppers.values().forEach(Scheduler.Task::cancel);
         activeHoppers.clear();
-        spawnerLocks.clear();
     }
 
     @EventHandler
@@ -132,10 +129,6 @@ public class HopperHandler implements Listener {
         if (event.getBlock().getType() == Material.HOPPER) {
             stopHopperTask(event.getBlock().getLocation());
         }
-    }
-
-    private ReentrantLock getOrCreateLock(SpawnerData spawner) {
-        return spawnerLocks.computeIfAbsent(spawner.getSpawnerId(), k -> new ReentrantLock());
     }
 
     public void startHopperTask(Location hopperLoc, Location spawnerLoc) {
@@ -187,11 +180,31 @@ public class HopperHandler implements Listener {
         }
     }
 
+    public void restartHopperForSpawner(Location spawnerLoc) {
+        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        
+        // Find hopper below the spawner
+        Block spawnerBlock = spawnerLoc.getBlock();
+        if (spawnerBlock.getType() != Material.SPAWNER) return;
+        
+        Block hopperBlock = spawnerBlock.getRelative(BlockFace.DOWN);
+        if (hopperBlock.getType() != Material.HOPPER) return;
+        
+        Location hopperLoc = hopperBlock.getLocation();
+        
+        // Stop existing hopper task if any
+        stopHopperTask(hopperLoc);
+        
+        // Start new hopper task
+        startHopperTask(hopperLoc, spawnerLoc);
+    }
+
     private void transferItems(Location hopperLoc, Location spawnerLoc) {
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
 
-        ReentrantLock lock = getOrCreateLock(spawner);
+        // Use inventoryLock for hopper transfers
+        ReentrantLock lock = spawner.getInventoryLock();
         if (!lock.tryLock()) return; // Skip this tick if we can't get the lock
 
         try {

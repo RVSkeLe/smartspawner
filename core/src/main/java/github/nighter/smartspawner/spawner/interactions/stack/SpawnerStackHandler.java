@@ -4,11 +4,10 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerStackEvent;
 import github.nighter.smartspawner.hooks.protections.CheckStackBlock;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.nms.ParticleWrapper;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
@@ -235,7 +234,7 @@ public class SpawnerStackHandler {
                 // Use location-based scheduling for particle effects
                 Scheduler.runLocationTask(loc, () -> {
                     world.spawnParticle(
-                            ParticleWrapper.VILLAGER_HAPPY,
+                            Particle.HAPPY_VILLAGER,
                             loc.clone().add(0.5, 0.5, 0.5),
                             10, 0.3, 0.3, 0.3, 0
                     );

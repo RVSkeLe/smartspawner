@@ -7,7 +7,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.BaseSubCommand;
-import github.nighter.smartspawner.nms.SpawnerWrapper;
+import github.nighter.smartspawner.utils.DynamicEntityValidator;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -21,6 +21,7 @@ import org.jspecify.annotations.NullMarked;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @NullMarked
 public class GiveSubCommand extends BaseSubCommand {
@@ -31,7 +32,11 @@ public class GiveSubCommand extends BaseSubCommand {
     public GiveSubCommand(SmartSpawner plugin) {
         super(plugin);
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
-        this.supportedMobs = SpawnerWrapper.SUPPORTED_MOBS;
+        // Generate supported mobs list from DynamicEntityValidator
+        this.supportedMobs = DynamicEntityValidator.getValidEntities().stream()
+                .map(EntityType::name)
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -132,7 +137,7 @@ public class GiveSubCommand extends BaseSubCommand {
                 spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType, amount);
             } else {
                 // Use spawner item factory for smart spawners
-                spawnerItem = spawnerItemFactory.createSpawnerItem(entityType, amount);
+                spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, amount);
             }
 
             // Give the item to the player

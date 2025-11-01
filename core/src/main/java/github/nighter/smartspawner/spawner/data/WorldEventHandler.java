@@ -1,4 +1,4 @@
-package github.nighter.smartspawner.spawner.events;
+package github.nighter.smartspawner.spawner.data;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
@@ -13,7 +13,6 @@ import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldSaveEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
@@ -186,6 +185,11 @@ public class WorldEventHandler implements Listener {
             
             // Reinitialize chunk spawner limits after loading pending spawners
             plugin.getChunkSpawnerLimiter().reloadConfig();
+
+            // Restart hoppers for the spawners in this world
+            if (plugin.getHopperHandler() != null) {
+                plugin.getHopperHandler().restartAllHoppers();
+            }
         }
     }
 

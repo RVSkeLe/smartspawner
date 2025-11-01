@@ -2,7 +2,7 @@ package github.nighter.smartspawner.spawner.limits;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import lombok.Getter;
 import org.bukkit.Chunk;
 import org.bukkit.Location;

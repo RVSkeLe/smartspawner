@@ -4,9 +4,13 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
+import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -17,9 +21,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 public class SpawnerManagementGUI {
     private static final int INVENTORY_SIZE = 27;
@@ -28,6 +31,9 @@ public class SpawnerManagementGUI {
     private static final int STACK_SLOT = 14;
     private static final int REMOVE_SLOT = 16;
     private static final int BACK_SLOT = 26;
+    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
+        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
+    );
     
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
@@ -47,27 +53,23 @@ public class SpawnerManagementGUI {
             messageService.sendMessage(player, "spawner_not_found");
             return;
         }
-
         String title = languageManager.getGuiTitle("spawner_management.title");
-
         Inventory inv = Bukkit.createInventory(
             new SpawnerManagementHolder(spawnerId, worldName, listPage),
             INVENTORY_SIZE, title
         );
-
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-
-        // Create action items with better materials and positioning
         createActionItem(inv, TELEPORT_SLOT, "spawner_management.teleport", Material.ENDER_PEARL);
         createActionItem(inv, OPEN_SPAWNER_SLOT, "spawner_management.open_spawner", Material.ENDER_EYE);
         createActionItem(inv, STACK_SLOT, "spawner_management.stack", Material.SPAWNER);
         createActionItem(inv, REMOVE_SLOT, "spawner_management.remove", Material.BARRIER);
         createActionItem(inv, BACK_SLOT, "spawner_management.back", Material.RED_STAINED_GLASS_PANE);
-
-        // Fill empty slots with glass panes
-        // fillEmptySlots(inv);
-
         player.openInventory(inv);
+    }
+
+    private static void hideTooltip(ItemStack item) {
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
+            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
     }
 
     private void createActionItem(Inventory inv, int slot, String langKey, Material material) {
@@ -77,25 +79,10 @@ public class SpawnerManagementGUI {
             meta.setDisplayName(languageManager.getGuiItemName(langKey + ".name"));
             List<String> lore = Arrays.asList(languageManager.getGuiItemLore(langKey + ".lore"));
             meta.setLore(lore);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,
-                    ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_UNBREAKABLE);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             item.setItemMeta(meta);
         }
+        hideTooltip(item);
         inv.setItem(slot, item);
     }
-
-//    private void fillEmptySlots(Inventory inv) {
-//        ItemStack glass = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
-//        ItemMeta meta = glass.getItemMeta();
-//        if (meta != null) {
-//            meta.setDisplayName(" ");
-//            glass.setItemMeta(meta);
-//        }
-//
-//        for (int i = 0; i < inv.getSize(); i++) {
-//            if (inv.getItem(i) == null) {
-//                inv.setItem(i, glass);
-//            }
-//        }
-//    }
 }

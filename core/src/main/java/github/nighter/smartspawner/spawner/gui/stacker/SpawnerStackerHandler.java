@@ -11,7 +11,7 @@ import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -624,7 +624,7 @@ public class SpawnerStackerHandler implements Listener {
 
             while (remainingAmount > 0) {
                 int stackSize = Math.min(MAX_STACK_SIZE, remainingAmount);
-                ItemStack spawnerItem = spawnerItemFactory.createSpawnerItem(entityType, stackSize);
+                ItemStack spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, stackSize);
                 newStacks.add(spawnerItem);
                 remainingAmount -= stackSize;
             }

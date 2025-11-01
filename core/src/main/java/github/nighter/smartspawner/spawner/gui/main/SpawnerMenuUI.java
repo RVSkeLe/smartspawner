@@ -5,11 +5,17 @@ import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.loot.LootItem;
-import github.nighter.smartspawner.spawner.utils.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.api.events.SpawnerOpenGUIEvent;
+import io.papermc.paper.datacomponent.DataComponentType;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -23,9 +29,11 @@ import java.util.*;
 
 public class SpawnerMenuUI {
     private static final int INVENTORY_SIZE = 27;
-    // Remove hardcoded slot constants - now using layout config
     private static final int TICKS_PER_SECOND = 20;
     private static final Map<String, String> EMPTY_PLACEHOLDERS = Collections.emptyMap();
+    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
+            RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
+    );
 
     // Cache frequently used formatting strings and pattern lookups
     private static final String LOOT_ITEM_FORMAT_KEY = "spawner_storage_item.loot_items";
@@ -70,8 +78,12 @@ public class SpawnerMenuUI {
         return timestamp == null || System.currentTimeMillis() - timestamp > CACHE_EXPIRY_TIME_MS;
     }
 
+    private static void hideTooltip(ItemStack item) {
+        item.setData(DataComponentTypes.TOOLTIP_DISPLAY,
+                TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
+    }
+
     public void openSpawnerMenu(Player player, SpawnerData spawner, boolean refresh) {
-        // Fire SpawnerOpenGUI API event
         if(SpawnerOpenGUIEvent.getHandlerList().getRegisteredListeners().length != 0) {
             SpawnerOpenGUIEvent openEvent = new SpawnerOpenGUIEvent(
                     player,
@@ -386,6 +398,7 @@ public class SpawnerMenuUI {
         List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
         spawnerMeta.setLore(lore);
         spawnerItem.setItemMeta(spawnerMeta);
+        hideTooltip(spawnerItem);
         return spawnerItem;
     }
 

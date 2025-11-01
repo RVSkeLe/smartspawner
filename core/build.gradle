@@ -1,7 +1,7 @@
 dependencies {
     api project(':api')
 
-    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT'
     // Hook plugins
     compileOnly 'org.geysermc.floodgate:api:2.2.5-SNAPSHOT'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT'
@@ -12,7 +12,7 @@ dependencies {
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
     compileOnly 'su.nightexpress.coinsengine:CoinsEngine:2.6.0'
     compileOnly 'com.github.Gypopo:EconomyShopGUI-API:1.9.0'
-    compileOnly 'world.bentobox:bentobox:3.8.2-SNAPSHOT'
+    compileOnly 'world.bentobox:bentobox:3.9.3-SNAPSHOT'
     compileOnly 'su.nightexpress.excellentshop:Core:4.21.2'
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Core:8.1.2") { exclude(group: "*") }
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Spigot:8.1.2") { exclude(group: "*") }
@@ -50,9 +50,6 @@ jar {
     archiveVersion.set("${version}")
 
     from { project(':api').sourceSets.main.output }
-    from { project(':NMS:v1_21').sourceSets.main.output }
-    from { project(':NMS:v1_21_4').sourceSets.main.output }
-    from { project(':NMS:v1_21_6').sourceSets.main.output }
     from sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'

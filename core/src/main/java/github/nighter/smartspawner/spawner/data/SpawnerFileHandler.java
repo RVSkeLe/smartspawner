@@ -1,9 +1,10 @@
-package github.nighter.smartspawner.spawner.utils;
+package github.nighter.smartspawner.spawner.data;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.Scheduler;
+import github.nighter.smartspawner.spawner.utils.ItemStackSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -233,8 +234,8 @@ public class SpawnerFileHandler {
 
         for (String spawnerId : spawnersSection.getKeys(false)) {
             try {
-                // Use non-logging version to suppress "World not found" errors during startup
-                SpawnerData spawner = loadSpawnerFromConfig(spawnerId, false);
+                // Use non-logging version and skip hopper restart during batch load
+                SpawnerData spawner = loadSpawnerFromConfig(spawnerId, false, false);
                 // Add to map even if null (world not loaded)
                 loadedSpawners.put(spawnerId, spawner);
             } catch (Exception e) {
@@ -265,10 +266,14 @@ public class SpawnerFileHandler {
     }
 
     private SpawnerData loadSpawnerFromConfig(String spawnerId) {
-        return loadSpawnerFromConfig(spawnerId, true);
+        return loadSpawnerFromConfig(spawnerId, true, true);
     }
 
     private SpawnerData loadSpawnerFromConfig(String spawnerId, boolean logErrors) {
+        return loadSpawnerFromConfig(spawnerId, logErrors, true);
+    }
+
+    private SpawnerData loadSpawnerFromConfig(String spawnerId, boolean logErrors, boolean restartHopper) {
         String path = "spawners." + spawnerId;
 
         String locationString = spawnerData.getString(path + ".location");
@@ -340,7 +345,7 @@ public class SpawnerFileHandler {
                         spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                         spawner.setMinMobs(Integer.parseInt(settings[7]));
                         spawner.setMaxMobs(Integer.parseInt(settings[8]));
-                        spawner.setStackSize(Integer.parseInt(settings[9]));
+                        spawner.setStackSize(Integer.parseInt(settings[9]), restartHopper);
                         spawner.setMaxStackSize(Integer.parseInt(settings[10]));
                         spawner.setLastSpawnTime(Long.parseLong(settings[11]));
                         spawner.setIsAtCapacity(Boolean.parseBoolean(settings[12]));
@@ -355,7 +360,7 @@ public class SpawnerFileHandler {
                     spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                     spawner.setMinMobs(Integer.parseInt(settings[7]));
                     spawner.setMaxMobs(Integer.parseInt(settings[8]));
-                    spawner.setStackSize(Integer.parseInt(settings[9]));
+                    spawner.setStackSize(Integer.parseInt(settings[9]), restartHopper);
                     spawner.setLastSpawnTime(Long.parseLong(settings[10]));
                     spawner.setIsAtCapacity(false);
                 }
