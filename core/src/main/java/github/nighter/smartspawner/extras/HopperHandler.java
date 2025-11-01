@@ -79,10 +79,10 @@ public class HopperHandler implements Listener {
 
         Scheduler.runLocationTask(chunkLoc, () -> {
             try {
-                BlockState[] tileEntities = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
-                if (tileEntities == null || tileEntities.length == 0) return;
+                BlockState[] hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+                if (hopperStates == null || hopperStates.length == 0) return;
 
-                for (BlockState state : tileEntities) {
+                for (BlockState state : hopperStates) {
                     if (state == null) continue;
 
                     Block hopperBlock = state.getBlock();
@@ -116,10 +116,10 @@ public class HopperHandler implements Listener {
         if (chunk == null) return;
 
         try {
-            BlockState[] tileEntities = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
-            if (tileEntities == null || tileEntities.length == 0) return;
+            BlockState[] hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+            if (hopperStates == null || hopperStates.length == 0) return;
 
-            for (BlockState state : tileEntities) {
+            for (BlockState state : hopperStates) {
                 if (state == null) continue;
                 stopHopperTask(state.getLocation());
             }
@@ -185,12 +185,11 @@ public class HopperHandler implements Listener {
         };
 
         try {
-            long checkDelay = plugin.getTimeFromConfig("hopper.check_delay", "3s");
             Scheduler.Task task = Scheduler.runLocationTaskTimer(
                     hopperLoc,
                     hopperRunnable,
                     0L,
-                    checkDelay
+                    plugin.getTimeFromConfig("hopper.check_delay", "3s")
             );
 
             if (task != null && !task.isCancelled()) {
