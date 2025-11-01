@@ -311,7 +311,14 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     public void setUpHopperHandler() {
-        this.hopperHandler = getConfig().getBoolean("hopper.enabled", false) ? new HopperHandler(this) : null;
+        if (this.hopperHandler != null) {
+            this.hopperHandler.cleanup();
+            this.hopperHandler = null;
+        }
+        
+        if (getConfig().getBoolean("hopper.enabled", false)) {
+            this.hopperHandler = new HopperHandler(this);
+        }
     }
 
     private void registerListeners() {

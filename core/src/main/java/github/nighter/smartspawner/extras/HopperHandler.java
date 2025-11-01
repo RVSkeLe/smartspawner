@@ -72,15 +72,23 @@ public class HopperHandler implements Listener {
     }
 
     private void processChunkHoppers(Chunk chunk) {
+        if (chunk == null || !chunk.isLoaded()) return;
+
         Location chunkLoc = new Location(chunk.getWorld(),
                 chunk.getX() * 16 + 8, 64, chunk.getZ() * 16 + 8);
 
         Scheduler.runLocationTask(chunkLoc, () -> {
             try {
-                for (BlockState state : chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false)) {
-                    Block hopperBlock = state.getBlock();
-                    Block aboveBlock = hopperBlock.getRelative(BlockFace.UP);
+                Collection<BlockState> hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+                if (hopperStates == null || hopperStates.isEmpty()) return;
 
+                for (BlockState state : hopperStates) {
+                    if (state == null) continue;
+
+                    Block hopperBlock = state.getBlock();
+                    if (hopperBlock.getType() != Material.HOPPER) continue;
+
+                    Block aboveBlock = hopperBlock.getRelative(BlockFace.UP);
                     if (aboveBlock.getType() == Material.SPAWNER) {
                         startHopperTask(hopperBlock.getLocation(), aboveBlock.getLocation());
                     }
@@ -102,15 +110,42 @@ public class HopperHandler implements Listener {
 
     @EventHandler
     public void onChunkUnload(ChunkUnloadEvent event) {
+        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+
         Chunk chunk = event.getChunk();
-        for (BlockState state : chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false)) {
-            stopHopperTask(state.getLocation());
+        if (chunk == null) return;
+
+        try {
+            Collection<BlockState> hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+            if (hopperStates == null || hopperStates.isEmpty()) return;
+
+            for (BlockState state : hopperStates) {
+                if (state == null) continue;
+                stopHopperTask(state.getLocation());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Error stopping hoppers in unloading chunk at " +
+                    chunk.getX() + "," + chunk.getZ(), e);
         }
     }
 
     public void cleanup() {
-        activeHoppers.values().forEach(Scheduler.Task::cancel);
-        activeHoppers.clear();
+        try {
+            List<Scheduler.Task> tasks = new ArrayList<>(activeHoppers.values());
+            activeHoppers.clear();
+            
+            for (Scheduler.Task task : tasks) {
+                if (task != null) {
+                    try {
+                        task.cancel();
+                    } catch (Exception e) {
+                        plugin.getLogger().log(Level.WARNING, "Error cancelling hopper task during cleanup", e);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Error during hopper handler cleanup", e);
+        }
     }
 
     @EventHandler
@@ -133,9 +168,10 @@ public class HopperHandler implements Listener {
 
     public void startHopperTask(Location hopperLoc, Location spawnerLoc) {
         if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
-        if (activeHoppers.containsKey(hopperLoc)) return;
+        if (hopperLoc == null || spawnerLoc == null) return;
 
-        // Create a runnable for the hopper task
+        stopHopperTask(hopperLoc);
+
         Runnable hopperRunnable = () -> {
             try {
                 if (!isValidSetup(hopperLoc, spawnerLoc)) {
@@ -145,11 +181,9 @@ public class HopperHandler implements Listener {
                 transferItems(hopperLoc, spawnerLoc);
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING, "Error in hopper task at " + hopperLoc, e);
-                // Don't stop the task on error, just log it
             }
         };
 
-        // Use the location-based scheduler for better Folia compatibility
         try {
             Scheduler.Task task = Scheduler.runLocationTaskTimer(
                     hopperLoc,
@@ -158,7 +192,9 @@ public class HopperHandler implements Listener {
                     plugin.getTimeFromConfig("hopper.check_delay", "3s")
             );
 
-            activeHoppers.put(hopperLoc, task);
+            if (task != null && !task.isCancelled()) {
+                activeHoppers.put(hopperLoc, task);
+            }
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to start hopper task at " + hopperLoc, e);
         }
@@ -174,49 +210,71 @@ public class HopperHandler implements Listener {
     }
 
     public void stopHopperTask(Location hopperLoc) {
+        if (hopperLoc == null) return;
+        
         Scheduler.Task task = activeHoppers.remove(hopperLoc);
         if (task != null) {
-            task.cancel();
+            try {
+                task.cancel();
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Error cancelling hopper task at " + hopperLoc, e);
+            }
         }
     }
 
     public void restartHopperForSpawner(Location spawnerLoc) {
         if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
-        
-        // Find hopper below the spawner
-        Block spawnerBlock = spawnerLoc.getBlock();
-        if (spawnerBlock.getType() != Material.SPAWNER) return;
-        
-        Block hopperBlock = spawnerBlock.getRelative(BlockFace.DOWN);
-        if (hopperBlock.getType() != Material.HOPPER) return;
-        
-        Location hopperLoc = hopperBlock.getLocation();
-        
-        // Stop existing hopper task if any
-        stopHopperTask(hopperLoc);
-        
-        // Start new hopper task
-        startHopperTask(hopperLoc, spawnerLoc);
+        if (spawnerLoc == null) return;
+
+        Scheduler.runLocationTask(spawnerLoc, () -> {
+            try {
+                Block spawnerBlock = spawnerLoc.getBlock();
+                if (spawnerBlock.getType() != Material.SPAWNER) return;
+
+                Block hopperBlock = spawnerBlock.getRelative(BlockFace.DOWN);
+                if (hopperBlock.getType() != Material.HOPPER) return;
+
+                Location hopperLoc = hopperBlock.getLocation();
+
+                startHopperTask(hopperLoc, spawnerLoc);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Error restarting hopper for spawner at " + spawnerLoc, e);
+            }
+        });
     }
 
     private void transferItems(Location hopperLoc, Location spawnerLoc) {
+        if (hopperLoc == null || spawnerLoc == null) return;
+
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
 
-        // Use inventoryLock for hopper transfers
         ReentrantLock lock = spawner.getInventoryLock();
-        if (!lock.tryLock()) return; // Skip this tick if we can't get the lock
+        if (!lock.tryLock()) return;
 
         try {
-            VirtualInventory virtualInv = spawner.getVirtualInventory();
-            Hopper hopper = (Hopper) hopperLoc.getBlock().getState(false);
+            Block hopperBlock = hopperLoc.getBlock();
+            if (hopperBlock.getType() != Material.HOPPER) {
+                stopHopperTask(hopperLoc);
+                return;
+            }
 
-            int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
-            int transferred = 0;
-            boolean inventoryChanged = false;
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+            if (virtualInv == null) return;
+
+            Hopper hopper = (Hopper) hopperBlock.getState(false);
+            if (hopper == null) return;
 
             Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
-            List<ItemStack> itemsToRemove = new ArrayList<>();
+            if (displayItems == null || displayItems.isEmpty()) return;
+
+            int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
+            
+            org.bukkit.inventory.Inventory hopperInv = hopper.getInventory();
+            
+            List<ItemStack> itemsToRemove = new ArrayList<>(itemsPerTransfer);
+            int transferred = 0;
+            boolean inventoryChanged = false;
 
             for (Map.Entry<Integer, ItemStack> entry : displayItems.entrySet()) {
                 if (transferred >= itemsPerTransfer) break;
@@ -224,31 +282,36 @@ public class HopperHandler implements Listener {
                 ItemStack item = entry.getValue();
                 if (item == null || item.getType() == Material.AIR) continue;
 
-                ItemStack[] hopperContents = hopper.getInventory().getContents();
-                for (int i = 0; i < hopperContents.length; i++) {
-                    if (transferred >= itemsPerTransfer) break;
-
+                ItemStack[] hopperContents = hopperInv.getContents();
+                
+                boolean itemTransferred = false;
+                for (int i = 0; i < hopperContents.length && !itemTransferred; i++) {
                     ItemStack hopperItem = hopperContents[i];
+                    
                     if (hopperItem == null || hopperItem.getType() == Material.AIR) {
-                        hopper.getInventory().setItem(i, item.clone());
+                        hopperInv.setItem(i, item.clone());
                         itemsToRemove.add(item);
                         transferred++;
                         inventoryChanged = true;
-                        break;
-                    } else if (hopperItem.isSimilar(item) &&
-                            hopperItem.getAmount() < hopperItem.getMaxStackSize()) {
-                        int space = hopperItem.getMaxStackSize() - hopperItem.getAmount();
-                        int toTransfer = Math.min(space, item.getAmount());
+                        itemTransferred = true;
+                    } else if (hopperItem.isSimilar(item)) {
+                        int currentAmount = hopperItem.getAmount();
+                        int maxStackSize = hopperItem.getMaxStackSize();
+                        
+                        if (currentAmount < maxStackSize) {
+                            int space = maxStackSize - currentAmount;
+                            int toTransfer = Math.min(space, item.getAmount());
 
-                        hopperItem.setAmount(hopperItem.getAmount() + toTransfer);
+                            hopperItem.setAmount(currentAmount + toTransfer);
 
-                        ItemStack toRemove = item.clone();
-                        toRemove.setAmount(toTransfer);
-                        itemsToRemove.add(toRemove);
+                            ItemStack toRemove = item.clone();
+                            toRemove.setAmount(toTransfer);
+                            itemsToRemove.add(toRemove);
 
-                        transferred++;
-                        inventoryChanged = true;
-                        break;
+                            transferred++;
+                            inventoryChanged = true;
+                            itemTransferred = true;
+                        }
                     }
                 }
             }
@@ -261,7 +324,7 @@ public class HopperHandler implements Listener {
                 updateOpenGuis(spawner);
             }
         } catch (Exception e) {
-            plugin.getLogger().log(Level.WARNING, "Error transferring items from spawner to hopper", e);
+            plugin.getLogger().log(Level.WARNING, "Error transferring items from spawner to hopper at " + hopperLoc, e);
         } finally {
             lock.unlock();
         }
