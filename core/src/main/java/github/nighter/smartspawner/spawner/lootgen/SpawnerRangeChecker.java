@@ -128,19 +128,21 @@ public class SpawnerRangeChecker {
 
     public void activateSpawner(SpawnerData spawner) {
         deactivateSpawner(spawner);
-        plugin.getLogger().info("Activating spawner " + spawner.getSpawnerId() + " for loot spawning.");
+
+        // Check if spawner is actually active before starting countdown
+        if (!spawner.getSpawnerActive()) {
+            return;
+        }
 
         // Set lastSpawnTime to current time to start countdown immediately
-        // This ensures timer shows full delay countdown when spawner activates
         long currentTime = System.currentTimeMillis();
         spawner.setLastSpawnTime(currentTime);
 
-        // Timer doesn't spawn loot directly - it just runs periodically to keep the spawner active
-        // SpawnerGuiViewManager will check the timer and trigger spawns via SpawnerLootGenerator
+        // Timer manages the spawner active state - actual loot spawning triggered by SpawnerGuiViewManager
         Scheduler.Task task = Scheduler.runTaskTimer(() -> {
-            // Task just keeps the spawner active - actual spawning logic moved to GUI manager
-            if (spawner.getSpawnerStop().get()) {
-                plugin.getLogger().info("Spawner " + spawner.getSpawnerId() + " is stopped, timer running but no spawn");
+            // Verify spawner is still active on each tick
+            if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                return;
             }
         }, spawner.getSpawnDelay(), spawner.getSpawnDelay());
 

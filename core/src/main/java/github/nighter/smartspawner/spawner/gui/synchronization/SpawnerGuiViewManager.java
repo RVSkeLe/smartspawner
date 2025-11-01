@@ -91,6 +91,29 @@ public class SpawnerGuiViewManager implements Listener {
     // Cache for storage title format to avoid repeated language lookups
     private String cachedStorageTitleFormat = null;
 
+    // Pre-generation cache: stores loot generated before timer expires
+    // Map<SpawnerId, PendingLoot> - loot ready to be added when timer hits 0
+    private final Map<String, PendingLoot> preGeneratedLoot = new ConcurrentHashMap<>();
+    
+    // Threshold for pre-generation (in milliseconds) - start generating when this much time remains
+    private static final long PRE_GENERATION_THRESHOLD = 2000L; // 2 seconds before spawn
+    
+    // Track which spawners are currently generating loot
+    private final Set<String> currentlyGenerating = ConcurrentHashMap.newKeySet();
+    
+    // Static class to hold pre-generated loot
+    private static class PendingLoot {
+        final List<ItemStack> items;
+        final int experience;
+        final long generatedAt;
+        
+        PendingLoot(List<ItemStack> items, int experience) {
+            this.items = items;
+            this.experience = experience;
+            this.generatedAt = System.currentTimeMillis();
+        }
+    }
+
     // Static class to hold viewer info more efficiently
     private static class SpawnerViewerInfo {
         final SpawnerData spawnerData;
@@ -1331,25 +1354,48 @@ public class SpawnerGuiViewManager implements Listener {
         long lastSpawnTime = spawner.getLastSpawnTime();
         long timeElapsed = currentTime - lastSpawnTime;
 
-        // Check if spawner is truly inactive (not just in initial stopped state)
-        // This mirrors the logic from SpawnerMenuUI.calculateInitialTimerValue() to ensure consistency
-        // between initial display and ongoing timer updates
+        // Check if spawner is active before processing
         boolean isSpawnerInactive = !spawner.getSpawnerActive() ||
-            (spawner.getSpawnerStop().get() && timeElapsed > cachedDelay * 2); // Only inactive if stopped for more than 2 cycles
+            (spawner.getSpawnerStop().get() && timeElapsed > cachedDelay * 2);
 
         if (isSpawnerInactive) {
+            // Clean up any pre-generated loot for inactive spawner
+            String spawnerId = spawner.getSpawnerId();
+            preGeneratedLoot.remove(spawnerId);
+            currentlyGenerating.remove(spawnerId);
             return -1;
         }
 
         long timeUntilNextSpawn = cachedDelay - timeElapsed;
-
-        // Ensure we don't go below 0 or above the delay
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));
 
-        // If the timer has expired, trigger loot spawn
+        String spawnerId = spawner.getSpawnerId();
+        
+        // Pre-generation: Start generating loot when timer is close to expiring
+        if (timeUntilNextSpawn > 0 && timeUntilNextSpawn <= PRE_GENERATION_THRESHOLD) {
+            // Only start pre-generation once per cycle
+            if (!currentlyGenerating.contains(spawnerId) && !preGeneratedLoot.containsKey(spawnerId)) {
+                currentlyGenerating.add(spawnerId);
+                
+                // Pre-generate loot asynchronously
+                Location spawnerLocation = spawner.getSpawnerLocation();
+                if (spawnerLocation != null) {
+                    Scheduler.runLocationTask(spawnerLocation, () -> {
+                        plugin.getSpawnerLootGenerator().preGenerateLoot(spawner, (items, experience) -> {
+                            // Store the pre-generated loot
+                            if (items != null && (!items.isEmpty() || experience > 0)) {
+                                preGeneratedLoot.put(spawnerId, new PendingLoot(items, experience));
+                            }
+                            currentlyGenerating.remove(spawnerId);
+                        });
+                    });
+                }
+            }
+        }
+
+        // Timer expired: Add pre-generated loot to spawner
         if (timeUntilNextSpawn <= 0) {
             try {
-                // Try to acquire dataLock with timeout to prevent deadlock
                 if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {
                     try {
                         // Re-check timing after acquiring lock
@@ -1358,16 +1404,23 @@ public class SpawnerGuiViewManager implements Listener {
                         timeElapsed = currentTime - lastSpawnTime;
 
                         if (timeElapsed >= cachedDelay) {
-                            // Get the spawner location to schedule on the right region
+                            // Check for pre-generated loot
+                            PendingLoot pending = preGeneratedLoot.remove(spawnerId);
+                            
                             Location spawnerLocation = spawner.getSpawnerLocation();
                             if (spawnerLocation != null) {
-                                // Schedule loot spawn on the appropriate region thread for Folia compatibility
-                                // SpawnerRangeChecker manages the timer, SpawnerGuiViewManager triggers the spawn
                                 Scheduler.runLocationTask(spawnerLocation, () -> {
-                                    plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
+                                    if (pending != null) {
+                                        // Use pre-generated loot for better UX
+                                        plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, pending.items, pending.experience);
+                                    } else {
+                                        // Fallback: Generate and add immediately if pre-generation didn't complete
+                                        plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
+                                    }
                                 });
                             }
-                            return cachedDelay; // Start new cycle with full delay
+                            
+                            return cachedDelay; // Start new cycle
                         }
 
                         return cachedDelay - timeElapsed;
@@ -1375,13 +1428,11 @@ public class SpawnerGuiViewManager implements Listener {
                         spawner.getDataLock().unlock();
                     }
                 } else {
-                    // If can't acquire lock, return minimal time to try again soon
-                    return 1000; // 1 second
+                    return 1000; // 1 second retry
                 }
             } catch (InterruptedException e) {
-                // Handle interruption
                 Thread.currentThread().interrupt();
-                return 1000; // 1 second
+                return 1000;
             }
         }
 
