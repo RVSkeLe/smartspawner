@@ -127,17 +127,8 @@ public class SpawnerRangeChecker {
     }
 
     public void activateSpawner(SpawnerData spawner) {
-        startSpawnerTask(spawner);
-        //plugin.debug("Spawner " + spawner.getSpawnerId() + " activated - Player in range");
-    }
-
-    private void deactivateSpawner(SpawnerData spawner) {
-        stopSpawnerTask(spawner);
-        //plugin.debug("Spawner " + spawner.getSpawnerId() + " deactivated - No players in range");
-    }
-
-    private void startSpawnerTask(SpawnerData spawner) {
-        stopSpawnerTask(spawner);
+        deactivateSpawner(spawner);
+        plugin.getLogger().info("Activating spawner " + spawner.getSpawnerId() + " for loot spawning.");
 
         // Set lastSpawnTime to current time to start countdown immediately
         // This ensures timer shows full delay countdown when spawner activates
@@ -146,6 +137,7 @@ public class SpawnerRangeChecker {
 
         Scheduler.Task task = Scheduler.runTaskTimer(() -> {
             if (!spawner.getSpawnerStop().get()) {
+                plugin.getLogger().info("Spawning loot for spawner " + spawner.getSpawnerId());
                 spawnerLootGenerator.spawnLootToSpawner(spawner);
             }
         }, spawner.getSpawnDelay(), spawner.getSpawnDelay()); // Start after one delay period
@@ -158,7 +150,7 @@ public class SpawnerRangeChecker {
         }
     }
 
-    public void stopSpawnerTask(SpawnerData spawner) {
+    public void deactivateSpawner(SpawnerData spawner) {
         Scheduler.Task task = spawnerTasks.remove(spawner.getSpawnerId());
         if (task != null) {
             task.cancel();

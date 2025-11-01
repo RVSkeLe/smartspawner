@@ -233,13 +233,10 @@ public class SpawnerData {
         }
 
         this.stackSize = newStackSize;
-        Map<VirtualInventory.ItemSignature, Long> currentItems = virtualInventory.getConsolidatedItems();
-
         calculateStackBasedValues();
 
-        VirtualInventory newInventory = new VirtualInventory(this.maxSpawnerLootSlots);
-        transferItemsToNewInventory(currentItems, newInventory);
-        this.virtualInventory = newInventory;
+        // Resize the existing virtual inventory instead of creating a new one
+        virtualInventory.resize(this.maxSpawnerLootSlots);
 
         // Reset lastSpawnTime to prevent exploit where players break spawners to trigger immediate loot
         this.lastSpawnTime = System.currentTimeMillis();
@@ -263,29 +260,7 @@ public class SpawnerData {
 
     private void recreateVirtualInventory() {
         if (virtualInventory == null) return;
-
-        Map<VirtualInventory.ItemSignature, Long> currentItems = virtualInventory.getConsolidatedItems();
-        VirtualInventory newInventory = new VirtualInventory(maxSpawnerLootSlots);
-        transferItemsToNewInventory(currentItems, newInventory);
-        this.virtualInventory = newInventory;
-    }
-
-    private void transferItemsToNewInventory(Map<VirtualInventory.ItemSignature, Long> items,
-                                             VirtualInventory newInventory) {
-        List<ItemStack> itemsToTransfer = new ArrayList<>();
-
-        items.forEach((signature, amount) -> {
-            ItemStack template = signature.getTemplate();
-            while (amount > 0) {
-                int batchSize = (int) Math.min(amount, Integer.MAX_VALUE);
-                ItemStack batch = template.clone();
-                batch.setAmount(batchSize);
-                itemsToTransfer.add(batch);
-                amount -= batchSize;
-            }
-        });
-
-        newInventory.addItems(itemsToTransfer);
+        virtualInventory.resize(maxSpawnerLootSlots);
     }
 
     public void setSpawnerExp(int exp) {

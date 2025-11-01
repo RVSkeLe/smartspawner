@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 public class VirtualInventory {
     private final Map<ItemSignature, Long> consolidatedItems;
     @Getter
-    private final int maxSlots;
+    private int maxSlots;
     private final Map<Integer, ItemStack> displayInventoryCache;
     private boolean displayCacheDirty;
     private int usedSlotsCache;
@@ -362,5 +362,31 @@ public class VirtualInventory {
         
         // Mark display cache as dirty to force regeneration
         this.displayCacheDirty = true;
+    }
+
+    /**
+     * Resizes the virtual inventory to a new maximum slot count.
+     * If the new size is smaller and items exceed the new capacity,
+     * items will be truncated based on the current sort order.
+     *
+     * @param newMaxSlots The new maximum number of slots
+     */
+    public void resize(int newMaxSlots) {
+        if (newMaxSlots == this.maxSlots) {
+            return; // No change needed
+        }
+
+        this.maxSlots = newMaxSlots;
+
+        // Mark caches as dirty since slot count changed
+        this.displayCacheDirty = true;
+
+        // If downsizing, we may need to remove items that exceed capacity
+        if (newMaxSlots < usedSlotsCache) {
+            // Let the display inventory rebuild handle the truncation naturally
+            // Items beyond maxSlots will simply not be displayed
+            // Note: This doesn't remove items from consolidatedItems,
+            // but they won't be accessible in the display
+        }
     }
 }

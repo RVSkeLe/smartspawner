@@ -89,7 +89,7 @@ public class SpawnerBreakListener implements Listener {
 
         if (spawner != null) {
             handleSmartSpawnerBreak(block, spawner, player);
-            plugin.getRangeChecker().stopSpawnerTask(spawner);
+            plugin.getRangeChecker().deactivateSpawner(spawner);
         } else {
             CreatureSpawner creatureSpawner = (CreatureSpawner) block.getState(false);
             if(callAPIEvent(player, block.getLocation(), 1)) {

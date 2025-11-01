@@ -81,7 +81,7 @@ public class ListSubCommand extends BaseSubCommand {
 
     // World selection GUI logic (unchanged)
     public void openWorldSelectionGUI(Player player) {
-        if (!player.hasPermission("smartspawner.list")) {
+        if (!player.hasPermission("smartspawner.command.list")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }
