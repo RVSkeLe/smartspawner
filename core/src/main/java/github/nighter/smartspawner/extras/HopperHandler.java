@@ -271,7 +271,6 @@ public class HopperHandler implements Listener {
             int itemsPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
             
             org.bukkit.inventory.Inventory hopperInv = hopper.getInventory();
-            ItemStack[] hopperContents = hopperInv.getContents();
             
             List<ItemStack> itemsToRemove = new ArrayList<>(itemsPerTransfer);
             int transferred = 0;
@@ -283,13 +282,14 @@ public class HopperHandler implements Listener {
                 ItemStack item = entry.getValue();
                 if (item == null || item.getType() == Material.AIR) continue;
 
+                ItemStack[] hopperContents = hopperInv.getContents();
+                
                 boolean itemTransferred = false;
                 for (int i = 0; i < hopperContents.length && !itemTransferred; i++) {
                     ItemStack hopperItem = hopperContents[i];
                     
                     if (hopperItem == null || hopperItem.getType() == Material.AIR) {
                         hopperInv.setItem(i, item.clone());
-                        hopperContents[i] = hopperInv.getItem(i);
                         itemsToRemove.add(item);
                         transferred++;
                         inventoryChanged = true;
