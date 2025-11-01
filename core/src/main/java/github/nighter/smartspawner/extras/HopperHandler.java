@@ -79,8 +79,8 @@ public class HopperHandler implements Listener {
 
         Scheduler.runLocationTask(chunkLoc, () -> {
             try {
-                BlockState[] hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
-                if (hopperStates == null || hopperStates.length == 0) return;
+                Collection<BlockState> hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+                if (hopperStates == null || hopperStates.isEmpty()) return;
 
                 for (BlockState state : hopperStates) {
                     if (state == null) continue;
@@ -116,8 +116,8 @@ public class HopperHandler implements Listener {
         if (chunk == null) return;
 
         try {
-            BlockState[] hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
-            if (hopperStates == null || hopperStates.length == 0) return;
+            Collection<BlockState> hopperStates = chunk.getTileEntities(block -> block.getType() == Material.HOPPER, false);
+            if (hopperStates == null || hopperStates.isEmpty()) return;
 
             for (BlockState state : hopperStates) {
                 if (state == null) continue;
