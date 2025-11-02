@@ -103,6 +103,14 @@ public class SpawnerStackerHandler implements Listener {
         // Cancel the event to prevent item movement
         event.setCancelled(true);
 
+        SpawnerData spawner = holder.getSpawnerData();
+        
+        // Validate spawner still exists - prevent exploits on broken spawners
+        if (!isSpawnerValid(spawner)) {
+            player.closeInventory();
+            return;
+        }
+
         // Check for cooldown - fast path return
         UUID playerId = player.getUniqueId();
         Long lastClick = lastClickTime.get(playerId);
@@ -111,8 +119,6 @@ public class SpawnerStackerHandler implements Listener {
         // Get the clicked item
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || !clickedItem.hasItemMeta()) return;
-
-        SpawnerData spawner = holder.getSpawnerData();
 
         // Handle navigation back to main menu if spawner is clicked
         if (clickedItem.getType() == Material.SPAWNER) {
@@ -152,9 +158,37 @@ public class SpawnerStackerHandler implements Listener {
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         // Prevent any dragging in the stacker GUI
-        if (event.getInventory().getHolder(false) instanceof SpawnerStackerHolder) {
-            event.setCancelled(true);
+        if (!(event.getInventory().getHolder(false) instanceof SpawnerStackerHolder holder)) {
+            return;
         }
+        
+        // Validate spawner still exists
+        if (!isSpawnerValid(holder.getSpawnerData())) {
+            event.setCancelled(true);
+            if (event.getWhoClicked() instanceof Player player) {
+                player.closeInventory();
+            }
+            return;
+        }
+        
+        event.setCancelled(true);
+    }
+
+    /**
+     * Validates that a spawner still exists in the manager.
+     * Prevents exploits when spawner is broken while GUI is open.
+     *
+     * @param spawner The spawner to validate
+     * @return true if spawner is valid, false otherwise
+     */
+    private boolean isSpawnerValid(SpawnerData spawner) {
+        if (spawner == null) {
+            return false;
+        }
+        
+        var spawnerManager = plugin.getSpawnerManager();
+        SpawnerData current = spawnerManager.getSpawnerById(spawner.getSpawnerId());
+        return current != null && current == spawner;
     }
 
     @EventHandler
