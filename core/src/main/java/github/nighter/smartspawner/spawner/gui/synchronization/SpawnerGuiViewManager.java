@@ -231,10 +231,6 @@ public class SpawnerGuiViewManager {
             plugin.debug(viewerCount + " spawner menu viewers to update for " + spawner.getSpawnerId() + " (batch update)");
         }
 
-        // Calculate pages for storage viewers
-        int oldTotalPages = -1;
-        int newTotalPages = -1;
-
         // Schedule updates for all viewers
         for (UUID viewerId : viewers) {
             Player viewer = Bukkit.getPlayer(viewerId);
@@ -243,32 +239,13 @@ public class SpawnerGuiViewManager {
                 continue;
             }
 
-            // Schedule batched GUI update
+            // Schedule batched GUI update for main menu viewers
             guiUpdateService.scheduleUpdate(viewerId, GuiUpdateService.UPDATE_ALL);
 
-            // Handle storage page updates
-            if (viewerCount <= 5) {
-                Inventory openInv = viewer.getOpenInventory().getTopInventory();
-                if (openInv != null && openInv.getHolder(false) instanceof StoragePageHolder) {
-                    if (oldTotalPages == -1) {
-                        StoragePageHolder holder = (StoragePageHolder) openInv.getHolder(false);
-                        oldTotalPages = storageUpdateService.calculateTotalPages(holder.getOldUsedSlots());
-                        newTotalPages = storageUpdateService.calculateTotalPages(spawner.getVirtualInventory().getUsedSlots());
-                    }
-
-                    storageUpdateService.processStorageUpdate(viewer, spawner, oldTotalPages, newTotalPages);
-                }
-            }
-        }
-
-        // For larger batches, handle storage viewers separately
-        if (viewerCount > 5) {
-            for (UUID viewerId : viewers) {
-                Player viewer = Bukkit.getPlayer(viewerId);
-                if (viewer == null || !viewer.isOnline()) {
-                    continue;
-                }
-
+            // Handle storage page updates - calculate pages on the correct thread
+            Inventory openInv = viewer.getOpenInventory().getTopInventory();
+            if (openInv != null && openInv.getHolder(false) instanceof StoragePageHolder) {
+                // Schedule storage update - page calculation happens inside
                 Location loc = viewer.getLocation();
                 if (loc != null) {
                     Scheduler.runLocationTask(loc, () -> {
@@ -276,13 +253,13 @@ public class SpawnerGuiViewManager {
                             return;
                         }
 
-                        Inventory openInv = viewer.getOpenInventory().getTopInventory();
-                        if (openInv != null && openInv.getHolder(false) instanceof StoragePageHolder) {
-                            StoragePageHolder holder = (StoragePageHolder) openInv.getHolder(false);
+                        Inventory inv = viewer.getOpenInventory().getTopInventory();
+                        if (inv != null && inv.getHolder(false) instanceof StoragePageHolder) {
+                            StoragePageHolder holder = (StoragePageHolder) inv.getHolder(false);
                             int oldPages = storageUpdateService.calculateTotalPages(holder.getOldUsedSlots());
                             int newPages = storageUpdateService.calculateTotalPages(spawner.getVirtualInventory().getUsedSlots());
 
-                            storageUpdateService.processStorageUpdateDirect(viewer, openInv, spawner, holder, oldPages, newPages);
+                            storageUpdateService.processStorageUpdateDirect(viewer, inv, spawner, holder, oldPages, newPages);
                         }
                     });
                 }
