@@ -91,7 +91,8 @@ public class SpawnerGuiViewManager implements Listener {
     // Cache for storage title format to avoid repeated language lookups
     private String cachedStorageTitleFormat = null;
     
-    private static final long PRE_GENERATION_THRESHOLD = 2000L;
+    private static final long PRE_GENERATION_THRESHOLD = 2000L; // 2 seconds - start pre-generating loot
+    private static final long EARLY_SPAWN_THRESHOLD = 1000L; // 1 seconds - add loot early for smooth UX
 
     // Static class to hold viewer info more efficiently
     private static class SpawnerViewerInfo {
@@ -203,9 +204,25 @@ public class SpawnerGuiViewManager implements Listener {
      * @return The formatted timer string (e.g., "01:30", "Inactive", or "Full")
      */
     public String calculateTimerDisplay(SpawnerData spawner) {
+        return calculateTimerDisplay(spawner, null);
+    }
+
+    /**
+     * Calculate the timer display string for a spawner with player context
+     *
+     * @param spawner The spawner to calculate the timer for
+     * @param player The player viewing the GUI (null for general calculation)
+     * @return The formatted timer string (e.g., "01:30", "Inactive", or "Full")
+     */
+    public String calculateTimerDisplay(SpawnerData spawner, org.bukkit.entity.Player player) {
         // Skip timer calculation if GUI doesn't use timer placeholders
         if (!isTimerPlaceholdersEnabled()) {
             return "";
+        }
+
+        // Show inactive for spectator mode players
+        if (player != null && player.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+            return cachedInactiveText;
         }
 
         // Check if spawner is at capacity first
@@ -1343,6 +1360,7 @@ public class SpawnerGuiViewManager implements Listener {
         long timeUntilNextSpawn = cachedDelay - timeElapsed;
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));
         
+        // Pre-generate loot when timer is low (2 seconds) for performance
         if (timeUntilNextSpawn > 0 && timeUntilNextSpawn <= PRE_GENERATION_THRESHOLD) {
             if (!spawner.isPreGenerating() && !spawner.hasPreGeneratedLoot()) {
                 if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
@@ -1368,6 +1386,53 @@ public class SpawnerGuiViewManager implements Listener {
             }
         }
 
+        // Add loot early (at ~800ms) for smooth UX - prevents flicker when timer resets
+        // This allows GUI to update before timer shows 00:00 → 00:25
+        if (timeUntilNextSpawn > 0 && timeUntilNextSpawn <= EARLY_SPAWN_THRESHOLD) {
+            if (spawner.hasPreGeneratedLoot()) {
+                try {
+                    if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {
+                        try {
+                            // Double-check time hasn't changed
+                            currentTime = System.currentTimeMillis();
+                            lastSpawnTime = spawner.getLastSpawnTime();
+                            timeElapsed = currentTime - lastSpawnTime;
+                            long remainingTime = cachedDelay - timeElapsed;
+
+                            // Only spawn if still within early threshold
+                            if (remainingTime > 0 && remainingTime <= EARLY_SPAWN_THRESHOLD) {
+                                if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                    spawner.clearPreGeneratedLoot();
+                                    return timeUntilNextSpawn;
+                                }
+
+                                Location spawnerLocation = spawner.getSpawnerLocation();
+                                if (spawnerLocation != null) {
+                                    Scheduler.runLocationTask(spawnerLocation, () -> {
+                                        if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                            spawner.clearPreGeneratedLoot();
+                                            return;
+                                        }
+
+                                        if (spawner.hasPreGeneratedLoot()) {
+                                            List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
+                                            int exp = spawner.getAndClearPreGeneratedExperience();
+                                            plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
+                                        }
+                                    });
+                                }
+                            }
+                        } finally {
+                            spawner.getDataLock().unlock();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        // Handle case when timer reaches 0 (fallback for non-pre-generated loot)
         if (timeUntilNextSpawn <= 0) {
             try {
                 if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {

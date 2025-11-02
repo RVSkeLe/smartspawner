@@ -139,7 +139,9 @@ public class SpawnerMenuUI {
 
         // Force an immediate timer update for the newly opened GUI (only if timer placeholders are enabled)
         // This ensures the timer displays correctly from the start
-        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled()) {
+        // Skip timer update if player is in spectator mode to prevent activating spawner
+        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled()
+                && player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
             plugin.getSpawnerGuiViewManager().forceTimerUpdate(player, spawner);
         }
     }
@@ -374,16 +376,19 @@ public class SpawnerMenuUI {
         placeholders.put("percentage_exp", formattedPercentExp);
 
         // Total sell price information
-        // Check if sell value needs recalculation before displaying
+        // Always recalculate if dirty to ensure immediate display (0s delay)
+        // This ensures totalPrice shows the latest value without 1-2s delay
         if (spawner.isSellValueDirty()) {
             spawner.recalculateSellValue();
         }
+        // Get the current sell value (already updated by addItemsAndUpdateSellValue if items were just added)
         double totalSellPrice = spawner.getAccumulatedSellValue();
         placeholders.put("total_sell_price", languageManager.formatNumber(totalSellPrice));
 
         // Calculate and add timer value to avoid showing %time% placeholder
         // This prevents the brief flicker when the item is recreated (e.g., after sell/claim exp)
-        String timerValue = plugin.getSpawnerGuiViewManager().calculateTimerDisplay(spawner);
+        // Pass player parameter to show inactive for spectator mode players
+        String timerValue = plugin.getSpawnerGuiViewManager().calculateTimerDisplay(spawner, player);
         placeholders.put("time", timerValue);
 
         // Set display name with the specified placeholders

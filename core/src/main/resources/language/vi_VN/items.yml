@@ -30,7 +30,7 @@ custom_item:
   # Available placeholders: %entity%, %ᴇɴᴛɪᴛʏ%
   # Delete this section if you don't want to use custom vanilla spawners name and lore
   vanilla_spawner:
-    name: ""
+    name: "Spawner %entity%"
     lore:
 
 # Item display names

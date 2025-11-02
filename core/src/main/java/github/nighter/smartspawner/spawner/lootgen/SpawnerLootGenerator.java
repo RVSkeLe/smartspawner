@@ -336,6 +336,8 @@ public class SpawnerLootGenerator {
     }
 
     private void handleGuiUpdates(SpawnerData spawner) {
+        spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+
         // Show particles if needed
         if (plugin.getConfig().getBoolean("particle.spawner_generate_loot", true)) {
             Location loc = spawner.getSpawnerLocation();
@@ -346,8 +348,6 @@ public class SpawnerLootGenerator {
                         10, 0.3, 0.3, 0.3, 0));
             }
         }
-
-        spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
         if (plugin.getConfig().getBoolean("hologram.enabled", false)) {
             spawner.updateHologramData();
