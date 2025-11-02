@@ -330,7 +330,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(spawnerPlaceListener, this);
         pm.registerEvents(spawnerStorageAction, this);
         pm.registerEvents(spawnerExplosionListener, this);
-        pm.registerEvents(spawnerGuiViewManager, this);
+        // Note: spawnerGuiViewManager registers its own listeners internally
         pm.registerEvents(spawnerClickManager, this);
         pm.registerEvents(spawnerMenuAction, this);
         pm.registerEvents(spawnerStackerHandler, this);
