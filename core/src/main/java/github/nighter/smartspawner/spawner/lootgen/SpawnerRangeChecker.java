@@ -59,6 +59,12 @@ public class SpawnerRangeChecker {
                             handleSpawnerStateChange(sd, expectedStop);
                         }
                     });
+                } else {
+                    // Spawner state hasn't changed, but check if it's time to spawn loot
+                    // Only process active spawners that are not stopped
+                    if (sd.getSpawnerActive() && !sd.getSpawnerStop().get()) {
+                        checkAndSpawnLoot(sd);
+                    }
                 }
             }
         });
@@ -143,6 +149,75 @@ public class SpawnerRangeChecker {
     public void deactivateSpawner(SpawnerData spawner) {
         // Clear any pre-generated loot when deactivating
         spawner.clearPreGeneratedLoot();
+    }
+
+    /**
+     * Checks if a spawner should spawn loot based on its timer and spawns if needed.
+     * This runs independently of GUI updates to ensure loot spawns even when no one is viewing.
+     *
+     * @param spawner The spawner to check
+     */
+    private void checkAndSpawnLoot(SpawnerData spawner) {
+        // Calculate spawn delay
+        long cachedDelay = spawner.getCachedSpawnDelay();
+        if (cachedDelay == 0) {
+            cachedDelay = spawner.getSpawnDelay() * 50L; // Convert ticks to milliseconds
+            spawner.setCachedSpawnDelay(cachedDelay);
+        }
+
+        long currentTime = System.currentTimeMillis();
+        long lastSpawnTime = spawner.getLastSpawnTime();
+        long timeElapsed = currentTime - lastSpawnTime;
+
+        // Check if it's time to spawn loot
+        if (timeElapsed >= cachedDelay) {
+            // Try to acquire lock with short timeout to avoid blocking
+            try {
+                if (spawner.getDataLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    try {
+                        // Double-check time and state after acquiring lock
+                        currentTime = System.currentTimeMillis();
+                        lastSpawnTime = spawner.getLastSpawnTime();
+                        timeElapsed = currentTime - lastSpawnTime;
+
+                        if (timeElapsed >= cachedDelay && spawner.getSpawnerActive() && !spawner.getSpawnerStop().get()) {
+                            Location spawnerLocation = spawner.getSpawnerLocation();
+                            if (spawnerLocation != null) {
+                                // Schedule loot spawning on the correct region thread
+                                Scheduler.runLocationTask(spawnerLocation, () -> {
+                                    // Final check before spawning
+                                    if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
+                                        spawner.clearPreGeneratedLoot();
+                                        return;
+                                    }
+
+                                    // Spawn loot (pre-generated if available, otherwise generate new)
+                                    if (spawner.hasPreGeneratedLoot()) {
+                                        java.util.List<org.bukkit.inventory.ItemStack> items = spawner.getAndClearPreGeneratedItems();
+                                        int exp = spawner.getAndClearPreGeneratedExperience();
+                                        plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
+                                    } else {
+                                        plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
+                                    }
+
+                                    // Update last spawn time to reset the timer
+                                    spawner.setLastSpawnTime(System.currentTimeMillis());
+
+                                    // Update any open GUIs to show the new loot
+                                    if (plugin.getSpawnerGuiViewManager().hasViewers(spawner)) {
+                                        plugin.getSpawnerGuiViewManager().updateSpawnerMenuViewers(spawner);
+                                    }
+                                });
+                            }
+                        }
+                    } finally {
+                        spawner.getDataLock().unlock();
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     public void cleanup() {

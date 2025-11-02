@@ -389,7 +389,8 @@ public class TimerUpdateService {
     }
 
     /**
-     * Calculates time until next spawn with loot pre-generation logic.
+     * Calculates time until next spawn for GUI display purposes only.
+     * Actual loot spawning is handled by SpawnerRangeChecker independently.
      */
     private long calculateTimeUntilNextSpawn(SpawnerData spawner) {
         long cachedDelay = spawner.getCachedSpawnDelay();
@@ -413,19 +414,9 @@ public class TimerUpdateService {
         long timeUntilNextSpawn = cachedDelay - timeElapsed;
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));
         
-        // Pre-generate loot when timer is low
+        // Pre-generate loot when timer is low for smooth GUI display
         if (lootHelper.shouldPreGenerateLoot(timeUntilNextSpawn)) {
             lootHelper.preGenerateLoot(spawner);
-        }
-
-        // Add loot early for smooth UX
-        if (lootHelper.shouldAddLootEarly(timeUntilNextSpawn)) {
-            lootHelper.addPreGeneratedLootEarly(spawner, cachedDelay);
-        }
-
-        // Handle timer reaching zero
-        if (timeUntilNextSpawn <= 0) {
-            return lootHelper.handleLootSpawnAtZero(spawner, cachedDelay, timeElapsed);
         }
 
         return timeUntilNextSpawn;
