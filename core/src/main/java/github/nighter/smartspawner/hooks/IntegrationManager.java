@@ -182,7 +182,7 @@ public class IntegrationManager {
                 }
                 return true;
             }
-        } catch (NoClassDefFoundError | NullPointerException e) {
+        } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Failed to initialize " + pluginName + " integration", e);
         }
         return false;
