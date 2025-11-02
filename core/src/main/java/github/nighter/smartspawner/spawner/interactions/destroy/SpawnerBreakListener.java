@@ -10,12 +10,6 @@ import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
-import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.TooltipDisplay;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -34,14 +28,9 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Map;
-import java.util.Set;
 
 public class SpawnerBreakListener implements Listener {
     private static final int MAX_STACK_SIZE = 64;
-    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
-        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
-    );
-
     private final SmartSpawner plugin;
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
@@ -58,11 +47,6 @@ public class SpawnerBreakListener implements Listener {
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerFileHandler = plugin.getSpawnerFileHandler();
         this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
-    }
-
-    private static void hideTooltip(ItemStack item) {
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY,
-            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -165,8 +149,6 @@ public class SpawnerBreakListener implements Listener {
             // Unregister vanilla spawner from chunk limiter (stack size 1)
             chunkSpawnerLimiter.unregisterSpawner(location, 1);
 
-            hideTooltip(spawnerItem);
-
             if (directToInventory) {
                 giveSpawnersToPlayer(player, 1, spawnerItem);
                 player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
@@ -252,8 +234,6 @@ public class SpawnerBreakListener implements Listener {
 
         boolean directToInventory = plugin.getConfig().getBoolean("spawner_break.direct_to_inventory", false);
 
-        hideTooltip(template);
-
         if (directToInventory) {
             giveSpawnersToPlayer(player, dropAmount, template);
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
@@ -325,13 +305,10 @@ public class SpawnerBreakListener implements Listener {
         ItemStack itemToGive = template.clone();
         itemToGive.setAmount(Math.min(amount, MAX_STACK_SIZE));
 
-        hideTooltip(itemToGive);
-
         Map<Integer, ItemStack> failedItems = player.getInventory().addItem(itemToGive);
 
         if (!failedItems.isEmpty()) {
             for (ItemStack failedItem : failedItems.values()) {
-                hideTooltip(failedItem);
                 player.getWorld().dropItemNaturally(player.getLocation().toCenterLocation(), failedItem);
             }
             messageService.sendMessage(player, "inventory_full_items_dropped");

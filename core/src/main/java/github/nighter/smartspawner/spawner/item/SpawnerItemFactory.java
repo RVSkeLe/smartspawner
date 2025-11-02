@@ -148,6 +148,7 @@ public class SpawnerItemFactory {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             spawner.setItemMeta(meta);
         }
+        hideTooltip(spawner);
         if (amount == 1) {
             spawnerItemCache.put(entityType, spawner.clone());
             cacheTimestamps.put(entityType, System.currentTimeMillis());
@@ -166,7 +167,7 @@ public class SpawnerItemFactory {
                 }
             }
         }
-        hideTooltip(spawner);
+        // hideTooltip(spawner);
         return spawner;
     }
 
@@ -197,6 +198,7 @@ public class SpawnerItemFactory {
             if (lore != null && !lore.isEmpty()) {
                 meta.setLore(lore);
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+                hideTooltip(spawner);
             }
             meta.getPersistentDataContainer().set(
                     VANILLA_SPAWNER_KEY,
@@ -205,7 +207,6 @@ public class SpawnerItemFactory {
             );
             spawner.setItemMeta(meta);
         }
-        hideTooltip(spawner);
         return spawner;
     }
 }

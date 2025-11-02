@@ -403,7 +403,7 @@ public class SpawnerMenuUI {
         List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
         spawnerMeta.setLore(lore);
         spawnerItem.setItemMeta(spawnerMeta);
-        hideTooltip(spawnerItem);
+        if (spawnerItem.getType() == Material.SPAWNER) hideTooltip(spawnerItem);
         return spawnerItem;
     }
 

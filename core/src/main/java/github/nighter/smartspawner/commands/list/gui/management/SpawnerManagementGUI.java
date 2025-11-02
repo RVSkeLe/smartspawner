@@ -82,7 +82,7 @@ public class SpawnerManagementGUI {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             item.setItemMeta(meta);
         }
-        hideTooltip(item);
+        if (item.getType() == Material.SPAWNER) hideTooltip(item);
         inv.setItem(slot, item);
     }
 }
