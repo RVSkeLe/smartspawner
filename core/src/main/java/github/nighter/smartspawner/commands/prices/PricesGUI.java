@@ -6,7 +6,6 @@ import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.loot.LootItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -28,7 +27,6 @@ public class PricesGUI implements Listener {
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
     private final MessageService messageService;
-    private final EntityLootRegistry lootRegistry;
     private final ItemPriceManager priceManager;
     
     private static final int ITEMS_PER_PAGE = 45;
@@ -38,7 +36,6 @@ public class PricesGUI implements Listener {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
         this.messageService = plugin.getMessageService();
-        this.lootRegistry = plugin.getEntityLootRegistry();
         this.priceManager = plugin.getItemPriceManager();
     }
 
@@ -96,7 +93,7 @@ public class PricesGUI implements Listener {
         Map<Material, PriceInfo> allItems = new HashMap<>();
 
         for (EntityType entityType : EntityType.values()) {
-            EntityLootConfig lootConfig = lootRegistry.getLootConfig(entityType);
+            EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
             if (lootConfig == null) continue;
 
             for (LootItem lootItem : lootConfig.getAllItems()) {
