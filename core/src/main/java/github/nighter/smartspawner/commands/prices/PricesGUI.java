@@ -43,7 +43,7 @@ public class PricesGUI implements Listener {
     }
 
     public void openPricesGUI(Player player, int page) {
-        if (!player.hasPermission("smartspawner.prices")) {
+        if (!player.hasPermission("smartspawner.command.prices")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }

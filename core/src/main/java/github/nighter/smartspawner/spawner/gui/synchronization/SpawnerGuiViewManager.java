@@ -25,32 +25,6 @@ import java.util.UUID;
 /**
  * Facade and coordinator for spawner GUI management.
  * Delegates responsibilities to specialized managers, services, and listeners.
- * 
- * <p>This refactored version follows SOLID principles with clear separation of concerns:
- * <ul>
- *   <li>ViewerTrackingManager - tracks which players are viewing which spawners</li>
- *   <li>TimerUpdateService - handles timer calculations and updates</li>
- *   <li>GuiUpdateService - manages GUI item updates (storage, exp, info)</li>
- *   <li>StorageUpdateService - handles storage page transitions</li>
- *   <li>SlotCacheManager - caches GUI slot positions</li>
- *   <li>UpdateTaskManager - manages scheduled update task lifecycle</li>
- *   <li>InventoryEventListener - handles inventory open/close events</li>
- *   <li>PlayerEventListener - handles player quit events</li>
- * </ul>
- * 
- * <p>Thread safety is ensured through:
- * <ul>
- *   <li>ConcurrentHashMap for all shared state</li>
- *   <li>Folia-compliant region-based scheduling</li>
- *   <li>Proper synchronization in critical sections</li>
- * </ul>
- * 
- * <p>Memory leak prevention:
- * <ul>
- *   <li>Proper listener unregistration in cleanup()</li>
- *   <li>Clear references in all cleanup methods</li>
- *   <li>No long-lived Bukkit object references</li>
- * </ul>
  */
 public class SpawnerGuiViewManager {
 
@@ -112,9 +86,11 @@ public class SpawnerGuiViewManager {
             this::cleanupViewer
         );
         
-        // Process timer updates
-        timerUpdateService.processTimerUpdates();
-        
+        // Process timer updates only if enabled
+        if (timerUpdateService.shouldProcessTimerUpdates()) {
+            timerUpdateService.processTimerUpdates();
+        }
+
         // Stop task if no viewers remain
         if (!viewerTrackingManager.hasAnyViewers()) {
             updateTaskManager.stopTask();

@@ -75,6 +75,14 @@ COD:
       amount: 0-1
       chance: 5.0
 
+# https://minecraft.wiki/w/Copper_Golem#Drops
+COPPER_GOLEM:
+  experience: 0
+  loot:
+      COPPER_INGOT:
+      amount: 1-3
+      chance: 100.0
+
 # https://minecraft.wiki/w/Cow#Drops
 COW:
   experience: 3

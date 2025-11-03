@@ -10,17 +10,16 @@ import github.nighter.smartspawner.spawner.gui.synchronization.utils.LootPreGene
 import github.nighter.smartspawner.spawner.gui.synchronization.utils.TimerFormatter;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Service responsible for managing and updating spawner timers in GUIs.
@@ -30,19 +29,18 @@ public class TimerUpdateService {
 
     private static final int MAX_PLAYERS_PER_BATCH = 10; // Limit players processed per batch
 
+    // Pre-compiled regex patterns for better performance
+    private static final Pattern TIMER_PATTERN = Pattern.compile("\\d{2}:\\d{2}");
+
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
     private final LootPreGenerationHelper lootHelper;
     private final ViewerTrackingManager viewerTrackingManager;
     private final SlotCacheManager slotCacheManager;
 
-    // Cached status text messages
+    // Cached status text messages for timer display
     private String cachedInactiveText;
     private String cachedFullText;
-    
-    // Pre-stripped versions for performance
-    private String strippedCachedInactive;
-    private String strippedCachedFull;
 
     // Timer placeholder detection
     private volatile Boolean hasTimerPlaceholders = null;
@@ -50,6 +48,9 @@ public class TimerUpdateService {
     // Performance tracking
     private final Map<UUID, Long> lastTimerUpdate = new ConcurrentHashMap<>();
     private final Map<UUID, String> lastTimerValue = new ConcurrentHashMap<>();
+
+    // Cache the lore line index where timer is located per spawner
+    private final Map<String, Integer> timerLineIndexCache = new ConcurrentHashMap<>();
 
     public TimerUpdateService(SmartSpawner plugin, ViewerTrackingManager viewerTrackingManager,
                               SlotCacheManager slotCacheManager) {
@@ -67,11 +68,6 @@ public class TimerUpdateService {
     private void initializeCachedStrings() {
         cachedInactiveText = languageManager.getGuiItemName("spawner_info_item.lore_inactive");
         cachedFullText = languageManager.getGuiItemName("spawner_info_item.lore_full");
-        
-        // Pre-strip colors for performance
-        strippedCachedInactive = ChatColor.stripColor(cachedInactiveText);
-        strippedCachedFull = ChatColor.stripColor(cachedFullText);
-        
         checkTimerPlaceholderUsage();
     }
 
@@ -119,9 +115,27 @@ public class TimerUpdateService {
     }
 
     /**
+     * Checks if timer updates should be processed.
+     * More efficient than isTimerPlaceholdersEnabled() as it returns false immediately
+     * when we're certain timers are disabled.
+     *
+     * @return true if timer updates should be processed
+     */
+    public boolean shouldProcessTimerUpdates() {
+        return hasTimerPlaceholders == null || hasTimerPlaceholders;
+    }
+
+    /**
      * Re-checks timer placeholder usage after configuration reload.
+     * Clears all caches to ensure fresh state.
      */
     public void recheckTimerPlaceholders() {
+        // Clear all caches before rechecking
+        timerLineIndexCache.clear();
+        lastTimerUpdate.clear();
+        lastTimerValue.clear();
+
+        // Reinitialize and recheck
         initializeCachedStrings();
     }
 
@@ -159,7 +173,8 @@ public class TimerUpdateService {
      * This is called periodically by the update task.
      */
     public void processTimerUpdates() {
-        if (!isTimerPlaceholdersEnabled()) {
+        // Early exit if no timer placeholders in GUI config
+        if (hasTimerPlaceholders != null && !hasTimerPlaceholders) {
             return;
         }
 
@@ -171,9 +186,9 @@ public class TimerUpdateService {
 
         // Group main menu viewers by spawner
         Map<String, List<UUID>> spawnerViewers = new HashMap<>();
+        Map<UUID, ViewerTrackingManager.ViewerInfo> mainMenuViewers = viewerTrackingManager.getMainMenuViewers();
 
-        for (Map.Entry<UUID, ViewerTrackingManager.ViewerInfo> entry : 
-                viewerTrackingManager.getMainMenuViewers().entrySet()) {
+        for (Map.Entry<UUID, ViewerTrackingManager.ViewerInfo> entry : mainMenuViewers.entrySet()) {
             UUID playerId = entry.getKey();
             ViewerTrackingManager.ViewerInfo viewerInfo = entry.getValue();
             SpawnerData spawner = viewerInfo.getSpawnerData();
@@ -207,9 +222,9 @@ public class TimerUpdateService {
             List<UUID> viewers = spawnerGroup.getValue();
             if (viewers.isEmpty()) continue;
 
-            // Get spawner from first viewer
+            // Get spawner from first viewer - cache the lookup
             UUID firstViewer = viewers.get(0);
-            ViewerTrackingManager.ViewerInfo viewerInfo = viewerTrackingManager.getMainMenuViewers().get(firstViewer);
+            ViewerTrackingManager.ViewerInfo viewerInfo = mainMenuViewers.get(firstViewer);
             if (viewerInfo == null) continue;
 
             SpawnerData spawner = viewerInfo.getSpawnerData();
@@ -221,10 +236,6 @@ public class TimerUpdateService {
             for (UUID playerId : viewers) {
                 if (processedPlayers >= MAX_PLAYERS_PER_BATCH) {
                     break;
-                }
-
-                if (!viewerTrackingManager.getMainMenuViewers().containsKey(playerId)) {
-                    continue;
                 }
 
                 // Skip if timer unchanged
@@ -251,7 +262,7 @@ public class TimerUpdateService {
                     final UUID finalPlayerId = playerId;
 
                     Scheduler.runLocationTask(playerLocation, () -> {
-                        if (!player.isOnline() || !viewerTrackingManager.getMainMenuViewers().containsKey(finalPlayerId)) {
+                        if (!player.isOnline() || !mainMenuViewers.containsKey(finalPlayerId)) {
                             return;
                         }
 
@@ -433,7 +444,7 @@ public class TimerUpdateService {
 
     /**
      * Updates timer in spawner info item.
-     * Optimized to minimize string operations and checks.
+     * Optimized to minimize string operations, checks, and object allocations.
      */
     private void updateSpawnerInfoItemTimer(Inventory inventory, SpawnerData spawner, 
                                            String timeDisplay, int spawnerInfoSlot) {
@@ -456,61 +467,89 @@ public class TimerUpdateService {
             return;
         }
 
-        boolean needsUpdate = false;
-        List<String> updatedLore = new ArrayList<>(lore.size());
+        // Try to use cached index first
+        String spawnerId = spawner.getSpawnerId();
+        Integer cachedIndex = timerLineIndexCache.get(spawnerId);
 
-        // Early exit optimization: if we find the timer line, we can stop processing
-        for (String line : lore) {
-            if (line.contains("%time%")) {
-                updatedLore.add(line.replace("%time%", timeDisplay));
+        boolean needsUpdate = false;
+
+        // Fast path: try cached index first
+        if (cachedIndex != null && cachedIndex >= 0 && cachedIndex < lore.size()) {
+            String line = lore.get(cachedIndex);
+            String updatedLine = tryUpdateTimerLine(line, timeDisplay);
+
+            if (updatedLine != null && !updatedLine.equals(line)) {
+                lore.set(cachedIndex, updatedLine);
                 needsUpdate = true;
-            } else {
-                String updatedLine = updateExistingTimerLine(line, timeDisplay);
-                if (!updatedLine.equals(line)) {
-                    updatedLore.add(updatedLine);
+            } else if (updatedLine == null) {
+                // Cache is stale, invalidate and fall through to search
+                timerLineIndexCache.remove(spawnerId);
+                cachedIndex = null;
+            }
+        }
+
+        // Slow path: search for timer line if cache miss or invalid
+        if (!needsUpdate && cachedIndex == null) {
+            for (int i = 0; i < lore.size(); i++) {
+                String line = lore.get(i);
+                String updatedLine = tryUpdateTimerLine(line, timeDisplay);
+
+                if (updatedLine != null && !updatedLine.equals(line)) {
+                    lore.set(i, updatedLine);
                     needsUpdate = true;
-                } else {
-                    updatedLore.add(line);
+                    // Cache this index for future updates
+                    timerLineIndexCache.put(spawnerId, i);
+                    break;
                 }
             }
         }
 
         if (needsUpdate) {
-            meta.setLore(updatedLore);
+            meta.setLore(lore);
             spawnerItem.setItemMeta(meta);
             inventory.setItem(spawnerInfoSlot, spawnerItem);
         }
     }
 
     /**
+     * Attempts to update a timer line. Returns updated line if this line contains timer info,
+     * or null if this line doesn't contain timer information.
+     */
+    private String tryUpdateTimerLine(String line, String timeDisplay) {
+        // Check for placeholder first (initial GUI creation)
+        if (line.contains("%time%")) {
+            return line.replace("%time%", timeDisplay);
+        }
+
+        // Quick reject: skip line if it can't possibly contain timer (no colon = no HH:MM pattern)
+        if (line.indexOf(':') == -1) {
+            return null;
+        }
+
+        // Try to update existing timer pattern
+        String updatedLine = updateExistingTimerLine(line, timeDisplay);
+        if (!updatedLine.equals(line)) {
+            return updatedLine;
+        }
+
+        return null; // This line doesn't contain timer info
+    }
+
+    /**
      * Updates existing timer line by replacing old value with new.
-     * Optimized to use pre-stripped cached values and minimize string operations.
+     * Only handles timer pattern (HH:MM) replacement for language independence.
      */
     private String updateExistingTimerLine(String line, String newTimeDisplay) {
-        // Pre-strip the line once
-        String strippedLine = ChatColor.stripColor(line);
-
-        // Check if line contains a timer pattern (HH:MM format)
-        if (strippedLine.matches(".*\\d{2}:\\d{2}.*")) {
-            // Try to replace time pattern directly
-            String updatedLine = line.replaceAll("\\d{2}:\\d{2}", newTimeDisplay);
-            if (!updatedLine.equals(line)) {
-                return updatedLine;
-            }
+        // Quick check: if line doesn't contain ':', it can't have a timer
+        int colonIndex = line.indexOf(':');
+        if (colonIndex == -1) {
+            return line;
         }
 
-        // Check if line contains cached inactive/full text (using pre-stripped versions)
-        if (strippedLine.contains(strippedCachedInactive)) {
-            return line.replace(cachedInactiveText, newTimeDisplay);
-        } else if (strippedLine.contains(strippedCachedFull)) {
-            return line.replace(cachedFullText, newTimeDisplay);
-        }
-
-        // Handle special case: new display is inactive/full but line has timer
-        String strippedNewDisplay = ChatColor.stripColor(newTimeDisplay);
-        if ((strippedNewDisplay.equals(strippedCachedInactive) || strippedNewDisplay.equals(strippedCachedFull))
-            && strippedLine.matches(".*\\d{2}:\\d{2}.*")) {
-            return line.replaceAll("\\d{2}:\\d{2}", newTimeDisplay);
+        // Check if line contains a timer pattern (HH:MM format) using pre-compiled pattern
+        if (TIMER_PATTERN.matcher(line).find()) {
+            // Replace time pattern directly
+            return TIMER_PATTERN.matcher(line).replaceFirst(newTimeDisplay);
         }
 
         return line;

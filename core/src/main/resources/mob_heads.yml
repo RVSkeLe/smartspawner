@@ -1,6 +1,7 @@
 # SmartSpawner - Mob Head Texture Configuration
 # Players can customize mob head textures for spawner GUI
-# Get custom texture hashes from https://minecraft-heads.com/
+# Custom Player Head Textures is hash from http://textures.minecraft.net/texture/<hash>)
+# Get custom texture hashes from https://minecraft-heads.com/, https://mcheads.ru/en,...
 
 # Default material for unknown mobs
 default_material: "SPAWNER"
@@ -31,10 +32,8 @@ mob_heads:
   PIGLIN_BRUTE:
     material: "PIGLIN_HEAD"
     custom_texture: null
-  
-  # Custom Player Head Textures (texture hash from http://textures.minecraft.net/texture/<hash>)
+
   # All mobs below use PLAYER_HEAD material with custom textures
-  
   ALLAY:
     material: "PLAYER_HEAD"
     custom_texture: "df5de940bfe499c59ee8dac9f9c3919e7535eff3a9acb16f4842bf290f4c679f"
@@ -90,6 +89,10 @@ mob_heads:
   COW:
     material: "PLAYER_HEAD"
     custom_texture: "b667c0e107be79d7679bfe89bbc57c6bf198ecb529a3295fcfdfd2f24408dca3"
+
+  COPPER_GOLEM:
+    material: "PLAYER_HEAD"
+    custom_texture: "fb2c96b6961ff5b53075116aa94331c471851de5008ba0594c387b46a429ebc4"
     
   CREAKING:
     material: "PLAYER_HEAD"
