@@ -50,11 +50,11 @@ spawner_storage_item:
   # Định nghĩa cách mỗi vật phẩm rơi sẽ hiển thị khi dùng {loot_items}
   # Các placeholder khả dụng cho từng vật phẩm rơi:
   # {item_name} - Tên vật phẩm (viết chuẩn)
-  # %ɪᴛᴇᴍ_ɴᴀᴍᴇ% - Tên vật phẩm (chữ nhỏ caps)
+  # {ɪᴛᴇᴍ_ɴᴀᴍᴇ} - Tên vật phẩm (chữ nhỏ caps)
   # {amount} - Số lượng vật phẩm (có dấu phẩy)
   # {raw_amount} - Số lượng vật phẩm (không định dạng)
   # {chance} - Tỉ lệ rơi vật phẩm này (có ký hiệu %, ví dụ: "8.5%")
-  loot_items: '  &#bdc3c7•  &#2ecc71{amount} &#bdc3c7%ɪᴛᴇᴍ_ɴᴀᴍᴇ%'
+  loot_items: '  &#bdc3c7•  &#2ecc71{amount} &#bdc3c7{ɪᴛᴇᴍ_ɴᴀᴍᴇ}'
   loot_items_empty: '  &#bdc3c7•  ᴋʜôɴɢ ᴄó'
 
 # Spawner Info Item Configuration
@@ -392,7 +392,7 @@ navigation:
 prices_gui_title: ɢɪá ʙáɴ ᴠậᴛ ᴘʜẩᴍ - [{current_page}/{total_pages}]
 
 price_item:
-  name: '&#3498db%ɪᴛᴇᴍ_ɴᴀᴍᴇ%'
+  name: '&#3498db{ɪᴛᴇᴍ_ɴᴀᴍᴇ}'
   lore:
     - ''
     - '&#3498db◈ &#ecf0f1ᴛʜôɴɢ ᴛɪɴ ɢɪá:'

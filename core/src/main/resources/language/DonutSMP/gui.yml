@@ -25,7 +25,7 @@ spawner_storage_item:
   name: '&#F97603sᴘᴀᴡɴᴇʀ sᴛᴏʀᴀɢᴇ'
   lore:
     - '{loot_items}'
-  loot_items: '&#F97603{amount} &f%ɪᴛᴇᴍ_ɴᴀᴍᴇ%'
+  loot_items: '&#F97603{amount} &f{ɪᴛᴇᴍ_ɴᴀᴍᴇ}'
   loot_items_empty: '&#e6e6faɴᴏ ɪᴛᴇᴍ ᴅʀᴏᴘs'
 
 spawner_info_item:
@@ -311,7 +311,7 @@ navigation:
 prices_gui_title: "ꜱᴇʟʟ ᴘʀɪᴄᴇꜱ - [{current_page}/{total_pages}]"
 
 price_item:
-  name: '&#3498db%ɪᴛᴇᴍ_ɴᴀᴍᴇ%'
+  name: '&#3498db{ɪᴛᴇᴍ_ɴᴀᴍᴇ}'
   lore:
     - ''
     - '&#3498db◈ &#ecf0f1ᴘʀɪᴄᴇ:'
