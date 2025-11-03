@@ -1,5 +1,6 @@
 <div align="center">
-<br>![a33db1a6dff953a70ae8 (1)](https://github.com/user-attachments/assets/c976b6a9-537c-46ec-8efc-0e80cdd0840d)
+  
+![banner](https://github.com/user-attachments/assets/c976b6a9-537c-46ec-8efc-0e80cdd0840d)
 
 [![Modrinth](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/available/modrinth_vector.svg)](https://modrinth.com/plugin/smart-spawner-plugin)
 [![Spigot](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/available/spigot_vector.svg)](https://www.spigotmc.org/resources/120743/)
