@@ -319,16 +319,19 @@ public class SpawnerMenuFormUI {
         int maxSlots = spawner.getMaxSpawnerLootSlots();
         double percentStorageDecimal = maxSlots > 0 ? ((double) currentItems / maxSlots) * 100 : 0;
         String formattedPercentStorage = String.format("%.1f", percentStorageDecimal);
+        int percentStorageRounded = (int) Math.round(percentStorageDecimal);
 
         placeholders.put("current_items", String.valueOf(currentItems));
         placeholders.put("max_items", languageManager.formatNumber(maxSlots));
-        placeholders.put("percentage_storage", formattedPercentStorage);
+        placeholders.put("percent_storage_decimal", formattedPercentStorage);
+        placeholders.put("percent_storage_rounded", String.valueOf(percentStorageRounded));
 
         // Experience information
         long currentExp = spawner.getSpawnerExp();
         long maxExp = spawner.getMaxStoredExp();
         double percentExpDecimal = maxExp > 0 ? ((double) currentExp / maxExp) * 100 : 0;
         String formattedPercentExp = String.format("%.1f", percentExpDecimal);
+        int percentExpRounded = (int) Math.round(percentExpDecimal);
 
         String formattedCurrentExp = languageManager.formatNumber(currentExp);
         String formattedMaxExp = languageManager.formatNumber(maxExp);
@@ -337,7 +340,8 @@ public class SpawnerMenuFormUI {
         placeholders.put("max_exp", formattedMaxExp);
         placeholders.put("raw_current_exp", String.valueOf(currentExp));
         placeholders.put("raw_max_exp", String.valueOf(maxExp));
-        placeholders.put("percentage_exp", formattedPercentExp);
+        placeholders.put("percent_exp_decimal", formattedPercentExp);
+        placeholders.put("percent_exp_rounded", String.valueOf(percentExpRounded));
 
         // Total sell price information
         // Check if sell value needs recalculation before displaying

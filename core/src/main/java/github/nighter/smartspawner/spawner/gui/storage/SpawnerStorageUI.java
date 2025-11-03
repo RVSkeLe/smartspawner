@@ -392,8 +392,8 @@ public class SpawnerStorageUI {
                 String itemName = languageManager.getVanillaItemName(lootItem.getMaterial());
                 String format = currentSort == lootItem.getMaterial() ? selectedItemFormat : unselectedItemFormat;
                 
-                // Replace %item_name% placeholder in format string
-                String formattedItem = format.replace("%item_name%", itemName);
+                // Replace {item_name} placeholder in format string
+                String formattedItem = format.replace("{item_name}", itemName);
                 availableItems.append(formattedItem);
                 first = false;
             }

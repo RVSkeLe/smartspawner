@@ -111,28 +111,32 @@ public class SpawnerHologram {
 
         // Create replacements map
         Map<String, String> replacements = new HashMap<>();
-        replacements.put("%entity%", entityTypeName);
-        replacements.put("%ᴇɴᴛɪᴛʏ%", languageManager.getSmallCaps(entityTypeName));
-        replacements.put("%stack_size%", String.valueOf(stackSize));
-        replacements.put("%current_exp%", languageManager.formatNumber(currentExp));
-        replacements.put("%max_exp%", languageManager.formatNumber(maxExp));
-        replacements.put("%used_slots%", languageManager.formatNumber(currentItems));
-        replacements.put("%max_slots%", languageManager.formatNumber(maxSlots));
+        replacements.put("entity", entityTypeName);
+        replacements.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityTypeName));
+        replacements.put("stack_size", String.valueOf(stackSize));
+        replacements.put("current_exp", languageManager.formatNumber(currentExp));
+        replacements.put("max_exp", languageManager.formatNumber(maxExp));
+        replacements.put("used_slots", languageManager.formatNumber(currentItems));
+        replacements.put("max_slots", languageManager.formatNumber(maxSlots));
         
         // Calculate and add percentage placeholders
         double percentStorageDecimal = maxSlots > 0 ? ((double) currentItems / maxSlots) * 100 : 0;
         String formattedPercentStorage = String.format("%.1f", percentStorageDecimal);
-        replacements.put("%percentage_storage%", formattedPercentStorage);
+        int percentStorageRounded = (int) Math.round(percentStorageDecimal);
+        replacements.put("percent_storage_decimal", formattedPercentStorage);
+        replacements.put("percent_storage_rounded", String.valueOf(percentStorageRounded));
         
         double percentExpDecimal = maxExp > 0 ? ((double) currentExp / maxExp) * 100 : 0;
         String formattedPercentExp = String.format("%.1f", percentExpDecimal);
-        replacements.put("%percentage_exp%", formattedPercentExp);
+        int percentExpRounded = (int) Math.round(percentExpDecimal);
+        replacements.put("percent_exp_decimal", formattedPercentExp);
+        replacements.put("percent_exp_rounded", String.valueOf(percentExpRounded));
 
         String hologramText = languageManager.getHologramText();
 
         // Apply replacements
         for (Map.Entry<String, String> entry : replacements.entrySet()) {
-            hologramText = hologramText.replace(entry.getKey(), entry.getValue());
+            hologramText = hologramText.replace("{" + entry.getKey() + "}", entry.getValue());
         }
 
         // Apply color codes

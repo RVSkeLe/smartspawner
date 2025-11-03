@@ -4,11 +4,11 @@
 # Controls how large numbers are displayed in-game
 #---------------------------------------------------
 format_number:
-  thousand: "%s%K"    # Example: 5000 → 5K
-  million: "%s%M"     # Example: 2000000 → 2M
-  billion: "%s%B"     # Example: 1500000000 → 1.5B
-  trillion: "%s%T"    # Example: 1000000000000 → 1T
-  default: "%s%"      # Fallback format when no other rule matches
+  thousand: "{s}K"    # Example: 5000 → 5K
+  million: "{s}M"     # Example: 2000000 → 2M
+  billion: "{s}B"     # Example: 1500000000 → 1.5B
+  trillion: "{s}T"    # Example: 1000000000000 → 1T
+  default: "{s}"      # Fallback format when no other rule matches
 
 #---------------------------------------------------
 #                 Mob Display Names
