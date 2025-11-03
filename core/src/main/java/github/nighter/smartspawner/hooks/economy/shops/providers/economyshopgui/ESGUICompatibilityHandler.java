@@ -18,7 +18,7 @@ public class ESGUICompatibilityHandler implements Listener {
     @EventHandler
     public void onESGUIShopItemsLoad(ShopItemsLoadEvent event) {
         plugin.getItemPriceManager().reloadShopIntegration();
-        plugin.getEntityLootRegistry().loadConfigurations();
+        plugin.getSpawnerSettingsConfig().reload();
         plugin.getSpawnerManager().reloadSpawnerDrops();
     }
 }

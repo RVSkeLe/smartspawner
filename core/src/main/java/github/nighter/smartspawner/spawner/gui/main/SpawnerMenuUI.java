@@ -230,7 +230,7 @@ public class SpawnerMenuUI {
         }
 
         // Get possible loot items
-        EntityLootConfig lootConfig = plugin.getEntityLootRegistry().getLootConfig(entityType);
+        EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
         List<LootItem> possibleLootItems = lootConfig != null
                 ? lootConfig.getAllItems()
                 : Collections.emptyList();

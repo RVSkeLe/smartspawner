@@ -10,7 +10,7 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
-import github.nighter.smartspawner.spawner.config.MobHeadConfig;
+import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
@@ -40,7 +40,6 @@ import github.nighter.smartspawner.spawner.interactions.stack.SpawnerStackHandle
 import github.nighter.smartspawner.spawner.interactions.type.SpawnEggHandler;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
@@ -80,7 +79,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
-    private MobHeadConfig mobHeadConfig;
+    private SpawnerSettingsConfig spawnerSettingsConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -120,7 +119,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerPlaceListener spawnerPlaceListener;
     private WorldEventHandler worldEventHandler;
     private ItemPriceManager itemPriceManager;
-    private EntityLootRegistry entityLootRegistry;
     private UpdateChecker updateChecker;
     private BrigadierCommandManager brigadierCommandManager;
     private ListSubCommand listSubCommand;
@@ -229,9 +227,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
         
-        // Initialize mob head config
-        this.mobHeadConfig = new MobHeadConfig(this);
-        this.mobHeadConfig.load();
+        // Initialize new unified spawner settings config (but don't load yet)
+        this.spawnerSettingsConfig = new SpawnerSettingsConfig(this);
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -242,7 +239,13 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void initializeEconomyComponents() {
         this.itemPriceManager = new ItemPriceManager(this);
         this.itemPriceManager.init();
-        this.entityLootRegistry = new EntityLootRegistry(this, itemPriceManager);
+        
+        // Load spawner settings after economy components are ready
+        // This is needed because loot configuration requires price manager
+        if (spawnerSettingsConfig != null) {
+            spawnerSettingsConfig.load();
+        }
+        
         this.spawnerItemFactory = new SpawnerItemFactory(this);
     }
 
@@ -391,9 +394,9 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         spawnerMenuAction.reload();
         timeFormatter.clearCache();
         
-        // Reload mob head config
-        if (mobHeadConfig != null) {
-            mobHeadConfig.reload();
+        // Reload spawner settings config (includes mob heads and loot)
+        if (spawnerSettingsConfig != null) {
+            spawnerSettingsConfig.reload();
             // Clear head cache to force regeneration with new textures
             SpawnerMobHeadTexture.clearCache();
         }

@@ -36,7 +36,7 @@ public class EntityLootRegistry {
         loadConfigurations();
     }
 
-    private void setupLootConfigFile() {
+    protected void setupLootConfigFile() {
         File lootConfigFile = new File(plugin.getDataFolder(), "mob_drops.yml");
         if (!lootConfigFile.exists()) {
             plugin.saveResource("mob_drops.yml", false);

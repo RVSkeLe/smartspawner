@@ -50,13 +50,13 @@ public class SpawnerMobHeadTexture {
             return DEFAULT_SPAWNER_BLOCK;
         }
         
-        MobHeadConfig mobHeadConfig = plugin.getMobHeadConfig();
-        if (mobHeadConfig == null) {
+        SpawnerSettingsConfig settingsConfig = plugin.getSpawnerSettingsConfig();
+        if (settingsConfig == null) {
             return DEFAULT_SPAWNER_BLOCK;
         }
         
         // Get material from config
-        Material material = mobHeadConfig.getMaterial(entityType);
+        Material material = settingsConfig.getMaterial(entityType);
         
         // If it's not a player head, return the vanilla head
         if (material != Material.PLAYER_HEAD) {
@@ -69,14 +69,14 @@ public class SpawnerMobHeadTexture {
         }
         
         // Check if we have a custom texture
-        if (!mobHeadConfig.hasCustomTexture(entityType)) {
+        if (!settingsConfig.hasCustomTexture(entityType)) {
             return new ItemStack(material);
         }
         
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         try {
-            String texture = mobHeadConfig.getCustomTexture(entityType);
+            String texture = settingsConfig.getCustomTexture(entityType);
             PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
             PlayerTextures textures = profile.getTextures();
             URL url = new URL("http://textures.minecraft.net/texture/" + texture);
