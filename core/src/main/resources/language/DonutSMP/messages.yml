@@ -49,12 +49,12 @@ no_exp:
   sound: block.note_block.pling
 
 exp_collected:
-  message: "&#2ecc71+%exp% ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ"
-  action_bar: "&#2ecc71+%exp% ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ"
+  message: "&#2ecc71+{exp} ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ"
+  action_bar: "&#2ecc71+{exp} ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ"
   sound: entity.experience_orb.pickup
 
 exp_collected_with_mending:
-  action_bar: "&#37eb9a+%exp% ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ &#f8f8ff| &#ff5252-%exp_mending% ᴇxᴘ ᴍᴇɴᴅɪɴɢ ᴜꜱᴇᴅ"
+  action_bar: "&#37eb9a+{exp} ᴇxᴘ ᴄᴏʟʟᴇᴄᴛᴇᴅ &#f8f8ff| &#ff5252-{exp_mending} ᴇxᴘ ᴍᴇɴᴅɪɴɢ ᴜꜱᴇᴅ"
   sound: entity.experience_orb.pickup
 
 # ------------------------------------------------------
@@ -69,7 +69,7 @@ no_items_to_take:
   sound: block.note_block.pling
 
 take_all_items:
-  action_bar: "&#37eb9aᴛᴏᴏᴋ &#f8f8ff%amount% &#37eb9aɪᴛᴇᴍꜱ ꜰʀᴏᴍ ꜱᴘᴀᴡɴᴇʀ"
+  action_bar: "&#37eb9aᴛᴏᴏᴋ &#f8f8ff{amount} &#37eb9aɪᴛᴇᴍꜱ ꜰʀᴏᴍ ꜱᴘᴀᴡɴᴇʀ"
   sound: entity.item.pickup
 
 no_items_to_drop:
@@ -80,7 +80,7 @@ no_items_to_drop:
 #         Spawner - Stacker GUI Interaction
 # ------------------------------------------------------
 spawner_stacker_minimum_reached:
-  message: "&#ff5252ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ &#f8f8ff+%amount% &#ff5252ᴡɪʟʟ ʙᴇ ꜱᴛᴀᴄᴋᴇᴅ."
+  message: "&#ff5252ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ &#f8f8ff+{amount} &#ff5252ᴡɪʟʟ ʙᴇ ꜱᴛᴀᴄᴋᴇᴅ."
   sound: block.note_block.pling
 
 spawner_cannot_remove_last:
@@ -88,7 +88,7 @@ spawner_cannot_remove_last:
   sound: block.note_block.pling
 
 spawner_insufficient_quantity:
-  action_bar: "&#ff5252ɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜱᴘᴀᴡɴᴇʀꜱ: &#f8f8ff%amountAvailable%&#ff5252/&#f8f8ff%amountChange%"
+  action_bar: "&#ff5252ɪɴꜱᴜꜰꜰɪᴄɪᴇɴᴛ ꜱᴘᴀᴡɴᴇʀꜱ: &#f8f8ff{amountAvailable}&#ff5252/&#f8f8ff{amountChange}"
   sound: block.note_block.pling
 
 inventory_full_items_dropped:
@@ -107,11 +107,11 @@ spawner_different:
   sound: block.note_block.pling
 
 spawner_stack_full:
-  action_bar: "&#ff5252ᴍᴀx ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ: &#f8f8ff%max%"
+  action_bar: "&#ff5252ᴍᴀx ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ: &#f8f8ff{max}"
   sound: block.note_block.pling
 
 spawner_stack_success:
-  action_bar: "[&#37eb9a&l✓&f] ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴛᴀᴄᴋᴇᴅ &#37eb9a%amount% &fꜱᴘᴀᴡɴᴇʀꜱ"
+  action_bar: "[&#37eb9a&l✓&f] ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴛᴀᴄᴋᴇᴅ &#37eb9a{amount} &fꜱᴘᴀᴡɴᴇʀꜱ"
   sound: entity.player.levelup
 
 # ------------------------------------------------------
@@ -165,7 +165,7 @@ natural_spawner_break_blocked:
 #              Spawner - Limit Interaction
 # ------------------------------------------------------
 spawner_chunk_limit_reached:
-  action_bar: "&#ff5252ᴄʜᴜɴᴋ ꜱᴘᴀᴡɴᴇʀ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ: &#f8f8ff%limit%"
+  action_bar: "&#ff5252ᴄʜᴜɴᴋ ꜱᴘᴀᴡɴᴇʀ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ: &#f8f8ff{limit}"
   sound: block.note_block.pling
 
 # ------------------------------------------------------
@@ -184,7 +184,7 @@ no_sellable_items:
   sound: block.note_block.pling
 
 sell_success:
-  message: "&#e6e6faꜱᴏʟᴅ &#e67e22%amount% ɪᴛᴇᴍꜱ&#e6e6fa ꜰᴏʀ &a+$%price%"
+  message: "&#e6e6faꜱᴏʟᴅ &#e67e22{amount} ɪᴛᴇᴍꜱ&#e6e6fa ꜰᴏʀ &a+${price}"
   sound: block.note_block.bell
 
 action_in_progress:
@@ -240,7 +240,7 @@ command_give_invalid_amount:
   sound: block.note_block.pling
 
 command_give_amount_too_large:
-  message: "&#ff5252ᴍᴀx ɢɪᴠᴇ ᴀᴍᴏᴜɴᴛ: &#f8f8ff%max%"
+  message: "&#ff5252ᴍᴀx ɢɪᴠᴇ ᴀᴍᴏᴜɴᴛ: &#f8f8ff{max}"
   sound: block.note_block.pling
 
 command_give_inventory_full:
@@ -248,11 +248,11 @@ command_give_inventory_full:
   sound: block.note_block.pling
 
 command_give_spawner_received:
-  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff%amount% %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
+  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff{amount} %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
   sound: entity.experience_orb.pickup
 
 command_give_spawner_given:
-  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff%amount% %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff%player%"
+  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
   sound: entity.experience_orb.pickup
 
 # Hologram command messages
@@ -281,7 +281,7 @@ command_ghost_spawner_check_start:
   sound: block.note_block.hat
 
 command_ghost_spawner_cleared:
-  message: "&#37eb9aꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ &#f8f8ffʀᴇᴍᴏᴠᴇᴅ &#37eb9a%count% &#f8f8ffɢʜᴏꜱᴛ ꜱᴘᴀᴡɴᴇʀ(ꜱ)"
+  message: "&#37eb9aꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ &#f8f8ffʀᴇᴍᴏᴠᴇᴅ &#37eb9a{count} &#f8f8ffɢʜᴏꜱᴛ ꜱᴘᴀᴡɴᴇʀ(ꜱ)"
   sound: entity.experience_orb.pickup
 
 command_ghost_spawner_none_found:
