@@ -486,44 +486,65 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         }
     }
     
+    // Cached wrapper instance for EntityLootRegistry
+    private EntityLootRegistryWrapper entityLootRegistryWrapper;
+    
     /**
      * Get EntityLootRegistry wrapper for backward compatibility
      * Delegates to SpawnerSettingsConfig
      */
     public EntityLootRegistry getEntityLootRegistry() {
-        // Return a wrapper that delegates to spawnerSettingsConfig
-        return new EntityLootRegistryWrapper();
+        if (entityLootRegistryWrapper == null) {
+            entityLootRegistryWrapper = new EntityLootRegistryWrapper(this, itemPriceManager);
+        }
+        return entityLootRegistryWrapper;
     }
     
     /**
      * Wrapper class to maintain backward compatibility with EntityLootRegistry API
+     * This class wraps SpawnerSettingsConfig to provide the same API as EntityLootRegistry
      */
-    private class EntityLootRegistryWrapper extends EntityLootRegistry {
-        public EntityLootRegistryWrapper() {
-            super(SmartSpawner.this, itemPriceManager);
+    private static class EntityLootRegistryWrapper extends EntityLootRegistry {
+        private final SmartSpawner plugin;
+        
+        public EntityLootRegistryWrapper(SmartSpawner plugin, ItemPriceManager priceManager) {
+            super(plugin, priceManager);
+            this.plugin = plugin;
         }
         
         @Override
-        public github.nighter.smartspawner.spawner.loot.EntityLootConfig getLootConfig(org.bukkit.entity.EntityType entityType) {
-            return spawnerSettingsConfig != null ? spawnerSettingsConfig.getLootConfig(entityType) : null;
-        }
-        
-        @Override
-        public Set<Material> getLoadedMaterials() {
-            return spawnerSettingsConfig != null ? spawnerSettingsConfig.getLoadedMaterials() : new HashSet<>();
-        }
-        
-        @Override
-        public void reload() {
-            if (spawnerSettingsConfig != null) {
-                spawnerSettingsConfig.reload();
-            }
+        protected void setupLootConfigFile() {
+            // Don't setup old config file - we use spawnerSettingsConfig instead
         }
         
         @Override
         public void loadConfigurations() {
-            if (spawnerSettingsConfig != null) {
-                spawnerSettingsConfig.reload();
+            // Delegate to spawnerSettingsConfig reload instead
+            if (plugin.getSpawnerSettingsConfig() != null) {
+                plugin.getSpawnerSettingsConfig().reload();
+            }
+        }
+        
+        @Override
+        public github.nighter.smartspawner.spawner.loot.EntityLootConfig getLootConfig(org.bukkit.entity.EntityType entityType) {
+            if (plugin.getSpawnerSettingsConfig() != null) {
+                return plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+            }
+            return super.getLootConfig(entityType);
+        }
+        
+        @Override
+        public Set<Material> getLoadedMaterials() {
+            if (plugin.getSpawnerSettingsConfig() != null) {
+                return plugin.getSpawnerSettingsConfig().getLoadedMaterials();
+            }
+            return super.getLoadedMaterials();
+        }
+        
+        @Override
+        public void reload() {
+            if (plugin.getSpawnerSettingsConfig() != null) {
+                plugin.getSpawnerSettingsConfig().reload();
             }
         }
     }
