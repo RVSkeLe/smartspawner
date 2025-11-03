@@ -152,6 +152,10 @@ GLOW_SQUID:
 GOAT:
   experience: 1
 
+# https://minecraft.wiki/w/Happy_Ghast#Drops
+HAPPY_GHAST:
+  experience: 1
+
 # https://minecraft.wiki/w/Horse#Drops
 HORSE:
   experience: 1

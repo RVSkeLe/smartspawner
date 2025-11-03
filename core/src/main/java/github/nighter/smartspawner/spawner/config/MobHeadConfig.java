@@ -117,7 +117,7 @@ public class MobHeadConfig {
                     mobHeadMap.put(entityType, new MobHeadData(material, customTexture));
                 }
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid entity type in mob_heads.yml: " + entityTypeName);
+                plugin.getLogger().warning("Skip entity type '" + entityTypeName + "' is invalid in mob_drops.yml or not available in server version " + plugin.getServer().getBukkitVersion());
             }
         }
         
