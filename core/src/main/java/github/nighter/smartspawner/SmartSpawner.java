@@ -510,12 +510,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
      * Wrapper class to maintain backward compatibility with EntityLootRegistry API
      * This class wraps SpawnerSettingsConfig to provide the same API as EntityLootRegistry
      */
-    private static class EntityLootRegistryWrapper extends EntityLootRegistry {
-        private final SmartSpawner plugin;
+    private class EntityLootRegistryWrapper extends EntityLootRegistry {
         
         public EntityLootRegistryWrapper(SmartSpawner plugin, ItemPriceManager priceManager) {
             super(plugin, priceManager);
-            this.plugin = plugin;
         }
         
         @Override
@@ -526,31 +524,31 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         @Override
         public void loadConfigurations() {
             // Delegate to spawnerSettingsConfig reload instead
-            if (plugin.getSpawnerSettingsConfig() != null) {
-                plugin.getSpawnerSettingsConfig().reload();
+            if (getSpawnerSettingsConfig() != null) {
+                getSpawnerSettingsConfig().reload();
             }
         }
         
         @Override
         public github.nighter.smartspawner.spawner.loot.EntityLootConfig getLootConfig(org.bukkit.entity.EntityType entityType) {
-            if (plugin.getSpawnerSettingsConfig() != null) {
-                return plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+            if (getSpawnerSettingsConfig() != null) {
+                return getSpawnerSettingsConfig().getLootConfig(entityType);
             }
             return super.getLootConfig(entityType);
         }
         
         @Override
         public Set<Material> getLoadedMaterials() {
-            if (plugin.getSpawnerSettingsConfig() != null) {
-                return plugin.getSpawnerSettingsConfig().getLoadedMaterials();
+            if (getSpawnerSettingsConfig() != null) {
+                return getSpawnerSettingsConfig().getLoadedMaterials();
             }
             return super.getLoadedMaterials();
         }
         
         @Override
         public void reload() {
-            if (plugin.getSpawnerSettingsConfig() != null) {
-                plugin.getSpawnerSettingsConfig().reload();
+            if (getSpawnerSettingsConfig() != null) {
+                getSpawnerSettingsConfig().reload();
             }
         }
     }

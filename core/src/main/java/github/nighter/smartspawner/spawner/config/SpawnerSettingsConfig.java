@@ -259,7 +259,7 @@ public class SpawnerSettingsConfig {
             try {
                 entityType = EntityType.valueOf(entityName.toUpperCase());
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Skip entity type '" + entityName + "' is invalid or not available in server version " + plugin.getServer().getBukkitVersion());
+                plugin.getLogger().warning("Entity type '" + entityName + "' is invalid or not available in server version " + plugin.getServer().getBukkitVersion());
                 continue;
             }
             
@@ -310,6 +310,9 @@ public class SpawnerSettingsConfig {
         int experience = entitySection.getInt("experience", 0);
         List<LootItem> items = new ArrayList<>();
         
+        // Cache price manager reference for better performance
+        ItemPriceManager priceManager = plugin.getItemPriceManager();
+        
         ConfigurationSection lootSection = entitySection.getConfigurationSection("loot");
         if (lootSection != null) {
             for (String itemKey : lootSection.getKeys(false)) {
@@ -339,8 +342,8 @@ public class SpawnerSettingsConfig {
                     double chance = itemSection.getDouble("chance", 100.0);
                     
                     double sellPrice = 0.0;
-                    if (plugin.getItemPriceManager() != null) {
-                        sellPrice = plugin.getItemPriceManager().getPrice(material);
+                    if (priceManager != null) {
+                        sellPrice = priceManager.getPrice(material);
                     }
                     
                     Integer minDurability = null;
