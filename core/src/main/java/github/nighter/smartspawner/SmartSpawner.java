@@ -234,9 +234,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
         
-        // Initialize new unified spawner settings config
+        // Initialize new unified spawner settings config (but don't load yet)
         this.spawnerSettingsConfig = new SpawnerSettingsConfig(this);
-        this.spawnerSettingsConfig.load();
         
         // Keep legacy mob head config for backward compatibility
         this.mobHeadConfig = new MobHeadConfig(this);
@@ -251,6 +250,13 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void initializeEconomyComponents() {
         this.itemPriceManager = new ItemPriceManager(this);
         this.itemPriceManager.init();
+        
+        // Load spawner settings after economy components are ready
+        // This is needed because loot configuration requires price manager
+        if (spawnerSettingsConfig != null) {
+            spawnerSettingsConfig.load();
+        }
+        
         // EntityLootRegistry is now part of SpawnerSettingsConfig
         this.spawnerItemFactory = new SpawnerItemFactory(this);
     }

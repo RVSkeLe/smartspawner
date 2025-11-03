@@ -338,7 +338,10 @@ public class SpawnerSettingsConfig {
                     int maxAmount = Integer.parseInt(amounts.length > 1 ? amounts[1] : amounts[0]);
                     double chance = itemSection.getDouble("chance", 100.0);
                     
-                    double sellPrice = plugin.getItemPriceManager().getPrice(material);
+                    double sellPrice = 0.0;
+                    if (plugin.getItemPriceManager() != null) {
+                        sellPrice = plugin.getItemPriceManager().getPrice(material);
+                    }
                     
                     Integer minDurability = null;
                     Integer maxDurability = null;
