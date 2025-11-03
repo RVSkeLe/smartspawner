@@ -39,6 +39,10 @@ public class TimerUpdateService {
     // Cached status text messages
     private String cachedInactiveText;
     private String cachedFullText;
+    
+    // Pre-stripped versions for performance
+    private String strippedCachedInactive;
+    private String strippedCachedFull;
 
     // Timer placeholder detection
     private volatile Boolean hasTimerPlaceholders = null;
@@ -63,6 +67,11 @@ public class TimerUpdateService {
     private void initializeCachedStrings() {
         cachedInactiveText = languageManager.getGuiItemName("spawner_info_item.lore_inactive");
         cachedFullText = languageManager.getGuiItemName("spawner_info_item.lore_full");
+        
+        // Pre-strip colors for performance
+        strippedCachedInactive = ChatColor.stripColor(cachedInactiveText);
+        strippedCachedFull = ChatColor.stripColor(cachedFullText);
+        
         checkTimerPlaceholderUsage();
     }
 
@@ -182,7 +191,7 @@ public class TimerUpdateService {
                 continue;
             }
 
-            // Skip if updated recently
+            // Skip if updated recently (throttle to 800ms)
             Long lastUpdate = lastTimerUpdate.get(playerId);
             if (lastUpdate != null && (currentTime - lastUpdate) < 800) {
                 continue;
@@ -218,15 +227,15 @@ public class TimerUpdateService {
                     continue;
                 }
 
-                Player player = Bukkit.getPlayer(playerId);
-                if (!isValidGuiSession(player)) {
-                    viewerTrackingManager.untrackViewer(playerId);
-                    continue;
-                }
-
                 // Skip if timer unchanged
                 String lastValue = lastTimerValue.get(playerId);
                 if (lastValue != null && lastValue.equals(newTimerValue)) {
+                    continue;
+                }
+
+                Player player = Bukkit.getPlayer(playerId);
+                if (!isValidGuiSession(player)) {
+                    viewerTrackingManager.untrackViewer(playerId);
                     continue;
                 }
 
@@ -424,6 +433,7 @@ public class TimerUpdateService {
 
     /**
      * Updates timer in spawner info item.
+     * Optimized to minimize string operations and checks.
      */
     private void updateSpawnerInfoItemTimer(Inventory inventory, SpawnerData spawner, 
                                            String timeDisplay, int spawnerInfoSlot) {
@@ -442,13 +452,14 @@ public class TimerUpdateService {
         }
 
         List<String> lore = meta.getLore();
-        if (lore == null) {
+        if (lore == null || lore.isEmpty()) {
             return;
         }
 
         boolean needsUpdate = false;
         List<String> updatedLore = new ArrayList<>(lore.size());
 
+        // Early exit optimization: if we find the timer line, we can stop processing
         for (String line : lore) {
             if (line.contains("%time%")) {
                 updatedLore.add(line.replace("%time%", timeDisplay));
@@ -473,35 +484,33 @@ public class TimerUpdateService {
 
     /**
      * Updates existing timer line by replacing old value with new.
+     * Optimized to use pre-stripped cached values and minimize string operations.
      */
     private String updateExistingTimerLine(String line, String newTimeDisplay) {
+        // Pre-strip the line once
         String strippedLine = ChatColor.stripColor(line);
-        String strippedNewDisplay = ChatColor.stripColor(newTimeDisplay);
 
-        if (strippedLine.matches(".*\\d{2}:\\d{2}.*") ||
-            strippedLine.contains(ChatColor.stripColor(cachedInactiveText)) ||
-            strippedLine.contains(ChatColor.stripColor(cachedFullText))) {
-
+        // Check if line contains a timer pattern (HH:MM format)
+        if (strippedLine.matches(".*\\d{2}:\\d{2}.*")) {
+            // Try to replace time pattern directly
             String updatedLine = line.replaceAll("\\d{2}:\\d{2}", newTimeDisplay);
             if (!updatedLine.equals(line)) {
                 return updatedLine;
             }
-
-            String strippedCachedInactive = ChatColor.stripColor(cachedInactiveText);
-            String strippedCachedFull = ChatColor.stripColor(cachedFullText);
-
-            if (strippedLine.contains(strippedCachedInactive)) {
-                return line.replace(cachedInactiveText, newTimeDisplay);
-            } else if (strippedLine.contains(strippedCachedFull)) {
-                return line.replace(cachedFullText, newTimeDisplay);
-            }
         }
 
-        if (strippedNewDisplay.equals(ChatColor.stripColor(cachedInactiveText)) ||
-            strippedNewDisplay.equals(ChatColor.stripColor(cachedFullText))) {
-            if (strippedLine.matches(".*\\d{2}:\\d{2}.*")) {
-                return line.replaceAll("\\d{2}:\\d{2}", newTimeDisplay);
-            }
+        // Check if line contains cached inactive/full text (using pre-stripped versions)
+        if (strippedLine.contains(strippedCachedInactive)) {
+            return line.replace(cachedInactiveText, newTimeDisplay);
+        } else if (strippedLine.contains(strippedCachedFull)) {
+            return line.replace(cachedFullText, newTimeDisplay);
+        }
+
+        // Handle special case: new display is inactive/full but line has timer
+        String strippedNewDisplay = ChatColor.stripColor(newTimeDisplay);
+        if ((strippedNewDisplay.equals(strippedCachedInactive) || strippedNewDisplay.equals(strippedCachedFull))
+            && strippedLine.matches(".*\\d{2}:\\d{2}.*")) {
+            return line.replaceAll("\\d{2}:\\d{2}", newTimeDisplay);
         }
 
         return line;

@@ -47,8 +47,9 @@ public class SpawnerMenuUI {
     private String emptyLootMessage;
 
     // Cache for GUI items - cleared when spawner data changes
-    private final Map<String, ItemStack> itemCache = new HashMap<>();
-    private final Map<String, Long> cacheTimestamps = new HashMap<>();
+    // Using ConcurrentHashMap for thread-safety with Folia's async scheduler
+    private final Map<String, ItemStack> itemCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> cacheTimestamps = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_TIME_MS = 30000; // 30 seconds
 
     public SpawnerMenuUI(SmartSpawner plugin) {
