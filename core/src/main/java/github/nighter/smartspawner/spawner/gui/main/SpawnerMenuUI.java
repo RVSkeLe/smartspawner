@@ -180,7 +180,7 @@ public class SpawnerMenuUI {
         Map<String, String> placeholders = new HashMap<>(4);
         placeholders.put("max_slots", languageManager.formatNumber(maxSlots));
         placeholders.put("current_items", String.valueOf(currentItems));
-        placeholders.put("percent_storage", String.valueOf(percentStorage));
+        placeholders.put("percent_storage_rounded", String.valueOf(percentStorage));
 
         // Get consolidated items and prepare the loot items section
         Map<VirtualInventory.ItemSignature, Long> storedItems = virtualInventory.getConsolidatedItems();
@@ -241,11 +241,11 @@ public class SpawnerMenuUI {
 
                 // Format the line with minimal string operations
                 String line = lootItemFormat
-                        .replace("%item_name%", materialName)
-                        .replace("%ɪᴛᴇᴍ_ɴᴀᴍᴇ%", materialNameSmallCaps)
-                        .replace("%amount%", formattedAmount)
-                        .replace("%raw_amount%", String.valueOf(amount))
-                        .replace("%chance%", chance);
+                        .replace("{item_name}", materialName)
+                        .replace("{ɪᴛᴇᴍ_ɴᴀᴍᴇ}", materialNameSmallCaps)
+                        .replace("{amount}", formattedAmount)
+                        .replace("{raw_amount}", String.valueOf(amount))
+                        .replace("{chance}", chance);
 
                 builder.append(line).append('\n');
             }
@@ -266,11 +266,11 @@ public class SpawnerMenuUI {
 
                 // Format with minimal replacements
                 String line = lootItemFormat
-                        .replace("%item_name%", materialName)
-                        .replace("%ɪᴛᴇᴍ_ɴᴀᴍᴇ%", materialNameSmallCaps)
-                        .replace("%amount%", formattedAmount)
-                        .replace("%raw_amount%", String.valueOf(amount))
-                        .replace("%chance%", "");
+                        .replace("{item_name}", materialName)
+                        .replace("{ɪᴛᴇᴍ_ɴᴀᴍᴇ}", materialNameSmallCaps)
+                        .replace("{amount}", formattedAmount)
+                        .replace("{raw_amount}", String.valueOf(amount))
+                        .replace("{chance}", "");
 
                 builder.append(line).append('\n');
             }
@@ -300,11 +300,13 @@ public class SpawnerMenuUI {
         // Calculate percentages with decimal precision - do this once
         double percentStorageDecimal = maxSlots > 0 ? ((double) currentItems / maxSlots) * 100 : 0;
         String formattedPercentStorage = String.format("%.1f", percentStorageDecimal);
+        int percentStorageRounded = (int) Math.round(percentStorageDecimal);
 
         long currentExp = spawner.getSpawnerExp();
         long maxExp = spawner.getMaxStoredExp();
         double percentExpDecimal = maxExp > 0 ? ((double) currentExp / maxExp) * 100 : 0;
         String formattedPercentExp = String.format("%.1f", percentExpDecimal);
+        int percentExpRounded = (int) Math.round(percentExpDecimal);
 
         // Create cache key including all relevant state
         boolean hasShopPermission = plugin.hasSellIntegration() && player.hasPermission("smartspawner.sellall");
@@ -350,7 +352,8 @@ public class SpawnerMenuUI {
         // Storage information
         placeholders.put("current_items", String.valueOf(currentItems));
         placeholders.put("max_items", languageManager.formatNumber(maxSlots));
-        placeholders.put("percentage_storage", formattedPercentStorage);
+        placeholders.put("percent_storage_decimal", formattedPercentStorage);
+        placeholders.put("percent_storage_rounded", String.valueOf(percentStorageRounded));
 
         // Experience information
         String formattedCurrentExp = languageManager.formatNumber(currentExp);
@@ -360,7 +363,8 @@ public class SpawnerMenuUI {
         placeholders.put("max_exp", formattedMaxExp);
         placeholders.put("raw_current_exp", String.valueOf(currentExp));
         placeholders.put("raw_max_exp", String.valueOf(maxExp));
-        placeholders.put("percentage_exp", formattedPercentExp);
+        placeholders.put("percent_exp_decimal", formattedPercentExp);
+        placeholders.put("percent_exp_rounded", String.valueOf(percentExpRounded));
 
         // Total sell price information
         // Always recalculate if dirty to ensure immediate display (0s delay)
@@ -423,7 +427,7 @@ public class SpawnerMenuUI {
         placeholders.put("current_exp", formattedExp);
         placeholders.put("raw_current_exp", String.valueOf(currentExp));
         placeholders.put("max_exp", formattedMaxExp);
-        placeholders.put("percent_exp", String.valueOf(percentExp));
+        placeholders.put("percent_exp_rounded", String.valueOf(percentExp));
         placeholders.put("u_max_exp", String.valueOf(maxExp));
 
         // Set name and lore

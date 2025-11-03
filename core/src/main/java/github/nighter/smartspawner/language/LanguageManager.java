@@ -593,7 +593,7 @@ public class LanguageManager {
 
             // First, identify placeholders in the line
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                String placeholder = "%" + entry.getKey() + "%";
+                String placeholder = "{" + entry.getKey() + "}";
                 if (line.contains(placeholder) && entry.getValue().contains("\n")) {
                     containsMultilinePlaceholder = true;
                     break;
@@ -606,7 +606,7 @@ public class LanguageManager {
 
                 // Apply non-multiline placeholders first
                 for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                    String placeholder = "%" + entry.getKey() + "%";
+                    String placeholder = "{" + entry.getKey() + "}";
                     String value = entry.getValue();
 
                     if (!value.contains("\n")) {
@@ -616,7 +616,7 @@ public class LanguageManager {
 
                 // Now handle multiline placeholders
                 for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                    String placeholder = "%" + entry.getKey() + "%";
+                    String placeholder = "{" + entry.getKey() + "}";
                     String value = entry.getValue();
 
                     if (processedLine.contains(placeholder) && value.contains("\n")) {
@@ -766,7 +766,7 @@ public class LanguageManager {
 
             // First, identify placeholders in the line
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                String placeholder = "%" + entry.getKey() + "%";
+                String placeholder = "{" + entry.getKey() + "}";
                 if (line.contains(placeholder) && entry.getValue().contains("\n")) {
                     containsMultilinePlaceholder = true;
                     break;
@@ -779,7 +779,7 @@ public class LanguageManager {
 
                 // Apply non-multiline placeholders first
                 for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                    String placeholder = "%" + entry.getKey() + "%";
+                    String placeholder = "{" + entry.getKey() + "}";
                     String value = entry.getValue();
 
                     if (!value.contains("\n")) {
@@ -789,7 +789,7 @@ public class LanguageManager {
 
                 // Now handle multiline placeholders
                 for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                    String placeholder = "%" + entry.getKey() + "%";
+                    String placeholder = "{" + entry.getKey() + "}";
                     String value = entry.getValue();
 
                     if (processedLine.contains(placeholder) && value.contains("\n")) {
@@ -1028,7 +1028,7 @@ public class LanguageManager {
         // Apply placeholders only if there are any
         if (placeholders != null && !placeholders.isEmpty()) {
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                result = result.replace("%" + entry.getKey() + "%", entry.getValue());
+                result = result.replace("{" + entry.getKey() + "}", entry.getValue());
             }
         }
 
@@ -1074,7 +1074,7 @@ public class LanguageManager {
         // Apply placeholders only if there are any
         if (placeholders != null && !placeholders.isEmpty()) {
             for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-                result = result.replace("%" + entry.getKey() + "%", entry.getValue());
+                result = result.replace("{" + entry.getKey() + "}", entry.getValue());
             }
         }
 

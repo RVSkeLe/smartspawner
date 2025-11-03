@@ -407,7 +407,7 @@ public class ListSubCommand extends BaseSubCommand {
                 if (!first) availableOptions.append("\n");
                 String optionName = languageManager.getGuiItemName("filter." + option.getName());
                 String format = option == currentFilter ? selectedFormat : unselectedFormat;
-                String formattedOption = format.replace("%option_name%", optionName);
+                String formattedOption = format.replace("{option_name}", optionName);
                 availableOptions.append(formattedOption);
                 first = false;
             }
@@ -421,7 +421,7 @@ public class ListSubCommand extends BaseSubCommand {
                 if (!first) availableOptions.append("\n");
                 String optionName = languageManager.getGuiItemName("sort." + option.getName());
                 String format = option == currentSort ? selectedFormat : unselectedFormat;
-                String formattedOption = format.replace("%option_name%", optionName);
+                String formattedOption = format.replace("{option_name}", optionName);
                 availableOptions.append(formattedOption);
                 first = false;
             }
