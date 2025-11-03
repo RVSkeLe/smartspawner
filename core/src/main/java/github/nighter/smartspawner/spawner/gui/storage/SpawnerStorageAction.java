@@ -54,7 +54,8 @@ public class SpawnerStorageAction implements Listener {
     private static final int STORAGE_SLOTS = 45;
 
     private final Map<ClickType, ItemClickHandler> clickHandlers;
-    private final Map<UUID, Inventory> openStorageInventories = new HashMap<>();
+    // Using ConcurrentHashMap for thread-safety with Folia's async scheduler
+    private final Map<UUID, Inventory> openStorageInventories = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
     private Random random = new Random();
     private GuiLayout layout;
