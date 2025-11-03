@@ -3,7 +3,6 @@ package github.nighter.smartspawner.spawner.properties;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.hologram.SpawnerHologram;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.loot.LootItem;
 import github.nighter.smartspawner.spawner.sell.SellResult;
 import lombok.Getter;
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
 public class SpawnerData {
     @Getter
     private final SmartSpawner plugin;
-    private final EntityLootRegistry lootRegistry;
 
     @Getter @Setter
     private String spawnerId;
@@ -124,7 +122,6 @@ public class SpawnerData {
         this.spawnerId = id;
         this.spawnerLocation = location;
         this.entityType = type;
-        this.lootRegistry = plugin.getEntityLootRegistry();
 
         initializeDefaults();
         loadConfigurationValues();
@@ -152,7 +149,7 @@ public class SpawnerData {
         this.maxStackSize = plugin.getConfig().getInt("spawner_properties.default.max_stack_size", 1000);
         this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
-        this.lootConfig = lootRegistry.getLootConfig(entityType);
+        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
     }
 
     public void recalculateAfterConfigReload() {
@@ -331,7 +328,7 @@ public class SpawnerData {
 
     public void setEntityType(EntityType newType) {
         this.entityType = newType;
-        this.lootConfig = lootRegistry.getLootConfig(newType);
+        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(newType);
         // Mark sell value as dirty since entity type and prices changed
         this.sellValueDirty = true;
         updateHologramData();
@@ -366,7 +363,7 @@ public class SpawnerData {
     }
 
     public void setLootConfig() {
-        this.lootConfig = lootRegistry.getLootConfig(entityType);
+        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
         // Mark sell value as dirty since prices may have changed
         this.sellValueDirty = true;
     }

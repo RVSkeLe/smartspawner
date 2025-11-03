@@ -10,7 +10,6 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
-import github.nighter.smartspawner.spawner.config.MobHeadConfig;
 import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
@@ -41,7 +40,6 @@ import github.nighter.smartspawner.spawner.interactions.stack.SpawnerStackHandle
 import github.nighter.smartspawner.spawner.interactions.type.SpawnEggHandler;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
@@ -59,12 +57,9 @@ import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
-import org.bukkit.Material;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.logging.Level;
 
 @Getter
@@ -84,7 +79,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
-    private MobHeadConfig mobHeadConfig;
     private SpawnerSettingsConfig spawnerSettingsConfig;
 
     // Factories
@@ -125,7 +119,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerPlaceListener spawnerPlaceListener;
     private WorldEventHandler worldEventHandler;
     private ItemPriceManager itemPriceManager;
-    private EntityLootRegistry entityLootRegistry;
     private UpdateChecker updateChecker;
     private BrigadierCommandManager brigadierCommandManager;
     private ListSubCommand listSubCommand;
@@ -237,10 +230,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         // Initialize new unified spawner settings config (but don't load yet)
         this.spawnerSettingsConfig = new SpawnerSettingsConfig(this);
         
-        // Keep legacy mob head config for backward compatibility
-        this.mobHeadConfig = new MobHeadConfig(this);
-        // Don't load it here - it will use the spawnerSettingsConfig through delegation
-        
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
         this.spawnerActionLogger = new SpawnerActionLogger(this, loggingConfig);
@@ -257,7 +246,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             spawnerSettingsConfig.load();
         }
         
-        // EntityLootRegistry is now part of SpawnerSettingsConfig
         this.spawnerItemFactory = new SpawnerItemFactory(this);
     }
 
@@ -413,9 +401,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             SpawnerMobHeadTexture.clearCache();
         }
         
-        // Legacy mob head config no longer needs separate reload
-        // It delegates to spawnerSettingsConfig
-        
         // Reload logging system
         loggingConfig.loadConfig();
         spawnerActionLogger.shutdown();
@@ -489,67 +474,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     public void debug(String message) {
         if (debugMode) {
             getLogger().info("[DEBUG] " + message);
-        }
-    }
-    
-    // Cached wrapper instance for EntityLootRegistry
-    private EntityLootRegistryWrapper entityLootRegistryWrapper;
-    
-    /**
-     * Get EntityLootRegistry wrapper for backward compatibility
-     * Delegates to SpawnerSettingsConfig
-     */
-    public EntityLootRegistry getEntityLootRegistry() {
-        if (entityLootRegistryWrapper == null) {
-            entityLootRegistryWrapper = new EntityLootRegistryWrapper(this, itemPriceManager);
-        }
-        return entityLootRegistryWrapper;
-    }
-    
-    /**
-     * Wrapper class to maintain backward compatibility with EntityLootRegistry API
-     * This class wraps SpawnerSettingsConfig to provide the same API as EntityLootRegistry
-     */
-    private class EntityLootRegistryWrapper extends EntityLootRegistry {
-        
-        public EntityLootRegistryWrapper(SmartSpawner plugin, ItemPriceManager priceManager) {
-            super(plugin, priceManager);
-        }
-        
-        @Override
-        protected void setupLootConfigFile() {
-            // Don't setup old config file - we use spawnerSettingsConfig instead
-        }
-        
-        @Override
-        public void loadConfigurations() {
-            // Delegate to spawnerSettingsConfig reload instead
-            if (getSpawnerSettingsConfig() != null) {
-                getSpawnerSettingsConfig().reload();
-            }
-        }
-        
-        @Override
-        public github.nighter.smartspawner.spawner.loot.EntityLootConfig getLootConfig(org.bukkit.entity.EntityType entityType) {
-            if (getSpawnerSettingsConfig() != null) {
-                return getSpawnerSettingsConfig().getLootConfig(entityType);
-            }
-            return super.getLootConfig(entityType);
-        }
-        
-        @Override
-        public Set<Material> getLoadedMaterials() {
-            if (getSpawnerSettingsConfig() != null) {
-                return getSpawnerSettingsConfig().getLoadedMaterials();
-            }
-            return super.getLoadedMaterials();
-        }
-        
-        @Override
-        public void reload() {
-            if (getSpawnerSettingsConfig() != null) {
-                getSpawnerSettingsConfig().reload();
-            }
         }
     }
 }

@@ -4,7 +4,6 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.loot.LootItem;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -27,7 +26,6 @@ public class SpawnerItemFactory {
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
-    private EntityLootRegistry entityLootRegistry;
     private static NamespacedKey VANILLA_SPAWNER_KEY;
     private final Map<EntityType, ItemStack> spawnerItemCache = new HashMap<>();
     private final Map<EntityType, Long> cacheTimestamps = new HashMap<>();
@@ -36,12 +34,10 @@ public class SpawnerItemFactory {
     public SpawnerItemFactory(SmartSpawner plugin) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
-        this.entityLootRegistry = plugin.getEntityLootRegistry();
         VANILLA_SPAWNER_KEY = new NamespacedKey(plugin, "vanilla_spawner");
     }
 
     public void reload() {
-        this.entityLootRegistry = plugin.getEntityLootRegistry();
         clearAllCaches();
     }
 
@@ -93,7 +89,7 @@ public class SpawnerItemFactory {
             }
             String entityTypeName = languageManager.getFormattedMobName(entityType);
             String entityTypeNameSmallCaps = languageManager.getSmallCaps(entityTypeName);
-            EntityLootConfig lootConfig = entityLootRegistry.getLootConfig(entityType);
+            EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
             List<LootItem> lootItems = lootConfig != null ? lootConfig.getAllItems() : Collections.emptyList();
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("entity", entityTypeName);

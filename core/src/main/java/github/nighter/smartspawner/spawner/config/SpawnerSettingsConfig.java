@@ -85,6 +85,13 @@ public class SpawnerSettingsConfig {
         plugin.getLogger().info("Migrating from old mob_drops.yml and mob_heads.yml to spawners_settings.yml...");
         
         try {
+            // Backup mob_drops.yml if it exists
+            if (oldDropsFile.exists()) {
+                File backup = new File(plugin.getDataFolder(), "mob_drops.yml.backup");
+                Files.copy(oldDropsFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                plugin.getLogger().info("Created backup of mob_drops.yml");
+            }
+            
             // Load old configs
             FileConfiguration dropsConfig = oldDropsFile.exists() ? 
                 YamlConfiguration.loadConfiguration(oldDropsFile) : null;
@@ -139,16 +146,30 @@ public class SpawnerSettingsConfig {
             // Save the new config
             newConfig.save(configFile);
             
-            // Backup old files
+            // Validate drops are the same
+            if (dropsConfig != null) {
+                boolean dropsMatch = validateDropsMatch(dropsConfig, newConfig);
+                if (dropsMatch) {
+                    plugin.getLogger().info("Validation passed: Drops match between mob_drops.yml and spawners_settings.yml");
+                } else {
+                    plugin.getLogger().warning("Validation warning: Some drops may differ between mob_drops.yml and spawners_settings.yml");
+                }
+            }
+            
+            // Delete old config files
             if (oldDropsFile.exists()) {
-                File backup = new File(plugin.getDataFolder(), "mob_drops.yml.old");
-                Files.move(oldDropsFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                plugin.getLogger().info("Backed up mob_drops.yml to mob_drops.yml.old");
+                if (oldDropsFile.delete()) {
+                    plugin.getLogger().info("Deleted mob_drops.yml");
+                } else {
+                    plugin.getLogger().warning("Failed to delete mob_drops.yml");
+                }
             }
             if (oldHeadsFile.exists()) {
-                File backup = new File(plugin.getDataFolder(), "mob_heads.yml.old");
-                Files.move(oldHeadsFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                plugin.getLogger().info("Backed up mob_heads.yml to mob_heads.yml.old");
+                if (oldHeadsFile.delete()) {
+                    plugin.getLogger().info("Deleted mob_heads.yml");
+                } else {
+                    plugin.getLogger().warning("Failed to delete mob_heads.yml");
+                }
             }
             
             plugin.getLogger().info("Migration completed successfully!");
@@ -156,6 +177,67 @@ public class SpawnerSettingsConfig {
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to migrate old configs", e);
         }
+    }
+    
+    /**
+     * Validate that drops in old mob_drops.yml match the new spawners_settings.yml
+     */
+    private boolean validateDropsMatch(FileConfiguration oldDrops, FileConfiguration newConfig) {
+        boolean allMatch = true;
+        for (String mobName : oldDrops.getKeys(false)) {
+            ConfigurationSection oldMobSection = oldDrops.getConfigurationSection(mobName);
+            ConfigurationSection newMobSection = newConfig.getConfigurationSection(mobName);
+            
+            if (oldMobSection == null || newMobSection == null) {
+                continue;
+            }
+            
+            // Check experience
+            int oldExp = oldMobSection.getInt("experience", 0);
+            int newExp = newMobSection.getInt("experience", 0);
+            if (oldExp != newExp) {
+                plugin.getLogger().warning("Experience mismatch for " + mobName + ": old=" + oldExp + ", new=" + newExp);
+                allMatch = false;
+            }
+            
+            // Check loot section
+            ConfigurationSection oldLoot = oldMobSection.getConfigurationSection("loot");
+            ConfigurationSection newLoot = newMobSection.getConfigurationSection("loot");
+            
+            if (oldLoot != null && newLoot != null) {
+                for (String itemName : oldLoot.getKeys(false)) {
+                    if (!newLoot.contains(itemName)) {
+                        plugin.getLogger().warning("Loot item missing for " + mobName + ": " + itemName);
+                        allMatch = false;
+                        continue;
+                    }
+                    
+                    ConfigurationSection oldItem = oldLoot.getConfigurationSection(itemName);
+                    ConfigurationSection newItem = newLoot.getConfigurationSection(itemName);
+                    
+                    if (oldItem != null && newItem != null) {
+                        // Compare amount, chance, etc.
+                        String oldAmount = oldItem.getString("amount");
+                        String newAmount = newItem.getString("amount");
+                        if (oldAmount != null && !oldAmount.equals(newAmount)) {
+                            plugin.getLogger().warning("Amount mismatch for " + mobName + "." + itemName + ": old=" + oldAmount + ", new=" + newAmount);
+                            allMatch = false;
+                        }
+                        
+                        double oldChance = oldItem.getDouble("chance", 0);
+                        double newChance = newItem.getDouble("chance", 0);
+                        if (Math.abs(oldChance - newChance) > 0.01) {
+                            plugin.getLogger().warning("Chance mismatch for " + mobName + "." + itemName + ": old=" + oldChance + ", new=" + newChance);
+                            allMatch = false;
+                        }
+                    }
+                }
+            } else if (oldLoot != null && newLoot == null) {
+                plugin.getLogger().warning("Loot section missing for " + mobName);
+                allMatch = false;
+            }
+        }
+        return allMatch;
     }
     
     /**
