@@ -2,6 +2,7 @@ package github.nighter.smartspawner.commands.list;
 
 import com.mojang.brigadier.context.CommandContext;
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.commands.BaseSubCommand;
 import github.nighter.smartspawner.commands.list.gui.list.enums.FilterOption;
 import github.nighter.smartspawner.commands.list.gui.list.enums.SortOption;
@@ -15,12 +16,6 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.TooltipDisplay;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -33,9 +28,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ListSubCommand extends BaseSubCommand {
-    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
-        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
-    );
     private final SpawnerManager spawnerManager;
     private final LanguageManager languageManager;
     private final MessageService messageService;
@@ -456,10 +448,6 @@ public class ListSubCommand extends BaseSubCommand {
         return button;
     }
 
-    private static void hideTooltip(ItemStack item) {
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
-            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
-    }
 
     private ItemStack createSpawnerInfoItem(SpawnerData spawner) {
         EntityType entityType = spawner.getEntityType();
@@ -496,7 +484,7 @@ public class ListSubCommand extends BaseSubCommand {
         List<String> lore = Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders));
         meta.setLore(lore);
         spawnerItem.setItemMeta(meta);
-        hideTooltip(spawnerItem);
+        VersionInitializer.hideTooltip(spawnerItem);
         return spawnerItem;
     }
 

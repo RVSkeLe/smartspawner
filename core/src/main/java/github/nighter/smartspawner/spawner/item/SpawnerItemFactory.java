@@ -2,15 +2,10 @@ package github.nighter.smartspawner.spawner.item;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
+import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.loot.LootItem;
-import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.TooltipDisplay;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
@@ -29,9 +24,6 @@ public class SpawnerItemFactory {
 
     private static final long CACHE_EXPIRY_TIME_MS = TimeUnit.MINUTES.toMillis(30);
     private static final int MAX_CACHE_SIZE = 100;
-    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
-        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
-    );
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
@@ -74,11 +66,6 @@ public class SpawnerItemFactory {
                 iterator.remove();
             }
         }
-    }
-
-    private static void hideTooltip(ItemStack item) {
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
-            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
     }
 
     public ItemStack createSmartSpawnerItem(EntityType entityType) {
@@ -148,7 +135,7 @@ public class SpawnerItemFactory {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             spawner.setItemMeta(meta);
         }
-        hideTooltip(spawner);
+        VersionInitializer.hideTooltip(spawner);
         if (amount == 1) {
             spawnerItemCache.put(entityType, spawner.clone());
             cacheTimestamps.put(entityType, System.currentTimeMillis());
@@ -167,7 +154,6 @@ public class SpawnerItemFactory {
                 }
             }
         }
-        // hideTooltip(spawner);
         return spawner;
     }
 
@@ -198,7 +184,7 @@ public class SpawnerItemFactory {
             if (lore != null && !lore.isEmpty()) {
                 meta.setLore(lore);
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
-                hideTooltip(spawner);
+                VersionInitializer.hideTooltip(spawner);
             }
             meta.getPersistentDataContainer().set(
                     VANILLA_SPAWNER_KEY,

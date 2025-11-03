@@ -59,7 +59,7 @@ public class EntityLootRegistry {
             try {
                 entityType = EntityType.valueOf(entityName.toUpperCase());
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Skip entity type '" + entityName + "' is invalid in mob_heads.yml or not available in server version " + plugin.getServer().getBukkitVersion() + " - skipping");
+                plugin.getLogger().warning("Skip entity type '" + entityName + "' is invalid in mob_heads.yml or not available in server version " + plugin.getServer().getBukkitVersion());
                 continue;
             }
 

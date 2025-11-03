@@ -1,14 +1,9 @@
 package github.nighter.smartspawner.spawner.gui.stacker;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.language.LanguageManager;
-import io.papermc.paper.datacomponent.DataComponentType;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.TooltipDisplay;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
-import io.papermc.paper.registry.keys.DataComponentTypeKeys;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -19,7 +14,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Arrays;
 
 public class SpawnerStackerUI {
@@ -28,9 +22,6 @@ public class SpawnerStackerUI {
     private static final int[] INCREASE_SLOTS = {17, 16, 15};
     private static final int SPAWNER_INFO_SLOT = 13;
     private static final int[] STACK_AMOUNTS = {64, 10, 1};
-    private static final Set<DataComponentType> HIDDEN_TOOLTIP_COMPONENTS = Set.of(
-        RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE).get(DataComponentTypeKeys.BLOCK_ENTITY_DATA)
-    );
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
@@ -97,11 +88,6 @@ public class SpawnerStackerUI {
         return placeholders;
     }
 
-    private static void hideTooltip(ItemStack item) {
-        item.setData(DataComponentTypes.TOOLTIP_DISPLAY, 
-            TooltipDisplay.tooltipDisplay().hiddenComponents(HIDDEN_TOOLTIP_COMPONENTS).build());
-    }
-
     private ItemStack createButton(Material material, String name, String[] lore) {
         ItemStack button = new ItemStack(material);
         ItemMeta meta = button.getItemMeta();
@@ -113,7 +99,7 @@ public class SpawnerStackerUI {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             button.setItemMeta(meta);
         }
-        hideTooltip(button);
+        VersionInitializer.hideTooltip(button);
         return button;
     }
 }
