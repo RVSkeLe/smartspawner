@@ -4,7 +4,7 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.loot.LootItem;
-import github.nighter.smartspawner.updates.ConfigUpdater;
+import github.nighter.smartspawner.updates.Version;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -28,7 +28,7 @@ public class SpawnerSettingsConfig {
     private FileConfiguration config;
     private final File configFile;
     private static final String CONFIG_VERSION_KEY = "config_version";
-    private static final String CURRENT_CONFIG_VERSION = "1.0.0";
+    private final String CURRENT_CONFIG_VERSION;
     
     // Mob head data
     private Material defaultMaterial;
@@ -41,14 +41,13 @@ public class SpawnerSettingsConfig {
     public SpawnerSettingsConfig(SmartSpawner plugin) {
         this.plugin = plugin;
         this.configFile = new File(plugin.getDataFolder(), "spawners_settings.yml");
+        CURRENT_CONFIG_VERSION = plugin.getDescription().getVersion();
     }
     
     /**
      * Load or create the spawners settings configuration
      */
     public void load() {
-        // Check and migrate from old config files if needed
-        migrateFromOldConfigs();
         
         // Create config file if it doesn't exist
         if (!configFile.exists()) {
@@ -64,182 +63,7 @@ public class SpawnerSettingsConfig {
         // Parse configuration
         parseConfig();
     }
-    
-    /**
-     * Migrate from old mob_drops.yml and mob_heads.yml if they exist
-     */
-    private void migrateFromOldConfigs() {
-        File oldDropsFile = new File(plugin.getDataFolder(), "mob_drops.yml");
-        File oldHeadsFile = new File(plugin.getDataFolder(), "mob_heads.yml");
-        
-        // If spawners_settings.yml already exists, no migration needed
-        if (configFile.exists()) {
-            return;
-        }
-        
-        // If neither old file exists, no migration needed
-        if (!oldDropsFile.exists() && !oldHeadsFile.exists()) {
-            return;
-        }
-        
-        plugin.getLogger().info("Migrating from old mob_drops.yml and mob_heads.yml to spawners_settings.yml...");
-        
-        try {
-            // Backup mob_drops.yml if it exists
-            if (oldDropsFile.exists()) {
-                File backup = new File(plugin.getDataFolder(), "mob_drops.yml.backup");
-                Files.copy(oldDropsFile.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                plugin.getLogger().info("Created backup of mob_drops.yml");
-            }
-            
-            // Load old configs
-            FileConfiguration dropsConfig = oldDropsFile.exists() ? 
-                YamlConfiguration.loadConfiguration(oldDropsFile) : null;
-            FileConfiguration headsConfig = oldHeadsFile.exists() ? 
-                YamlConfiguration.loadConfiguration(oldHeadsFile) : null;
-            
-            // Create new merged config
-            FileConfiguration newConfig = new YamlConfiguration();
-            newConfig.set(CONFIG_VERSION_KEY, CURRENT_CONFIG_VERSION);
-            
-            // Set default material
-            if (headsConfig != null) {
-                newConfig.set("default_material", headsConfig.getString("default_material", "SPAWNER"));
-            } else {
-                newConfig.set("default_material", "SPAWNER");
-            }
-            
-            // Get all mob types
-            Set<String> allMobs = new HashSet<>();
-            if (dropsConfig != null) {
-                allMobs.addAll(dropsConfig.getKeys(false));
-            }
-            if (headsConfig != null) {
-                ConfigurationSection mobHeadsSection = headsConfig.getConfigurationSection("mob_heads");
-                if (mobHeadsSection != null) {
-                    allMobs.addAll(mobHeadsSection.getKeys(false));
-                }
-            }
-            
-            // Merge data for each mob
-            for (String mob : allMobs) {
-                // Copy drops data
-                if (dropsConfig != null && dropsConfig.contains(mob)) {
-                    ConfigurationSection mobSection = dropsConfig.getConfigurationSection(mob);
-                    if (mobSection != null) {
-                        for (String key : mobSection.getKeys(false)) {
-                            newConfig.set(mob + "." + key, mobSection.get(key));
-                        }
-                    }
-                }
-                
-                // Copy head texture data
-                if (headsConfig != null) {
-                    ConfigurationSection headSection = headsConfig.getConfigurationSection("mob_heads." + mob);
-                    if (headSection != null) {
-                        newConfig.set(mob + ".head_texture.material", headSection.getString("material"));
-                        newConfig.set(mob + ".head_texture.custom_texture", headSection.getString("custom_texture"));
-                    }
-                }
-            }
-            
-            // Save the new config
-            newConfig.save(configFile);
-            
-            // Validate drops are the same
-            if (dropsConfig != null) {
-                boolean dropsMatch = validateDropsMatch(dropsConfig, newConfig);
-                if (dropsMatch) {
-                    plugin.getLogger().info("Validation passed: Drops match between mob_drops.yml and spawners_settings.yml");
-                } else {
-                    plugin.getLogger().warning("Validation warning: Some drops may differ between mob_drops.yml and spawners_settings.yml");
-                }
-            }
-            
-            // Delete old config files
-            if (oldDropsFile.exists()) {
-                if (oldDropsFile.delete()) {
-                    plugin.getLogger().info("Deleted mob_drops.yml");
-                } else {
-                    plugin.getLogger().warning("Failed to delete mob_drops.yml");
-                }
-            }
-            if (oldHeadsFile.exists()) {
-                if (oldHeadsFile.delete()) {
-                    plugin.getLogger().info("Deleted mob_heads.yml");
-                } else {
-                    plugin.getLogger().warning("Failed to delete mob_heads.yml");
-                }
-            }
-            
-            plugin.getLogger().info("Migration completed successfully!");
-            
-        } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to migrate old configs", e);
-        }
-    }
-    
-    /**
-     * Validate that drops in old mob_drops.yml match the new spawners_settings.yml
-     */
-    private boolean validateDropsMatch(FileConfiguration oldDrops, FileConfiguration newConfig) {
-        boolean allMatch = true;
-        for (String mobName : oldDrops.getKeys(false)) {
-            ConfigurationSection oldMobSection = oldDrops.getConfigurationSection(mobName);
-            ConfigurationSection newMobSection = newConfig.getConfigurationSection(mobName);
-            
-            if (oldMobSection == null || newMobSection == null) {
-                continue;
-            }
-            
-            // Check experience
-            int oldExp = oldMobSection.getInt("experience", 0);
-            int newExp = newMobSection.getInt("experience", 0);
-            if (oldExp != newExp) {
-                plugin.getLogger().warning("Experience mismatch for " + mobName + ": old=" + oldExp + ", new=" + newExp);
-                allMatch = false;
-            }
-            
-            // Check loot section
-            ConfigurationSection oldLoot = oldMobSection.getConfigurationSection("loot");
-            ConfigurationSection newLoot = newMobSection.getConfigurationSection("loot");
-            
-            if (oldLoot != null && newLoot != null) {
-                for (String itemName : oldLoot.getKeys(false)) {
-                    if (!newLoot.contains(itemName)) {
-                        plugin.getLogger().warning("Loot item missing for " + mobName + ": " + itemName);
-                        allMatch = false;
-                        continue;
-                    }
-                    
-                    ConfigurationSection oldItem = oldLoot.getConfigurationSection(itemName);
-                    ConfigurationSection newItem = newLoot.getConfigurationSection(itemName);
-                    
-                    if (oldItem != null && newItem != null) {
-                        // Compare amount, chance, etc.
-                        String oldAmount = oldItem.getString("amount");
-                        String newAmount = newItem.getString("amount");
-                        if (oldAmount != null && !oldAmount.equals(newAmount)) {
-                            plugin.getLogger().warning("Amount mismatch for " + mobName + "." + itemName + ": old=" + oldAmount + ", new=" + newAmount);
-                            allMatch = false;
-                        }
-                        
-                        double oldChance = oldItem.getDouble("chance", 0);
-                        double newChance = newItem.getDouble("chance", 0);
-                        if (Math.abs(oldChance - newChance) > 0.01) {
-                            plugin.getLogger().warning("Chance mismatch for " + mobName + "." + itemName + ": old=" + oldChance + ", new=" + newChance);
-                            allMatch = false;
-                        }
-                    }
-                }
-            } else if (oldLoot != null && newLoot == null) {
-                plugin.getLogger().warning("Loot section missing for " + mobName);
-                allMatch = false;
-            }
-        }
-        return allMatch;
-    }
-    
+
     /**
      * Check if config needs updating and update if necessary
      */
@@ -249,67 +73,158 @@ public class SpawnerSettingsConfig {
         }
         
         FileConfiguration currentConfig = YamlConfiguration.loadConfiguration(configFile);
-        String configVersion = currentConfig.getString(CONFIG_VERSION_KEY, "0.0.0");
-        
-        if (configVersion.equals(CURRENT_CONFIG_VERSION)) {
+        String configVersionStr = currentConfig.getString(CONFIG_VERSION_KEY, "0.0.0");
+        Version configVersion = new Version(configVersionStr);
+        Version currentConfigVersion = new Version(CURRENT_CONFIG_VERSION);
+
+        if (configVersion.compareTo(currentConfigVersion) >= 0) {
             return;
         }
         
-        plugin.getLogger().info("Updating spawners_settings.yml from version " + configVersion + " to " + CURRENT_CONFIG_VERSION);
-        
+        plugin.getLogger().info("Updating spawners_settings.yml from version " + configVersionStr + " to " + CURRENT_CONFIG_VERSION);
+
         try {
-            // Create backup
-            File backupFile = new File(plugin.getDataFolder(), "spawners_settings_backup_" + configVersion + ".yml");
-            Files.copy(configFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            plugin.getLogger().info("Backup created at " + backupFile.getName());
-            
-            // Get user values
-            Map<String, Object> userValues = new HashMap<>();
-            for (String key : currentConfig.getKeys(true)) {
-                if (!currentConfig.isConfigurationSection(key)) {
-                    userValues.put(key, currentConfig.get(key));
-                }
-            }
-            
-            // Load default config
-            saveDefaultConfig();
-            FileConfiguration newConfig = YamlConfiguration.loadConfiguration(configFile);
+            Map<String, Object> userValues = flattenConfig(currentConfig);
+
+            // Create temp file with new default config
+            File tempFile = new File(plugin.getDataFolder(), "spawners_settings_new.yml");
+            createDefaultConfigWithHeader(tempFile);
+
+            FileConfiguration newConfig = YamlConfiguration.loadConfiguration(tempFile);
             newConfig.set(CONFIG_VERSION_KEY, CURRENT_CONFIG_VERSION);
-            
-            // Apply user values
-            for (Map.Entry<String, Object> entry : userValues.entrySet()) {
-                String path = entry.getKey();
-                if (!path.equals(CONFIG_VERSION_KEY) && newConfig.contains(path)) {
-                    newConfig.set(path, entry.getValue());
-                }
+
+            // Check if there are actual differences before creating backup
+            boolean configDiffers = hasConfigDifferences(userValues, newConfig);
+
+            if (configDiffers) {
+                File backupFile = new File(plugin.getDataFolder(), "spawners_settings_backup_" + configVersionStr + ".yml");
+                Files.copy(configFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                plugin.getLogger().info("Config backup created at " + backupFile.getName());
+            } else {
+                plugin.debug("No significant config changes detected, skipping backup creation");
             }
             
+            // Apply user values and save
+            applyUserValues(newConfig, userValues);
             newConfig.save(configFile);
-            
+            tempFile.delete();
+
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to update spawners_settings.yml", e);
         }
     }
     
     /**
-     * Save the default configuration from resources
+     * Create default configuration file with version header
      */
-    private void saveDefaultConfig() {
+    private void createDefaultConfigWithHeader(File destinationFile) {
         try {
-            if (!plugin.getDataFolder().exists()) {
-                plugin.getDataFolder().mkdirs();
+            // Ensure parent directory exists
+            File parentDir = destinationFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
             }
             
             try (InputStream in = plugin.getResource("spawners_settings.yml")) {
                 if (in != null) {
-                    Files.copy(in, configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    plugin.getLogger().info("Created default spawners_settings.yml configuration");
+                    List<String> defaultLines = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))
+                            .lines()
+                            .toList();
+
+                    List<String> newLines = new ArrayList<>();
+                    newLines.add("# Configuration version - Do not modify this value");
+                    newLines.add(CONFIG_VERSION_KEY + ": " + CURRENT_CONFIG_VERSION);
+                    newLines.add("");
+                    newLines.addAll(defaultLines);
+
+                    Files.write(destinationFile.toPath(), newLines, StandardCharsets.UTF_8);
                 } else {
-                    plugin.getLogger().warning("Could not find default spawners_settings.yml in resources");
+                    plugin.getLogger().warning("Default spawners_settings.yml not found in the plugin's resources.");
+                    destinationFile.createNewFile();
                 }
             }
         } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not create spawners_settings.yml", e);
+            plugin.getLogger().severe("Failed to create default spawners_settings.yml with header: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Determines if there are actual differences between old and new config
+     */
+    private boolean hasConfigDifferences(Map<String, Object> userValues, FileConfiguration newConfig) {
+        // Get all paths from new config (excluding config_version)
+        Map<String, Object> newConfigMap = flattenConfig(newConfig);
+
+        // Check for removed or changed keys
+        for (Map.Entry<String, Object> entry : userValues.entrySet()) {
+            String path = entry.getKey();
+            Object oldValue = entry.getValue();
+
+            // Skip config_version key
+            if (path.equals(CONFIG_VERSION_KEY)) continue;
+
+            // Check if path no longer exists
+            if (!newConfig.contains(path)) {
+                return true; // Found a removed path
+            }
+
+            // Check if default value changed
+            Object newDefaultValue = newConfig.get(path);
+            if (newDefaultValue != null && !newDefaultValue.equals(oldValue)) {
+                return true; // Default value changed
+            }
+        }
+
+        // Check for new keys
+        for (String path : newConfigMap.keySet()) {
+            if (!path.equals(CONFIG_VERSION_KEY) && !userValues.containsKey(path)) {
+                return true; // Found a new path
+            }
+        }
+
+        return false; // No significant differences
+    }
+
+    /**
+     * Flattens a configuration section into a map of path -> value
+     */
+    private Map<String, Object> flattenConfig(ConfigurationSection config) {
+        Map<String, Object> result = new HashMap<>();
+        for (String key : config.getKeys(true)) {
+            if (!config.isConfigurationSection(key)) {
+                result.put(key, config.get(key));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Applies the user values to the new config
+     */
+    private void applyUserValues(FileConfiguration newConfig, Map<String, Object> userValues) {
+        for (Map.Entry<String, Object> entry : userValues.entrySet()) {
+            String path = entry.getKey();
+            Object value = entry.getValue();
+
+            // Don't override config_version
+            if (path.equals(CONFIG_VERSION_KEY)) continue;
+
+            if (newConfig.contains(path)) {
+                newConfig.set(path, value);
+            } else {
+                plugin.getLogger().warning("Config path '" + path + "' from old config no longer exists in new config");
+            }
+        }
+    }
+
+    /**
+     * Save the default configuration from resources (legacy method for initial file creation)
+     */
+    private void saveDefaultConfig() {
+        if (!configFile.exists()) {
+            createDefaultConfigWithHeader(configFile);
+            plugin.getLogger().info("Created default spawners_settings.yml configuration");
         }
     }
     

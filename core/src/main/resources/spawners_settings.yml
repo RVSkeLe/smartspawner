@@ -1,15 +1,10 @@
-# SmartSpawner - Spawner Settings Configuration
-# This file contains merged configuration for mob drops and head textures
 # For detailed configuration guide and examples, please visit:
-#   https://nighterdevelopment.github.io/smartspawner-docs/mob-drops/
+# https://nighterdevelopment.github.io/smartspawner-docs/mob-drops/
 
-# Configuration version - DO NOT MODIFY
-config_version: '1.0.0'
-
-# Default material for unknown mobs
+# Default head material for unknown mobs
 default_material: "SPAWNER"
 
-# Reference: https://minecraft.wiki/w/ALLAY#Drops
+# Reference: https://minecraft.wiki/w/Allay#Drops
 ALLAY:
   experience: 0
   head_texture:

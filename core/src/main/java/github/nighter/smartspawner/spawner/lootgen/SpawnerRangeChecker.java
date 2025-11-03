@@ -72,8 +72,8 @@ public class SpawnerRangeChecker {
     }
 
     private PlayerRangeWrapper[] getRangePlayers() {
-        final Collection<? extends Player> onlinePlayers = Bukkit.getOnlinePlayers();
-        final PlayerRangeWrapper[] rangePlayers = new PlayerRangeWrapper[onlinePlayers.size()];
+        final Player[] onlinePlayers = Bukkit.getOnlinePlayers().toArray(new Player[0]);
+        final PlayerRangeWrapper[] rangePlayers = new PlayerRangeWrapper[onlinePlayers.length];
         int i = 0;
 
         for (Player p : onlinePlayers) {
