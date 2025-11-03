@@ -72,7 +72,7 @@ public class TimerUpdateService {
     }
 
     /**
-     * Checks if the GUI configuration uses %time% placeholders.
+     * Checks if the GUI configuration uses {time} placeholders.
      */
     private void checkTimerPlaceholderUsage() {
         try {
@@ -83,7 +83,7 @@ public class TimerUpdateService {
 
             if (loreLines != null) {
                 for (String line : loreLines) {
-                    if (line != null && line.contains("%time%")) {
+                    if (line != null && line.contains("{time}")) {
                         hasTimers = true;
                         break;
                     }
@@ -92,7 +92,7 @@ public class TimerUpdateService {
 
             if (!hasTimers && loreNoShopLines != null) {
                 for (String line : loreNoShopLines) {
-                    if (line != null && line.contains("%time%")) {
+                    if (line != null && line.contains("{time}")) {
                         hasTimers = true;
                         break;
                     }
@@ -517,8 +517,8 @@ public class TimerUpdateService {
      */
     private String tryUpdateTimerLine(String line, String timeDisplay) {
         // Check for placeholder first (initial GUI creation)
-        if (line.contains("%time%")) {
-            return line.replace("%time%", timeDisplay);
+        if (line.contains("{time}")) {
+            return line.replace("{time}", timeDisplay);
         }
 
         // Quick reject: skip line if it can't possibly contain timer (no colon = no HH:MM pattern)

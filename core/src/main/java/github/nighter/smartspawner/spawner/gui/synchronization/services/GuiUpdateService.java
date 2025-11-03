@@ -235,7 +235,7 @@ public class GuiUpdateService {
         // Find timer line in new lore
         int newTimerLineIndex = -1;
         for (int i = 0; i < newLore.size(); i++) {
-            if (newLore.get(i).contains("%time%")) {
+            if (newLore.get(i).contains("{time}")) {
                 newTimerLineIndex = i;
                 break;
             }
@@ -250,7 +250,7 @@ public class GuiUpdateService {
             String currentLine = currentLore.get(newTimerLineIndex);
             String newLine = newLore.get(newTimerLineIndex);
 
-            if (!currentLine.contains("%time%") && newLine.contains("%time%")) {
+            if (!currentLine.contains("{time}") && newLine.contains("{time}")) {
                 String currentTimerValue = extractTimerValue(currentLine, newLine);
                 
                 if (currentTimerValue != null && !currentTimerValue.isEmpty()) {
@@ -272,7 +272,7 @@ public class GuiUpdateService {
      * Extracts timer value from current line using template matching.
      */
     private String extractTimerValue(String currentLine, String newLine) {
-        String newLineTemplate = newLine.replace("%time%", "TIMER_PLACEHOLDER");
+        String newLineTemplate = newLine.replace("{time}", "TIMER_PLACEHOLDER");
         String cleanNewTemplate = ChatColor.stripColor(newLineTemplate);
         String cleanCurrentLine = ChatColor.stripColor(currentLine);
 

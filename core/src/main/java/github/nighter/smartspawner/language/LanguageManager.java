@@ -846,24 +846,24 @@ public class LanguageManager {
         double value;
 
         if (number >= 1_000_000_000_000L) {
-            format = cachedDefaultLocaleData.formatting().getString("format_number.trillion", "%s%T");
+            format = cachedDefaultLocaleData.formatting().getString("format_number.trillion", "{s}T");
             value = Math.round(number / 1_000_000_000_000.0 * 10) / 10.0;
         } else if (number >= 1_000_000_000L) {
-            format = cachedDefaultLocaleData.formatting().getString("format_number.billion", "%s%B");
+            format = cachedDefaultLocaleData.formatting().getString("format_number.billion", "{s}B");
             value = Math.round(number / 1_000_000_000.0 * 10) / 10.0;
         } else if (number >= 1_000_000L) {
-            format = cachedDefaultLocaleData.formatting().getString("format_number.million", "%s%M");
+            format = cachedDefaultLocaleData.formatting().getString("format_number.million", "{s}M");
             value = Math.round(number / 1_000_000.0 * 10) / 10.0;
         } else if (number >= 1_000L) {
-            format = cachedDefaultLocaleData.formatting().getString("format_number.thousand", "%s%K");
+            format = cachedDefaultLocaleData.formatting().getString("format_number.thousand", "{s}K");
             value = Math.round(number / 1_000.0 * 10) / 10.0;
         } else {
-            format = cachedDefaultLocaleData.formatting().getString("format_number.default", "%s%");
+            format = cachedDefaultLocaleData.formatting().getString("format_number.default", "{s}");
             value = Math.round(number * 10) / 10.0;
         }
 
-        // Replace %s% with the formatted value and escape any other % characters
-        return format.replace("%s%", formatDecimal(value));
+        // Replace {s} with the formatted value
+        return format.replace("{s}", formatDecimal(value));
     }
 
     private String formatDecimal(double value) {
