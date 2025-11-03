@@ -275,7 +275,7 @@ GUARDIAN:
 
 # Reference: https://minecraft.wiki/w/Happy_Ghast#Drops
 HAPPY_GHAST:
-  experience: 1
+  experience: 3
 
 # Reference: https://minecraft.wiki/w/Hoglin#Drops
 HOGLIN:
@@ -290,7 +290,7 @@ HOGLIN:
 
 # Reference: https://minecraft.wiki/w/Horse#Drops
 HORSE:
-  experience: 1
+  experience: 3
   loot:
     LEATHER:
       amount: 0-2

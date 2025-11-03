@@ -8,6 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -193,7 +194,7 @@ public class SpawnerRangeChecker {
 
                                     // Spawn loot (pre-generated if available, otherwise generate new)
                                     if (spawner.hasPreGeneratedLoot()) {
-                                        java.util.List<org.bukkit.inventory.ItemStack> items = spawner.getAndClearPreGeneratedItems();
+                                        List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
                                         int exp = spawner.getAndClearPreGeneratedExperience();
                                         plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
                                     } else {
