@@ -344,7 +344,6 @@ public class SpawnerMenuUI {
         placeholders.put("range", String.valueOf(spawner.getSpawnerRange()));
         long delaySeconds = spawner.getSpawnDelay() / TICKS_PER_SECOND;
         placeholders.put("delay", String.valueOf(delaySeconds));
-        placeholders.put("delay_raw", String.valueOf(spawner.getSpawnDelay()));
         placeholders.put("min_mobs", String.valueOf(spawner.getMinMobs()));
         placeholders.put("max_mobs", String.valueOf(spawner.getMaxMobs()));
 

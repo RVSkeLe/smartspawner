@@ -47,7 +47,7 @@ spawner_storage_item:
       # You can add an optional line to display all loot items:
     # - '%loot_items%'
 
-    # This defines how each loot item will be displayed when using %loot_items%
+  # This defines how each loot item will be displayed when using %loot_items%
   # Available placeholders for each loot item:
   # %item_name% - The name of the item (normal capitalization)
   # %ɪᴛᴇᴍ_ɴᴀᴍᴇ% - The name of the item in small caps format
@@ -72,7 +72,6 @@ spawner_storage_item:
 # Spawner Settings:
 # %range%            - Spawning range in blocks
 # %delay%            - Spawn delay in seconds
-# %delay_raw%        - Raw spawn delay in ticks
 # %min_mobs%         - Minimum number of mobs to spawn
 # %max_mobs%         - Maximum number of mobs to spawn
 #

@@ -57,6 +57,36 @@ spawner_storage_item:
   loot_items: '  &#bdc3c7•  &#2ecc71%amount% &#bdc3c7%ɪᴛᴇᴍ_ɴᴀᴍᴇ%'
   loot_items_empty: '  &#bdc3c7•  ᴋʜôɴɢ ᴄó'
 
+# Spawner Info Item Configuration
+# Available placeholders:
+#
+# Entity Information:
+# %entity%           - Formatted entity name (e.g., "Zombie")
+# %ᴇɴᴛɪᴛʏ%           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# %entity_type%      - Raw entity type (e.g., "ZOMBIE")
+#
+# Stack Information:
+# %stack_size%       - Number of spawners stacked at this location
+#
+# Spawner Settings:
+# %range%            - Spawning range in blocks
+# %delay%            - Spawn delay in seconds
+# %min_mobs%         - Minimum number of mobs to spawn
+# %max_mobs%         - Maximum number of mobs to spawn
+#
+# Storage Information:
+# %current_items%    - Current number of items stored
+# %max_items%        - Maximum storage capacity for items
+# %percent_storage%  - Storage usage as integer percentage (e.g., "87")
+# %percentage_storage% - Storage usage as formatted percentage with decimal (e.g., "87.5")
+#
+# Experience Information:
+# %current_exp%      - Current experience stored (formatted with commas)
+# %max_exp%          - Maximum experience capacity (formatted with commas)
+# %raw_current_exp%  - Raw current experience number
+# %raw_max_exp%      - Raw maximum experience number
+# %percent_exp%      - Experience storage as integer percentage
+# %percentage_exp%    - Experience storage as formatted percentage with decimal (e.g., "42.7")
 spawner_info_item:
   name: '&#3498dbꜱᴘᴀᴡɴᴇʀ %ᴇɴᴛɪᴛʏ%'
   lore:

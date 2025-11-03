@@ -72,7 +72,6 @@ spawner_storage_item:
 # Spawner Settings:
 # %range%            - Spawning range in blocks
 # %delay%            - Spawn delay in seconds
-# %delay_raw%        - Raw spawn delay in ticks
 # %min_mobs%         - Minimum number of mobs to spawn
 # %max_mobs%         - Maximum number of mobs to spawn
 #
