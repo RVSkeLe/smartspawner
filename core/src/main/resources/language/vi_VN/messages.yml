@@ -136,7 +136,7 @@ invalid_egg:
   sound: entity.enderman.teleport
 
 entity_changed:
-  action_bar: "&#37eb9aᴛʜàɴʜ ᴄôɴɢ đổɪ sᴀɴɢ &#f8f8ff%ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ"
+  action_bar: "&#37eb9aᴛʜàɴʜ ᴄôɴɢ đổɪ sᴀɴɢ &#f8f8ff{ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ"
   sound: entity.player.levelup
 
 # ------------------------------------------------------
@@ -251,11 +251,11 @@ command_give_inventory_full:
   sound: block.note_block.pling
 
 command_give_spawner_received:
-  message: "&#37eb9aʙạɴ đã ɴʜậɴ được &#f8f8ff{amount} ꜱᴘᴀᴡɴᴇʀ %ᴇɴᴛɪᴛʏ%"
+  message: "&#37eb9aʙạɴ đã ɴʜậɴ được &#f8f8ff{amount} ꜱᴘᴀᴡɴᴇʀ {ᴇɴᴛɪᴛʏ}"
   sound: entity.experience_orb.pickup
 
 command_give_spawner_given:
-  message: "&#37eb9ađã ᴄʜᴏ &#f8f8ff{amount} ꜱᴘᴀᴡɴᴇʀ %ᴇɴᴛɪᴛʏ% &#37eb9aᴄʜᴏ &#f8f8ff{player}"
+  message: "&#37eb9ađã ᴄʜᴏ &#f8f8ff{amount} ꜱᴘᴀᴡɴᴇʀ {ᴇɴᴛɪᴛʏ} &#37eb9aᴄʜᴏ &#f8f8ff{player}"
   sound: entity.experience_orb.pickup
 
 # Hologram command messages

@@ -14,7 +14,7 @@
 custom_item:
   # Appearance of smart spawner items in inventory and tooltips
   spawner:
-    name: "&#3498db%ᴇɴᴛɪᴛʏ% ꜱᴘᴀᴡɴᴇʀ"
+    name: "&#3498db{ᴇɴᴛɪᴛʏ} ꜱᴘᴀᴡɴᴇʀ"
     loot_items: "  &#ecf0f1•  {amount} %ɪᴛᴇᴍ_ɴᴀᴍᴇ% &#3498db({chance}%)"
     loot_items_empty: "  &#ecf0f1•  ʟᴇᴇʀ"
     lore:
@@ -27,7 +27,7 @@ custom_item:
       - ""
 
   # Appearance of vanilla spawner items in inventory and tooltips
-  # Available placeholders: {entity}, %ᴇɴᴛɪᴛʏ%
+  # Available placeholders: {entity}, {ᴇɴᴛɪᴛʏ}
   # Delete this section if you don't want to use custom vanilla spawners name and lore
   vanilla_spawner:
     name: "{entity} Spawner"

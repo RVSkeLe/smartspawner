@@ -133,7 +133,7 @@ invalid_egg:
   sound: entity.enderman.teleport
 
 entity_changed:
-  action_bar: "&#37eb9aꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴄʜᴀɴɢᴇᴅ ᴛᴏ &#f8f8ff%ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ"
+  action_bar: "&#37eb9aꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴄʜᴀɴɢᴇᴅ ᴛᴏ &#f8f8ff{ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ"
   sound: entity.player.levelup
 
 # ------------------------------------------------------
@@ -248,11 +248,11 @@ command_give_inventory_full:
   sound: block.note_block.pling
 
 command_give_spawner_received:
-  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff{amount} %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
+  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
   sound: entity.experience_orb.pickup
 
 command_give_spawner_given:
-  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
+  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
   sound: entity.experience_orb.pickup
 
 # Hologram command messages
