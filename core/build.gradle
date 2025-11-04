@@ -23,7 +23,7 @@ dependencies {
     compileOnly 'dev.aurelium:auraskills-api-bukkit:2.3.8'
     compileOnly 'pl.minecodes.plots:plugin-api:4.6.2'
     compileOnly("io.lumine:Mythic-Dist:5.10.1")
-    compileOnly("com.iridium:IridiumSkyblock:4.1.1")
+    compileOnly("com.iridium:IridiumSkyblock:4.1.2")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.55"))
     compileOnly("com.intellectualsites.plotsquared:plotsquared-core")
     implementation("com.github.Zrips:Residence:6.0.0.1") {
