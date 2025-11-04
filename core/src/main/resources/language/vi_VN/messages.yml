@@ -75,6 +75,14 @@ no_items_to_drop:
   message: "&#ff5252ᴋʜôɴɢ ᴄó ᴠậᴛ ᴘʜẩᴍ để ᴛʜả"
   sound: block.note_block.pling
 
+items_not_available:
+  message: "&#ff5252ᴠậᴛ ᴘʜẩᴍ ᴋʜôɴɢ ᴄó ꜱẵɴ"
+  sound: block.note_block.pling
+
+drop_failed:
+  message: "&#ff5252ᴛʜả ᴠậᴛ ᴘʜẩᴍ ᴛʜấᴛ ʙạɪ"
+  sound: block.note_block.pling
+
 # ------------------------------------------------------
 #         Spawner - Stacker GUI Interaction
 # ------------------------------------------------------
@@ -191,7 +199,7 @@ sell_success:
   sound: block.note_block.bell
 
 action_in_progress:
-  action_bar: "&#f0c857ᴍộᴛ ʜᴏạᴛ độɴɢ ᴋʜáᴄ đᴀɴɢ đɪềɴ ʀᴀ. Vᴜɪ ʟòɴɢ ᴛʜử ʟạɪ ꜱᴀᴜ ɢɪâʏ ʟáᴛ."
+  message: "&#f0c857ᴍộᴛ ʜᴏạᴛ độɴɢ ᴋʜáᴄ đᴀɴɢ đɪềɴ ʀᴀ. Vᴜɪ ʟòɴɢ ᴛʜử ʟạɪ ꜱᴀᴜ ɢɪâʏ ʟáᴛ."
   sound: block.note_block.pling
 
 action_failed:
