@@ -5,7 +5,6 @@ import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuHolder;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
-import github.nighter.smartspawner.spawner.gui.synchronization.ItemUpdater;
 import github.nighter.smartspawner.spawner.gui.synchronization.managers.SlotCacheManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.ChatColor;
@@ -168,7 +167,7 @@ public class GuiUpdateService {
 
         ItemStack newChestItem = spawnerMenuUI.createLootStorageItem(spawner);
 
-        if (!ItemUpdater.areItemsEqual(currentChestItem, newChestItem)) {
+        if (!areItemsEqual(currentChestItem, newChestItem)) {
             inventory.setItem(storageSlot, newChestItem);
         }
     }
@@ -188,7 +187,7 @@ public class GuiUpdateService {
 
         ItemStack newExpItem = spawnerMenuUI.createExpItem(spawner);
 
-        if (!ItemUpdater.areItemsEqual(currentExpItem, newExpItem)) {
+        if (!areItemsEqual(currentExpItem, newExpItem)) {
             inventory.setItem(expSlot, newExpItem);
         }
     }
@@ -208,7 +207,7 @@ public class GuiUpdateService {
 
         ItemStack newSpawnerItem = spawnerMenuUI.createSpawnerInfoItem(player, spawner);
 
-        if (!ItemUpdater.areItemsEqual(currentSpawnerItem, newSpawnerItem)) {
+        if (!areItemsEqual(currentSpawnerItem, newSpawnerItem)) {
             preserveTimerInfo(currentSpawnerItem, newSpawnerItem);
             inventory.setItem(spawnerInfoSlot, newSpawnerItem);
         }
@@ -266,6 +265,62 @@ public class GuiUpdateService {
                 }
             }
         }
+    }
+
+    /**
+     * Compares two ItemStacks for equality, focusing on display name and lore.
+     * This helps avoid unnecessary item updates in the GUI.
+     *
+     * @param item1 First ItemStack to compare
+     * @param item2 Second ItemStack to compare
+     * @return true if items have the same material, display name and lore
+     */
+    public static boolean areItemsEqual(ItemStack item1, ItemStack item2) {
+        if (item1 == item2) return true;  // Same instance
+        if (item1 == null || item2 == null) return false;
+
+        // Check material first (fast check)
+        if (item1.getType() != item2.getType()) return false;
+
+        // Get item metas
+        ItemMeta meta1 = item1.getItemMeta();
+        ItemMeta meta2 = item2.getItemMeta();
+
+        // If both have no meta, they're equal
+        if (meta1 == null && meta2 == null) return true;
+        // If only one has meta, they're not equal
+        if (meta1 == null || meta2 == null) return false;
+
+        // Check display name
+        if (meta1.hasDisplayName() != meta2.hasDisplayName()) return false;
+        if (meta1.hasDisplayName() && !meta1.getDisplayName().equals(meta2.getDisplayName())) return false;
+
+        // Check lore
+        return areLoreListsEqual(meta1.getLore(), meta2.getLore());
+    }
+
+    /**
+     * Compares two lore lists for equality.
+     * This method is optimized for performance with early returns.
+     */
+    private static boolean areLoreListsEqual(List<String> lore1, List<String> lore2) {
+        if (lore1 == lore2) return true;  // Same instance
+        if (lore1 == null || lore2 == null) return false;
+
+        int size = lore1.size();
+        if (size != lore2.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < size; i++) {
+            String s1 = lore1.get(i);
+            String s2 = lore2.get(i);
+            if (s1 == s2) continue;  // Same instance
+            if (s1 == null || s2 == null) return false;
+            if (!s1.equals(s2)) return false;
+        }
+
+        return true;
     }
 
     /**

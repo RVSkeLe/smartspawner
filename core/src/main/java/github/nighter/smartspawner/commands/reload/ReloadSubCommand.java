@@ -3,13 +3,10 @@ package github.nighter.smartspawner.commands.reload;
 import com.mojang.brigadier.context.CommandContext;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.BaseSubCommand;
-import github.nighter.smartspawner.spawner.gui.synchronization.ItemUpdater;
-import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.jspecify.annotations.NullMarked;
 
-import java.util.List;
 import java.util.Map;
 
 @NullMarked
@@ -52,7 +49,6 @@ public class ReloadSubCommand extends BaseSubCommand {
             }
 
             // Clear all caches first to avoid using stale data during reload
-            ItemUpdater.clearCache();
             plugin.getSpawnerItemFactory().clearAllCaches();
             plugin.getMessageService().clearKeyExistsCache();
 
