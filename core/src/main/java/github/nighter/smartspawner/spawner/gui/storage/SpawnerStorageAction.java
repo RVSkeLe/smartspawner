@@ -337,7 +337,7 @@ public class SpawnerStorageAction implements Listener {
 
         // 2. Transaction lock - prevent concurrent drop operations per player
         if (!acquireDropTransaction(playerId)) {
-            messageService.sendMessage(player, "operation_in_progress");
+            messageService.sendMessage(player, "action_in_progress");
             return;
         }
 

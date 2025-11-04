@@ -76,6 +76,14 @@ no_items_to_drop:
   message: "&#ff5252ɴᴏ ɪᴛᴇᴍꜱ ᴛᴏ ᴅʀᴏᴘ"
   sound: block.note_block.pling
 
+items_not_available:
+  message: "&#ff5252ɪᴛᴇᴍꜱ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ"
+  sound: block.note_block.pling
+
+drop_failed:
+  message: "&#ff5252ᴅʀᴏᴘ ᴏᴘᴇʀᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ"
+  sound: block.note_block.pling
+
 # ------------------------------------------------------
 #         Spawner - Stacker GUI Interaction
 # ------------------------------------------------------
