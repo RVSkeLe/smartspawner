@@ -340,7 +340,7 @@ public class SpawnerFileHandler {
                         spawner.setSpawnerActive(Boolean.parseBoolean(settings[1]));
                         spawner.setSpawnerRange(Integer.parseInt(settings[2]));
                         spawner.getSpawnerStop().set(Boolean.parseBoolean(settings[3]));
-                        spawner.setSpawnDelay(Integer.parseInt(settings[4]));
+                        spawner.setSpawnDelayFromConfig();
                         spawner.setMaxSpawnerLootSlots(Integer.parseInt(settings[5]));
                         spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                         spawner.setMinMobs(Integer.parseInt(settings[7]));
@@ -355,7 +355,7 @@ public class SpawnerFileHandler {
                     spawner.setSpawnerActive(Boolean.parseBoolean(settings[1]));
                     spawner.setSpawnerRange(Integer.parseInt(settings[2]));
                     spawner.getSpawnerStop().set(Boolean.parseBoolean(settings[3]));
-                    spawner.setSpawnDelay(Integer.parseInt(settings[4]));
+                    spawner.setSpawnDelayFromConfig();
                     spawner.setMaxSpawnerLootSlots(Integer.parseInt(settings[5]));
                     spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                     spawner.setMinMobs(Integer.parseInt(settings[7]));

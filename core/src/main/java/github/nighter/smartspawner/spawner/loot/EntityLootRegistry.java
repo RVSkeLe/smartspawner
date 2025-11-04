@@ -95,7 +95,7 @@ public class EntityLootRegistry {
                         String[] amounts = itemSection.getString("amount", "1-1").split("-");
                         int minAmount = Integer.parseInt(amounts[0]);
                         int maxAmount = Integer.parseInt(amounts.length > 1 ? amounts[1] : amounts[0]);
-                        double chance = itemSection.getDouble("chance", 100.0);
+                        double chance = itemSection.getDouble("chance", 0.0);
 
                         double sellPrice = getSellPrice(material);
 

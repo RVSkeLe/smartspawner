@@ -96,10 +96,7 @@ public class SpawnerData {
     // Accumulated sell value for optimization
     @Getter
     private volatile double accumulatedSellValue;
-    /**
-     * -- GETTER --
-     *  Checks if sell value needs recalculation
-     */
+
     @Getter
     private volatile boolean sellValueDirty;
 
@@ -147,7 +144,7 @@ public class SpawnerData {
         this.baseMinMobs = plugin.getConfig().getInt("spawner_properties.default.min_mobs", 1);
         this.baseMaxMobs = plugin.getConfig().getInt("spawner_properties.default.max_mobs", 4);
         this.maxStackSize = plugin.getConfig().getInt("spawner_properties.default.max_stack_size", 1000);
-        this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
+        this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s") + 20L;
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
         this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
     }
@@ -180,10 +177,19 @@ public class SpawnerData {
     }
 
     public void setSpawnDelay(long baseSpawnerDelay) {
-        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 400;
+        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500 + 20L;
         if (baseSpawnerDelay <= 0) {
-            plugin.getLogger().warning("Invalid delay value. Setting to default: 400");
+            plugin.getLogger().warning("Invalid spawner delay value. Setting to default: 500 ticks (25s)");
         }
+    }
+
+    public void setSpawnDelayFromConfig() {
+        long delay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
+        if (delay <= 0) {
+            plugin.getLogger().warning("Invalid spawner delay value in config. Setting to default: 500 ticks (25s)");
+            delay = 500L;
+        }
+        setSpawnDelay(delay + 20L);
     }
 
     private void initializeComponents() {
