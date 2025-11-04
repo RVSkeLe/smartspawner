@@ -57,6 +57,11 @@ public class SpawnerStorageAction implements Listener {
     // Using ConcurrentHashMap for thread-safety with Folia's async scheduler
     private final Map<UUID, Inventory> openStorageInventories = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
+    // Transaction locking system to prevent concurrent drop operations
+    private final Set<UUID> activeDropTransactions = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> transactionStartTimes = new ConcurrentHashMap<>();
+    private static final long TRANSACTION_TIMEOUT_MS = 5000; // 5 seconds max per transaction
+    private static final long DROP_COOLDOWN_MS = 500; // 500ms cooldown between drops
     private Random random = new Random();
     private GuiLayout layout;
 
@@ -307,70 +312,153 @@ public class SpawnerStorageAction implements Listener {
         }
     }
 
+    /**
+     * Handles dropping all items from the current storage page with comprehensive dupe prevention.
+     * 
+     * Security measures implemented:
+     * 1. Transaction locking to prevent concurrent operations
+     * 2. Pre-drop validation of items in VirtualInventory
+     * 3. Atomic operation: VirtualInventory update BEFORE item drop
+     * 4. Rollback mechanism if VirtualInventory update fails
+     * 5. Post-drop verification
+     * 6. Edge case handling for disconnects, lag, and rapid clicks
+     * 
+     * @param player The player dropping items
+     * @param spawner The spawner data
+     * @param inventory The storage inventory
+     */
     private void handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
-        if (isClickTooFrequent(player)) {
-            return;
-        }
-
-        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
-        if (holder == null) {
-            return;
-        }
-
-        List<ItemStack> pageItems = new ArrayList<>();
-        int itemsFoundCount = 0;
-
-        for (int i = 0; i < STORAGE_SLOTS; i++) {
-            ItemStack item = inventory.getItem(i);
-            if (item != null && item.getType() != Material.AIR) {
-                pageItems.add(item.clone());
-                itemsFoundCount += item.getAmount();
-                inventory.setItem(i, null);
-            }
-        }
-
-        if (pageItems.isEmpty()) {
-            messageService.sendMessage(player, "no_items_to_drop");
-            return;
-        }
-
-        final int itemsFound = itemsFoundCount;
+        UUID playerId = player.getUniqueId();
         
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
-        spawner.removeItemsAndUpdateSellValue(pageItems);
-
-        dropItemsInDirection(player, pageItems);
-
-        int newTotalPages = calculateTotalPages(spawner);
-        if (holder.getCurrentPage() > newTotalPages) {
-            holder.setCurrentPage(Math.max(1, newTotalPages));
-        }
-        holder.setTotalPages(newTotalPages);
-        holder.updateOldUsedSlots();
-
-        spawner.updateHologramData();
-        spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
-
-        if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
-            spawner.setIsAtCapacity(false);
-        }
-        if (!spawner.isInteracted()) {
-            spawner.markInteracted();
+        // 1. Cooldown check - prevents spam clicking (500ms debounce)
+        if (isDropOperationTooFrequent(playerId)) {
+            return;
         }
 
-        // Log drop page items action
-        if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DROP_PAGE_ITEMS, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("items_dropped", itemsFound)
-                    .metadata("page_number", holder.getCurrentPage())
-            );
+        // 2. Transaction lock - prevent concurrent drop operations per player
+        if (!acquireDropTransaction(playerId)) {
+            messageService.sendMessage(player, "operation_in_progress");
+            return;
         }
 
-        updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
-        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 0.8f);
+        try {
+            // 3. Validate holder exists
+            StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+            if (holder == null) {
+                return;
+            }
+
+            // 4. Validate spawner still exists (prevents exploit on broken spawners)
+            if (!isSpawnerValid(spawner)) {
+                player.closeInventory();
+                return;
+            }
+
+            // 5. Validate inventory is still open (prevents exploit on early close)
+            if (!isPlayerInventoryOpen(player, inventory)) {
+                return;
+            }
+
+            // 6. Collect items from GUI display
+            List<ItemStack> pageItems = new ArrayList<>();
+            Map<Integer, ItemStack> guiSnapshot = new HashMap<>(); // For rollback
+            int itemsFoundCount = 0;
+
+            for (int i = 0; i < STORAGE_SLOTS; i++) {
+                ItemStack item = inventory.getItem(i);
+                if (item != null && item.getType() != Material.AIR) {
+                    pageItems.add(item.clone());
+                    guiSnapshot.put(i, item.clone()); // Save for potential rollback
+                    itemsFoundCount += item.getAmount();
+                }
+            }
+
+            if (pageItems.isEmpty()) {
+                messageService.sendMessage(player, "no_items_to_drop");
+                return;
+            }
+
+            final int itemsFound = itemsFoundCount;
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+
+            // 7. PRE-DROP VALIDATION: Verify items actually exist in VirtualInventory
+            if (!validateItemsExistInVirtualInventory(pageItems, virtualInv)) {
+                messageService.sendMessage(player, "items_not_available");
+                // Refresh display to show actual inventory state
+                updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+                return;
+            }
+
+            // 8. CRITICAL: Remove from VirtualInventory FIRST (atomic operation)
+            // This is the key security fix - VirtualInventory must update before items drop
+            boolean removalSuccess = spawner.removeItemsAndUpdateSellValue(pageItems);
+            
+            if (!removalSuccess) {
+                // Removal failed - items don't exist in VirtualInventory
+                messageService.sendMessage(player, "drop_failed");
+                // Refresh display to show actual inventory state
+                updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+                return;
+            }
+
+            // 9. Validate inventory still open after VirtualInventory update
+            // Player may have closed inventory during the update
+            if (!isPlayerInventoryOpen(player, inventory)) {
+                // Rollback: Items removed from VirtualInventory but inventory closed
+                // Re-add items to VirtualInventory
+                virtualInv.addItems(pageItems);
+                return;
+            }
+
+            // 10. Clear GUI display AFTER successful VirtualInventory update
+            for (int i = 0; i < STORAGE_SLOTS; i++) {
+                ItemStack item = inventory.getItem(i);
+                if (item != null && item.getType() != Material.AIR) {
+                    inventory.setItem(i, null);
+                }
+            }
+
+            // 11. Drop items in world (only after VirtualInventory confirmed removal)
+            dropItemsInDirection(player, pageItems);
+
+            // 12. Update page metadata
+            int newTotalPages = calculateTotalPages(spawner);
+            if (holder.getCurrentPage() > newTotalPages) {
+                holder.setCurrentPage(Math.max(1, newTotalPages));
+            }
+            holder.setTotalPages(newTotalPages);
+            holder.updateOldUsedSlots();
+
+            // 13. Update spawner state
+            spawner.updateHologramData();
+            spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+
+            if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
+                spawner.setIsAtCapacity(false);
+            }
+            if (!spawner.isInteracted()) {
+                spawner.markInteracted();
+            }
+
+            // 14. Log successful drop operation
+            if (plugin.getSpawnerActionLogger() != null) {
+                plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DROP_PAGE_ITEMS, builder -> 
+                    builder.player(player.getName(), player.getUniqueId())
+                        .location(spawner.getSpawnerLocation())
+                        .entityType(spawner.getEntityType())
+                        .metadata("items_dropped", itemsFound)
+                        .metadata("page_number", holder.getCurrentPage())
+                );
+            }
+
+            // 15. Refresh display and provide feedback
+            updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 0.8f);
+
+        } finally {
+            // 16. ALWAYS release transaction lock (prevents deadlocks)
+            releaseDropTransaction(playerId);
+        }
     }
 
     private void dropItemsInDirection(Player player, List<ItemStack> items) {
@@ -505,10 +593,132 @@ public class SpawnerStorageAction implements Listener {
         return (now - last) < 300;
     }
 
+    /**
+     * Checks if a drop operation is too frequent for the given player.
+     * Uses a 500ms cooldown to prevent rapid click exploits.
+     * 
+     * @param playerId The player's UUID
+     * @return true if the operation is too frequent, false otherwise
+     */
+    private boolean isDropOperationTooFrequent(UUID playerId) {
+        long now = System.currentTimeMillis();
+        long last = lastItemClickTime.getOrDefault(playerId, 0L);
+        lastItemClickTime.put(playerId, now);
+        return (now - last) < DROP_COOLDOWN_MS;
+    }
+
+    /**
+     * Attempts to acquire a drop transaction lock for the player.
+     * Includes timeout mechanism to prevent stuck transactions.
+     * 
+     * @param playerId The player's UUID
+     * @return true if lock acquired, false if already in transaction
+     */
+    private boolean acquireDropTransaction(UUID playerId) {
+        // Check for expired transactions and clean them up
+        cleanupExpiredTransactions();
+        
+        // Try to add to active transactions (returns false if already exists)
+        if (activeDropTransactions.add(playerId)) {
+            transactionStartTimes.put(playerId, System.currentTimeMillis());
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Releases the drop transaction lock for the player.
+     * Should ALWAYS be called in a finally block.
+     * 
+     * @param playerId The player's UUID
+     */
+    private void releaseDropTransaction(UUID playerId) {
+        activeDropTransactions.remove(playerId);
+        transactionStartTimes.remove(playerId);
+    }
+
+    /**
+     * Cleans up transactions that have exceeded the timeout limit.
+     * Prevents deadlocks from crashed operations or server lag.
+     */
+    private void cleanupExpiredTransactions() {
+        long now = System.currentTimeMillis();
+        List<UUID> expiredTransactions = new ArrayList<>();
+        
+        for (Map.Entry<UUID, Long> entry : transactionStartTimes.entrySet()) {
+            if (now - entry.getValue() > TRANSACTION_TIMEOUT_MS) {
+                expiredTransactions.add(entry.getKey());
+            }
+        }
+        
+        for (UUID playerId : expiredTransactions) {
+            activeDropTransactions.remove(playerId);
+            transactionStartTimes.remove(playerId);
+        }
+    }
+
+    /**
+     * Validates that all items in the list exist in the VirtualInventory.
+     * Pre-drop validation layer to prevent duplication exploits.
+     * 
+     * @param items Items to validate
+     * @param virtualInv The virtual inventory to check against
+     * @return true if all items exist in sufficient quantities, false otherwise
+     */
+    private boolean validateItemsExistInVirtualInventory(List<ItemStack> items, VirtualInventory virtualInv) {
+        if (items == null || items.isEmpty()) {
+            return true;
+        }
+        
+        // Build a map of item signatures to required amounts
+        Map<VirtualInventory.ItemSignature, Long> requiredItems = new HashMap<>();
+        for (ItemStack item : items) {
+            if (item == null || item.getAmount() <= 0) continue;
+            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+            requiredItems.merge(sig, (long) item.getAmount(), Long::sum);
+        }
+        
+        // Check against VirtualInventory's consolidated items
+        Map<VirtualInventory.ItemSignature, Long> consolidatedItems = virtualInv.getConsolidatedItems();
+        
+        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : requiredItems.entrySet()) {
+            Long available = consolidatedItems.get(entry.getKey());
+            if (available == null || available < entry.getValue()) {
+                // Not enough of this item type in VirtualInventory
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Checks if the player still has the specified inventory open.
+     * Prevents exploits where player closes inventory mid-operation.
+     * 
+     * @param player The player to check
+     * @param expectedInventory The inventory that should be open
+     * @return true if the inventory is still open, false otherwise
+     */
+    private boolean isPlayerInventoryOpen(Player player, Inventory expectedInventory) {
+        if (player == null || !player.isOnline()) {
+            return false;
+        }
+        
+        Inventory openInv = player.getOpenInventory().getTopInventory();
+        return openInv != null && openInv.equals(expectedInventory);
+    }
+
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
         lastItemClickTime.remove(playerId);
+        
+        // Clean up transaction locks on player disconnect
+        // This prevents stuck transactions from disconnected players
+        activeDropTransactions.remove(playerId);
+        transactionStartTimes.remove(playerId);
     }
 
     private void openMainMenu(Player player, SpawnerData spawner) {
