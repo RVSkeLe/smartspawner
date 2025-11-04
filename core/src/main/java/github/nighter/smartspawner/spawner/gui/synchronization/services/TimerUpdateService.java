@@ -171,6 +171,7 @@ public class TimerUpdateService {
     /**
      * Processes timer updates for all main menu viewers.
      * This is called periodically by the update task.
+     * Optimized to minimize repeated Player object lookups and inventory checks.
      */
     public void processTimerUpdates() {
         // Early exit if no timer placeholders in GUI config
@@ -185,7 +186,7 @@ public class TimerUpdateService {
         long currentTime = System.currentTimeMillis();
 
         // Group main menu viewers by spawner
-        Map<String, List<UUID>> spawnerViewers = new HashMap<>();
+        Map<String, List<PlayerViewerContext>> spawnerViewers = new HashMap<>();
         Map<UUID, ViewerTrackingManager.ViewerInfo> mainMenuViewers = viewerTrackingManager.getMainMenuViewers();
 
         for (Map.Entry<UUID, ViewerTrackingManager.ViewerInfo> entry : mainMenuViewers.entrySet()) {
@@ -193,38 +194,40 @@ public class TimerUpdateService {
             ViewerTrackingManager.ViewerInfo viewerInfo = entry.getValue();
             SpawnerData spawner = viewerInfo.getSpawnerData();
 
+            // Skip if updated recently (throttle to 800ms) - check before expensive operations
+            Long lastUpdate = lastTimerUpdate.get(playerId);
+            if (lastUpdate != null && (currentTime - lastUpdate) < 800) {
+                continue;
+            }
+
             Player player = Bukkit.getPlayer(playerId);
-            if (!isValidGuiSession(player)) {
+            if (player == null || !player.isOnline()) {
                 viewerTrackingManager.untrackViewer(playerId);
                 continue;
             }
 
-            // Ensure player has main menu open
+            // Get inventory once and validate
             Inventory openInventory = player.getOpenInventory().getTopInventory();
             if (openInventory == null || !(openInventory.getHolder(false) instanceof SpawnerMenuHolder)) {
                 viewerTrackingManager.untrackViewer(playerId);
                 continue;
             }
 
-            // Skip if updated recently (throttle to 800ms)
-            Long lastUpdate = lastTimerUpdate.get(playerId);
-            if (lastUpdate != null && (currentTime - lastUpdate) < 800) {
-                continue;
-            }
-
-            spawnerViewers.computeIfAbsent(spawner.getSpawnerId(), k -> new ArrayList<>()).add(playerId);
+            // Store player and inventory context to avoid repeated lookups
+            spawnerViewers.computeIfAbsent(spawner.getSpawnerId(), k -> new ArrayList<>())
+                .add(new PlayerViewerContext(playerId, player, openInventory, player.getLocation()));
         }
 
         int processedPlayers = 0;
 
         // Process spawners in batches
-        for (Map.Entry<String, List<UUID>> spawnerGroup : spawnerViewers.entrySet()) {
-            List<UUID> viewers = spawnerGroup.getValue();
+        for (Map.Entry<String, List<PlayerViewerContext>> spawnerGroup : spawnerViewers.entrySet()) {
+            List<PlayerViewerContext> viewers = spawnerGroup.getValue();
             if (viewers.isEmpty()) continue;
 
             // Get spawner from first viewer - cache the lookup
-            UUID firstViewer = viewers.get(0);
-            ViewerTrackingManager.ViewerInfo viewerInfo = mainMenuViewers.get(firstViewer);
+            PlayerViewerContext firstViewer = viewers.get(0);
+            ViewerTrackingManager.ViewerInfo viewerInfo = mainMenuViewers.get(firstViewer.playerId);
             if (viewerInfo == null) continue;
 
             SpawnerData spawner = viewerInfo.getSpawnerData();
@@ -233,49 +236,44 @@ public class TimerUpdateService {
             String newTimerValue = calculateTimerDisplayInternal(spawner);
 
             // Apply to all viewers
-            for (UUID playerId : viewers) {
+            for (PlayerViewerContext context : viewers) {
                 if (processedPlayers >= MAX_PLAYERS_PER_BATCH) {
                     break;
                 }
 
                 // Skip if timer unchanged
-                String lastValue = lastTimerValue.get(playerId);
+                String lastValue = lastTimerValue.get(context.playerId);
                 if (lastValue != null && lastValue.equals(newTimerValue)) {
                     continue;
                 }
 
-                Player player = Bukkit.getPlayer(playerId);
-                if (!isValidGuiSession(player)) {
-                    viewerTrackingManager.untrackViewer(playerId);
-                    continue;
-                }
-
                 // Update tracking
-                lastTimerUpdate.put(playerId, currentTime);
-                lastTimerValue.put(playerId, newTimerValue);
+                lastTimerUpdate.put(context.playerId, currentTime);
+                lastTimerValue.put(context.playerId, newTimerValue);
                 processedPlayers++;
 
-                // Schedule update on player's thread
-                Location playerLocation = player.getLocation();
-                if (playerLocation != null) {
+                // Schedule update on player's thread using cached location
+                if (context.location != null) {
                     final String finalTimerValue = newTimerValue;
-                    final UUID finalPlayerId = playerId;
+                    final UUID finalPlayerId = context.playerId;
 
-                    Scheduler.runLocationTask(playerLocation, () -> {
-                        if (!player.isOnline() || !mainMenuViewers.containsKey(finalPlayerId)) {
+                    Scheduler.runLocationTask(context.location, () -> {
+                        // Quick validation - player and inventory already validated above
+                        if (!context.player.isOnline() || !mainMenuViewers.containsKey(finalPlayerId)) {
                             return;
                         }
 
-                        Inventory openInventory = player.getOpenInventory().getTopInventory();
-                        if (openInventory == null || !(openInventory.getHolder(false) instanceof SpawnerMenuHolder)) {
+                        // Revalidate inventory in case it changed
+                        Inventory currentInv = context.player.getOpenInventory().getTopInventory();
+                        if (currentInv == null || !(currentInv.getHolder(false) instanceof SpawnerMenuHolder)) {
                             viewerTrackingManager.untrackViewer(finalPlayerId);
                             return;
                         }
 
                         int spawnerInfoSlot = slotCacheManager.getSpawnerInfoSlot();
                         if (spawnerInfoSlot >= 0) {
-                            updateSpawnerInfoItemTimer(openInventory, spawner, finalTimerValue, spawnerInfoSlot);
-                            player.updateInventory();
+                            updateSpawnerInfoItemTimer(currentInv, spawner, finalTimerValue, spawnerInfoSlot);
+                            context.player.updateInventory();
                         }
                     });
                 }
@@ -444,7 +442,7 @@ public class TimerUpdateService {
 
     /**
      * Updates timer in spawner info item.
-     * Optimized to minimize string operations, checks, and object allocations.
+     * Optimized to minimize hasItemMeta/getItemMeta calls and object allocations.
      */
     private void updateSpawnerInfoItemTimer(Inventory inventory, SpawnerData spawner, 
                                            String timeDisplay, int spawnerInfoSlot) {
@@ -453,15 +451,17 @@ public class TimerUpdateService {
         }
 
         ItemStack spawnerItem = inventory.getItem(spawnerInfoSlot);
-        if (spawnerItem == null || !spawnerItem.hasItemMeta()) {
+        if (spawnerItem == null) {
             return;
         }
 
+        // Get meta once - this is the expensive operation
         ItemMeta meta = spawnerItem.getItemMeta();
-        if (meta == null || !meta.hasLore()) {
+        if (meta == null) {
             return;
         }
 
+        // Get lore once - this creates a defensive copy, avoid multiple calls
         List<String> lore = meta.getLore();
         if (lore == null || lore.isEmpty()) {
             return;
@@ -472,14 +472,16 @@ public class TimerUpdateService {
         Integer cachedIndex = timerLineIndexCache.get(spawnerId);
 
         boolean needsUpdate = false;
+        int updatedIndex = -1;
+        String updatedLine = null;
 
         // Fast path: try cached index first
         if (cachedIndex != null && cachedIndex >= 0 && cachedIndex < lore.size()) {
             String line = lore.get(cachedIndex);
-            String updatedLine = tryUpdateTimerLine(line, timeDisplay);
+            updatedLine = tryUpdateTimerLine(line, timeDisplay);
 
             if (updatedLine != null && !updatedLine.equals(line)) {
-                lore.set(cachedIndex, updatedLine);
+                updatedIndex = cachedIndex;
                 needsUpdate = true;
             } else if (updatedLine == null) {
                 // Cache is stale, invalidate and fall through to search
@@ -492,10 +494,10 @@ public class TimerUpdateService {
         if (!needsUpdate && cachedIndex == null) {
             for (int i = 0; i < lore.size(); i++) {
                 String line = lore.get(i);
-                String updatedLine = tryUpdateTimerLine(line, timeDisplay);
+                updatedLine = tryUpdateTimerLine(line, timeDisplay);
 
                 if (updatedLine != null && !updatedLine.equals(line)) {
-                    lore.set(i, updatedLine);
+                    updatedIndex = i;
                     needsUpdate = true;
                     // Cache this index for future updates
                     timerLineIndexCache.put(spawnerId, i);
@@ -504,9 +506,11 @@ public class TimerUpdateService {
             }
         }
 
-        if (needsUpdate) {
+        if (needsUpdate && updatedIndex >= 0) {
+            lore.set(updatedIndex, updatedLine);
             meta.setLore(lore);
             spawnerItem.setItemMeta(meta);
+            // Direct slot update without getting item again
             inventory.setItem(spawnerInfoSlot, spawnerItem);
         }
     }
@@ -575,5 +579,23 @@ public class TimerUpdateService {
     public void clearAllTracking() {
         lastTimerUpdate.clear();
         lastTimerValue.clear();
+    }
+
+    /**
+     * Context object to cache player-related lookups and avoid repeated method calls.
+     * Reduces performance overhead from multiple Player.isOnline(), getOpenInventory(), etc.
+     */
+    private static class PlayerViewerContext {
+        final UUID playerId;
+        final Player player;
+        final Inventory inventory;
+        final Location location;
+
+        PlayerViewerContext(UUID playerId, Player player, Inventory inventory, Location location) {
+            this.playerId = playerId;
+            this.player = player;
+            this.inventory = inventory;
+            this.location = location;
+        }
     }
 }

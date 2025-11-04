@@ -11,6 +11,7 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.api.events.SpawnerOpenGUIEvent;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -21,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class SpawnerMenuUI {
     private static final int INVENTORY_SIZE = 27;
@@ -306,7 +308,7 @@ public class SpawnerMenuUI {
         // Get layout configuration first for cache key calculation
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
         GuiButton spawnerInfoButton = layout.getButton("spawner_info");
-        
+
         // Get important data upfront
         EntityType entityType = spawner.getEntityType();
         int stackSize = spawner.getStackSize();
@@ -319,27 +321,13 @@ public class SpawnerMenuUI {
         // Create cache key including all relevant state
         boolean hasShopPermission = plugin.hasSellIntegration() && player.hasPermission("smartspawner.sellall");
 
-        // Not in cache, create the ItemStack        
-        ItemStack spawnerItem;
-        if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
-            // Use custom head texture for MOB_HEAD material
-            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player);
-        } else if (spawnerInfoButton != null) {
-            // Use the configured material
-            spawnerItem = new ItemStack(spawnerInfoButton.getMaterial());
-        } else {
-            // Fallback to default behavior
-            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player);
-        }
-        
-        ItemMeta spawnerMeta = spawnerItem.getItemMeta();
-        if (spawnerMeta == null) return spawnerItem;
+        // Not in cache, create the ItemStack
 
         // Smart placeholder detection: First, get the raw name and lore templates
         String nameTemplate = languageManager.getGuiItemName("spawner_info_item.name", EMPTY_PLACEHOLDERS);
         String loreKey = hasShopPermission ? "spawner_info_item.lore" : "spawner_info_item.lore_no_shop";
         List<String> loreTemplate = languageManager.getGuiItemLoreAsList(loreKey, EMPTY_PLACEHOLDERS);
-        
+
         // Define all available placeholders
         Set<String> availablePlaceholders = Set.of(
             "entity", "ᴇɴᴛɪᴛʏ", "entity_type", "stack_size", "range", "delay", "min_mobs", "max_mobs",
@@ -347,15 +335,15 @@ public class SpawnerMenuUI {
             "current_exp", "max_exp", "raw_current_exp", "raw_max_exp", "percent_exp_decimal", "percent_exp_rounded",
             "total_sell_price", "time"
         );
-        
+
         // Detect which placeholders are actually used
         Set<String> usedPlaceholders = new HashSet<>();
         usedPlaceholders.addAll(detectUsedPlaceholders(nameTemplate, availablePlaceholders));
         usedPlaceholders.addAll(detectUsedPlaceholders(loreTemplate, availablePlaceholders));
-        
+
         // Prepare only the placeholders that are actually used
         Map<String, String> placeholders = new HashMap<>();
-        
+
         // Entity information
         if (usedPlaceholders.contains("entity") || usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
             String entityName = languageManager.getFormattedMobName(entityType);
@@ -450,13 +438,30 @@ public class SpawnerMenuUI {
             placeholders.put("time", timerValue);
         }
 
-        // Set display name with the specified placeholders
-        spawnerMeta.setDisplayName(languageManager.getGuiItemName("spawner_info_item.name", placeholders));
+        ItemStack spawnerItem;
 
-        // Get and set lore with placeholders
-        List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
-        spawnerMeta.setLore(lore);
-        spawnerItem.setItemMeta(spawnerMeta);
+        // Prepare the meta modifier consumer
+        Consumer<ItemMeta> metaModifier = meta -> {
+            // Set display name with the specified placeholders
+            meta.setDisplayName(languageManager.getGuiItemName("spawner_info_item.name", placeholders));
+
+            // Get and set lore with placeholders
+            List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
+            meta.setLore(lore);
+        };
+
+        if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
+            // Use custom head texture for MOB_HEAD material
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
+        } else if (spawnerInfoButton != null) {
+            // Use the configured material
+            spawnerItem = new ItemStack(spawnerInfoButton.getMaterial());
+            spawnerItem.editMeta(metaModifier);
+        } else {
+            // Fallback to default behavior
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
+        }
+
         if (spawnerItem.getType() == Material.SPAWNER) VersionInitializer.hideTooltip(spawnerItem);
         return spawnerItem;
     }

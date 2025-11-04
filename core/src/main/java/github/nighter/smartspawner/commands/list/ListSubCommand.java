@@ -451,22 +451,11 @@ public class ListSubCommand extends BaseSubCommand {
 
     private ItemStack createSpawnerInfoItem(SpawnerData spawner) {
         EntityType entityType = spawner.getEntityType();
-        ItemStack spawnerItem;
-        ItemMeta meta;
-        if (entityType == null) {
-            spawnerItem = new ItemStack(Material.SPAWNER);
-            meta = spawnerItem.getItemMeta();
-            if (meta == null) return spawnerItem;
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
-        } else {
-            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType);
-            meta = spawnerItem.getItemMeta();
-            if (meta == null) return spawnerItem;
-        }
         Location loc = spawner.getSpawnerLocation();
+
+        // Prepare all placeholders upfront
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("id", String.valueOf(spawner.getSpawnerId()));
-        meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
         placeholders.put("entity", languageManager.getFormattedMobName(entityType));
         placeholders.put("size", String.valueOf(spawner.getStackSize()));
         if (spawner.getSpawnerStop().get()) {
@@ -481,9 +470,26 @@ public class ListSubCommand extends BaseSubCommand {
         placeholders.put("z", String.valueOf(loc.getBlockZ()));
         String lastPlayer = spawner.getLastInteractedPlayer();
         placeholders.put("last_player", lastPlayer != null ? lastPlayer : "None");
-        List<String> lore = Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders));
-        meta.setLore(lore);
-        spawnerItem.setItemMeta(meta);
+
+        ItemStack spawnerItem;
+
+        if (entityType == null) {
+            spawnerItem = new ItemStack(Material.SPAWNER);
+            spawnerItem.editMeta(meta -> {
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+                meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
+                List<String> lore = Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders));
+                meta.setLore(lore);
+            });
+        } else {
+            // Use optimized method with consumer to avoid extra getItemMeta/setItemMeta
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, meta -> {
+                meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
+                List<String> lore = Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders));
+                meta.setLore(lore);
+            });
+        }
+
         VersionInitializer.hideTooltip(spawnerItem);
         return spawnerItem;
     }

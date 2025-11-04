@@ -6,6 +6,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.profile.PlayerTextures;
 import org.bukkit.profile.PlayerProfile;
@@ -14,6 +15,7 @@ import java.net.URL;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class SpawnerMobHeadTexture {
     private static final Map<EntityType, ItemStack> HEAD_CACHE = new EnumMap<>(EntityType.class);
@@ -40,19 +42,72 @@ public class SpawnerMobHeadTexture {
         return getCustomHead(entityType);
     }
 
-    public static ItemStack getCustomHead(EntityType entityType) {
+    /**
+     * Optimized version that accepts a Consumer to modify the ItemMeta directly,
+     * avoiding an extra getItemMeta() and setItemMeta() cycle.
+     *
+     * @param entityType The entity type for the head
+     * @param player The player requesting the head
+     * @param metaModifier Consumer to modify the ItemMeta (can be null)
+     * @return The configured ItemStack
+     */
+    public static ItemStack getCustomHead(EntityType entityType, Player player, Consumer<ItemMeta> metaModifier) {
         if (entityType == null) {
-            return DEFAULT_SPAWNER_BLOCK;
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        if (isBedrockPlayer(player)) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        return getCustomHead(entityType, metaModifier);
+    }
+
+    public static ItemStack getCustomHead(EntityType entityType) {
+        return getCustomHead(entityType, (Consumer<ItemMeta>) null);
+    }
+
+    /**
+     * Optimized version that accepts a Consumer to modify the ItemMeta directly,
+     * avoiding an extra getItemMeta() and setItemMeta() cycle.
+     *
+     * @param entityType The entity type for the head
+     * @param metaModifier Consumer to modify the ItemMeta (can be null)
+     * @return The configured ItemStack
+     */
+    public static ItemStack getCustomHead(EntityType entityType, Consumer<ItemMeta> metaModifier) {
+        if (entityType == null) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
         
         SmartSpawner plugin = SmartSpawner.getInstance();
         if (plugin == null) {
-            return DEFAULT_SPAWNER_BLOCK;
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
         
         SpawnerSettingsConfig settingsConfig = plugin.getSpawnerSettingsConfig();
         if (settingsConfig == null) {
-            return DEFAULT_SPAWNER_BLOCK;
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
         
         // Get material from config
@@ -60,19 +115,32 @@ public class SpawnerMobHeadTexture {
         
         // If it's not a player head, return the vanilla head
         if (material != Material.PLAYER_HEAD) {
-            return new ItemStack(material);
+            ItemStack item = new ItemStack(material);
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
         
         // Check cache for player heads
         if (HEAD_CACHE.containsKey(entityType)) {
-            return HEAD_CACHE.get(entityType).clone();
+            ItemStack item = HEAD_CACHE.get(entityType).clone();
+            // Apply meta modifier if provided
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
         
         // Check if we have a custom texture
         if (!settingsConfig.hasCustomTexture(entityType)) {
-            return new ItemStack(material);
+            ItemStack item = new ItemStack(material);
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
-        
+
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         try {
@@ -83,12 +151,27 @@ public class SpawnerMobHeadTexture {
             textures.setSkin(url);
             profile.setTextures(textures);
             meta.setOwnerProfile(profile);
+
+            // Apply meta modifier before setting meta (if provided)
+            if (metaModifier != null) {
+                metaModifier.accept(meta);
+            }
+
             head.setItemMeta(meta);
-            HEAD_CACHE.put(entityType, head.clone());
+
+            // Only cache the head without custom modifications
+            if (metaModifier == null) {
+                HEAD_CACHE.put(entityType, head.clone());
+            }
+
             return head;
         } catch (Exception e) {
             e.printStackTrace();
-            return new ItemStack(material);
+            ItemStack item = new ItemStack(material);
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
         }
     }
 
