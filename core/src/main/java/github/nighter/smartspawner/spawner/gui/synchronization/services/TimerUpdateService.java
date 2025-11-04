@@ -437,6 +437,11 @@ public class TimerUpdateService {
             lootHelper.preGenerateLoot(spawner);
         }
 
+        // Add pre-generated loot early for instant spawn at 00:00
+        if (lootHelper.shouldAddLootEarly(timeUntilNextSpawn)) {
+            lootHelper.addPreGeneratedLootEarly(spawner, cachedDelay);
+        }
+
         return timeUntilNextSpawn;
     }
 

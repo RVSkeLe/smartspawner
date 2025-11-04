@@ -106,6 +106,9 @@ public final class LootPreGenerationHelper {
 
                         Location spawnerLocation = spawner.getSpawnerLocation();
                         if (spawnerLocation != null) {
+                            // Calculate when the loot should have spawned (for timer accuracy)
+                            final long scheduledSpawnTime = lastSpawnTime + cachedDelay;
+
                             Scheduler.runLocationTask(spawnerLocation, () -> {
                                 if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
                                     spawner.clearPreGeneratedLoot();
@@ -115,7 +118,9 @@ public final class LootPreGenerationHelper {
                                 if (spawner.hasPreGeneratedLoot()) {
                                     List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
                                     int exp = spawner.getAndClearPreGeneratedExperience();
-                                    plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
+
+                                    // Add the loot with scheduled spawn time for accurate timer reset
+                                    plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp, scheduledSpawnTime);
                                 }
                             });
                         }
@@ -126,62 +131,6 @@ public final class LootPreGenerationHelper {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Handles spawning loot when timer reaches zero (fallback for non-pre-generated loot).
-     *
-     * @param spawner The spawner data
-     * @param cachedDelay The cached spawn delay
-     * @param timeElapsed Time elapsed since last spawn
-     * @return The time until next spawn
-     */
-    public long handleLootSpawnAtZero(SpawnerData spawner, long cachedDelay, long timeElapsed) {
-        try {
-            if (spawner.getDataLock().tryLock(100, TimeUnit.MILLISECONDS)) {
-                try {
-                    long currentTime = System.currentTimeMillis();
-                    long lastSpawnTime = spawner.getLastSpawnTime();
-                    timeElapsed = currentTime - lastSpawnTime;
-
-                    if (timeElapsed >= cachedDelay) {
-                        if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
-                            spawner.clearPreGeneratedLoot();
-                            return cachedDelay;
-                        }
-
-                        Location spawnerLocation = spawner.getSpawnerLocation();
-                        if (spawnerLocation != null) {
-                            Scheduler.runLocationTask(spawnerLocation, () -> {
-                                if (!spawner.getSpawnerActive() || spawner.getSpawnerStop().get()) {
-                                    spawner.clearPreGeneratedLoot();
-                                    return;
-                                }
-
-                                if (spawner.hasPreGeneratedLoot()) {
-                                    List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
-                                    int exp = spawner.getAndClearPreGeneratedExperience();
-                                    plugin.getSpawnerLootGenerator().addPreGeneratedLoot(spawner, items, exp);
-                                } else {
-                                    plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
-                                }
-                            });
-                        }
-
-                        return cachedDelay;
-                    }
-
-                    return cachedDelay - timeElapsed;
-                } finally {
-                    spawner.getDataLock().unlock();
-                }
-            } else {
-                return 1000;
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return 1000;
         }
     }
 }

@@ -438,6 +438,19 @@ public class SpawnerLootGenerator {
      * @param experience Pre-generated experience amount
      */
     public void addPreGeneratedLoot(SpawnerData spawner, List<ItemStack> items, int experience) {
+        addPreGeneratedLoot(spawner, items, experience, System.currentTimeMillis());
+    }
+
+    /**
+     * Adds pre-generated loot to spawner with custom spawn time.
+     * Used for early loot addition to prevent timer stutter.
+     *
+     * @param spawner The spawner to add loot to
+     * @param items Pre-generated items list
+     * @param experience Pre-generated experience amount
+     * @param spawnTime The spawn time to set (for timer accuracy)
+     */
+    public void addPreGeneratedLoot(SpawnerData spawner, List<ItemStack> items, int experience, long spawnTime) {
         if ((items == null || items.isEmpty()) && experience == 0) {
             return;
         }
@@ -462,7 +475,6 @@ public class SpawnerLootGenerator {
                     return;
                 }
 
-                final long spawnTime = System.currentTimeMillis();
                 final boolean capacityCheck;
                 
                 try {

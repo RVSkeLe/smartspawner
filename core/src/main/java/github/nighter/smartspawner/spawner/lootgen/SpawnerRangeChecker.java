@@ -166,6 +166,8 @@ public class SpawnerRangeChecker {
             spawner.setCachedSpawnDelay(cachedDelay);
         }
 
+        final long finalCachedDelay = cachedDelay; // Make effectively final for lambda
+
         long currentTime = System.currentTimeMillis();
         long lastSpawnTime = spawner.getLastSpawnTime();
         long timeElapsed = currentTime - lastSpawnTime;
@@ -192,6 +194,17 @@ public class SpawnerRangeChecker {
                                         return;
                                     }
 
+                                    // Check if loot was already added early (for smooth UX)
+                                    // If so, just update the timer without spawning again
+                                    long timeSinceLastSpawn = System.currentTimeMillis() - spawner.getLastSpawnTime();
+                                    if (timeSinceLastSpawn < finalCachedDelay - 100) { // 100ms tolerance
+                                        // Loot was already added early, just update GUI
+                                        if (plugin.getSpawnerGuiViewManager().hasViewers(spawner)) {
+                                            plugin.getSpawnerGuiViewManager().updateSpawnerMenuViewers(spawner);
+                                        }
+                                        return;
+                                    }
+
                                     // Spawn loot (pre-generated if available, otherwise generate new)
                                     if (spawner.hasPreGeneratedLoot()) {
                                         List<ItemStack> items = spawner.getAndClearPreGeneratedItems();
@@ -201,8 +214,7 @@ public class SpawnerRangeChecker {
                                         plugin.getSpawnerLootGenerator().spawnLootToSpawner(spawner);
                                     }
 
-                                    // Update last spawn time to reset the timer
-                                    spawner.setLastSpawnTime(System.currentTimeMillis());
+                                    // Update last spawn time is handled by addPreGeneratedLoot/spawnLootToSpawner
 
                                     // Update any open GUIs to show the new loot
                                     if (plugin.getSpawnerGuiViewManager().hasViewers(spawner)) {
