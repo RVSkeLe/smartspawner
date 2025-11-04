@@ -391,6 +391,8 @@ public class SpawnerStorageAction implements Listener {
 
             // 8. CRITICAL: Remove from VirtualInventory FIRST (atomic operation)
             // This is the key security fix - VirtualInventory must update before items drop
+            // Note: removeItemsAndUpdateSellValue() calls virtualInventory.removeItems()
+            // which returns false if items don't exist (verified in VirtualInventory.java lines 174-178)
             boolean removalSuccess = spawner.removeItemsAndUpdateSellValue(pageItems);
             
             if (!removalSuccess) {
@@ -405,7 +407,8 @@ public class SpawnerStorageAction implements Listener {
             // Player may have closed inventory during the update
             if (!isPlayerInventoryOpen(player, inventory)) {
                 // Rollback: Items removed from VirtualInventory but inventory closed
-                // Re-add items to VirtualInventory
+                // Re-add items to VirtualInventory using addItems() (VirtualInventory.java line 135)
+                // This ensures items are not lost and prevents duplication
                 virtualInv.addItems(pageItems);
                 return;
             }
