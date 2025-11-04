@@ -162,7 +162,7 @@ public class SpawnerRangeChecker {
         // Calculate spawn delay
         long cachedDelay = spawner.getCachedSpawnDelay();
         if (cachedDelay == 0) {
-            cachedDelay = spawner.getSpawnDelay() * 50L; // Convert ticks to milliseconds
+            cachedDelay = (spawner.getSpawnDelay() + 20L) * 50L; // Convert ticks to milliseconds
             spawner.setCachedSpawnDelay(cachedDelay);
         }
 

@@ -246,6 +246,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             spawnerSettingsConfig.load();
         }
         
+        // Pre-warm the head texture cache after settings are loaded
+        // This prevents the brief flash of default player heads when opening GUIs
+        SpawnerMobHeadTexture.prewarmCache();
+
         this.spawnerItemFactory = new SpawnerItemFactory(this);
     }
 

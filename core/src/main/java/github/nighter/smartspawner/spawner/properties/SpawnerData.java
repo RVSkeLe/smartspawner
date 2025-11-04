@@ -102,7 +102,7 @@ public class SpawnerData {
 
     private SpawnerHologram hologram;
     @Getter @Setter
-    private long cachedSpawnDelay = 0;
+    private long cachedSpawnDelay;
 
     // Sort preference for spawner storage
     @Getter @Setter
@@ -144,7 +144,8 @@ public class SpawnerData {
         this.baseMinMobs = plugin.getConfig().getInt("spawner_properties.default.min_mobs", 1);
         this.baseMaxMobs = plugin.getConfig().getInt("spawner_properties.default.max_mobs", 4);
         this.maxStackSize = plugin.getConfig().getInt("spawner_properties.default.max_stack_size", 1000);
-        this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s") + 20L;
+        this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
+        this.cachedSpawnDelay = (this.spawnDelay + 20L) * 50L; // Add 1 second buffer for GUI display and convert tick to ms
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
         this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
     }
@@ -177,19 +178,18 @@ public class SpawnerData {
     }
 
     public void setSpawnDelay(long baseSpawnerDelay) {
-        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500 + 20L;
+        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500;
         if (baseSpawnerDelay <= 0) {
             plugin.getLogger().warning("Invalid spawner delay value. Setting to default: 500 ticks (25s)");
         }
     }
-
     public void setSpawnDelayFromConfig() {
         long delay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
         if (delay <= 0) {
             plugin.getLogger().warning("Invalid spawner delay value in config. Setting to default: 500 ticks (25s)");
             delay = 500L;
         }
-        setSpawnDelay(delay + 20L);
+        setSpawnDelay(delay);
     }
 
     private void initializeComponents() {

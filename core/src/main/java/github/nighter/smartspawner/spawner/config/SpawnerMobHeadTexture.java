@@ -1,5 +1,6 @@
 package github.nighter.smartspawner.spawner.config;
 
+import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.SmartSpawner;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -19,6 +20,7 @@ import java.util.function.Consumer;
 
 public class SpawnerMobHeadTexture {
     private static final Map<EntityType, ItemStack> HEAD_CACHE = new EnumMap<>(EntityType.class);
+    private static final Map<EntityType, SkullMeta> BASE_META_CACHE = new EnumMap<>(EntityType.class);
     private static final ItemStack DEFAULT_SPAWNER_BLOCK = new ItemStack(Material.SPAWNER);
 
     private static boolean isBedrockPlayer(Player player) {
@@ -28,18 +30,6 @@ public class SpawnerMobHeadTexture {
             return false;
         }
         return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);
-    }
-
-    public static ItemStack getCustomHead(EntityType entityType, Player player) {
-        if (entityType == null) {
-            return DEFAULT_SPAWNER_BLOCK;
-        }
-        
-        if (isBedrockPlayer(player)) {
-            return DEFAULT_SPAWNER_BLOCK;
-        }
-        
-        return getCustomHead(entityType);
     }
 
     /**
@@ -121,17 +111,7 @@ public class SpawnerMobHeadTexture {
             }
             return item;
         }
-        
-        // Check cache for player heads
-        if (HEAD_CACHE.containsKey(entityType)) {
-            ItemStack item = HEAD_CACHE.get(entityType).clone();
-            // Apply meta modifier if provided
-            if (metaModifier != null) {
-                item.editMeta(metaModifier);
-            }
-            return item;
-        }
-        
+
         // Check if we have a custom texture
         if (!settingsConfig.hasCustomTexture(entityType)) {
             ItemStack item = new ItemStack(material);
@@ -141,41 +121,96 @@ public class SpawnerMobHeadTexture {
             return item;
         }
 
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) head.getItemMeta();
-        try {
-            String texture = settingsConfig.getCustomTexture(entityType);
-            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
-            PlayerTextures textures = profile.getTextures();
-            URL url = new URL("http://textures.minecraft.net/texture/" + texture);
-            textures.setSkin(url);
-            profile.setTextures(textures);
-            meta.setOwnerProfile(profile);
+        // Check if we have cached base meta with texture already applied
+        SkullMeta baseMeta = BASE_META_CACHE.get(entityType);
 
-            // Apply meta modifier before setting meta (if provided)
-            if (metaModifier != null) {
-                metaModifier.accept(meta);
+        if (baseMeta == null) {
+            // Create and cache the base meta with texture
+            try {
+                String texture = settingsConfig.getCustomTexture(entityType);
+                PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
+                PlayerTextures textures = profile.getTextures();
+                URL url = new URL("http://textures.minecraft.net/texture/" + texture);
+                textures.setSkin(url);
+                profile.setTextures(textures);
+
+                ItemStack tempHead = new ItemStack(Material.PLAYER_HEAD);
+                SkullMeta tempMeta = (SkullMeta) tempHead.getItemMeta();
+                tempMeta.setOwnerProfile(profile);
+
+                // Cache the base meta (clone to ensure immutability)
+                baseMeta = (SkullMeta) tempMeta.clone();
+                BASE_META_CACHE.put(entityType, baseMeta);
+            } catch (Exception e) {
+                e.printStackTrace();
+                ItemStack item = new ItemStack(material);
+                if (metaModifier != null) {
+                    item.editMeta(metaModifier);
+                }
+                return item;
             }
-
-            head.setItemMeta(meta);
-
-            // Only cache the head without custom modifications
-            if (metaModifier == null) {
-                HEAD_CACHE.put(entityType, head.clone());
-            }
-
-            return head;
-        } catch (Exception e) {
-            e.printStackTrace();
-            ItemStack item = new ItemStack(material);
-            if (metaModifier != null) {
-                item.editMeta(metaModifier);
-            }
-            return item;
         }
+
+        // Create head using cached base meta
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) baseMeta.clone();
+
+        // Apply custom modifications if provided
+        if (metaModifier != null) {
+            metaModifier.accept(meta);
+        }
+
+        head.setItemMeta(meta);
+
+        // Cache the unmodified version for reuse
+        if (metaModifier == null && !HEAD_CACHE.containsKey(entityType)) {
+            HEAD_CACHE.put(entityType, head.clone());
+        }
+
+        return head;
     }
 
     public static void clearCache() {
         HEAD_CACHE.clear();
+        BASE_META_CACHE.clear();
+    }
+
+    /**
+     * Pre-warms the head texture cache with common entity types.
+     * This should be called during plugin initialization to reduce latency when opening GUIs.
+     * Runs asynchronously to avoid blocking plugin startup.
+     */
+    public static void prewarmCache() {
+        SmartSpawner plugin = SmartSpawner.getInstance();
+        if (plugin == null) return;
+
+        // Run asynchronously to avoid blocking the main thread during startup
+        Scheduler.runTaskAsync(() -> {
+            SpawnerSettingsConfig settingsConfig = plugin.getSpawnerSettingsConfig();
+            if (settingsConfig == null) return;
+
+            // List of common spawner types to pre-cache
+            EntityType[] commonTypes = {
+                EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER,
+                EntityType.SPIDER, EntityType.ENDERMAN, EntityType.BLAZE,
+                EntityType.SLIME, EntityType.MAGMA_CUBE, EntityType.GHAST,
+                EntityType.PIG, EntityType.COW, EntityType.CHICKEN,
+                EntityType.SHEEP, EntityType.IRON_GOLEM, EntityType.WITHER_SKELETON,
+                EntityType.ZOGLIN, EntityType.HOGLIN, EntityType.CAVE_SPIDER
+            };
+
+            for (EntityType type : commonTypes) {
+                try {
+                    // Only pre-cache if it's a player head with custom texture
+                    if (settingsConfig.getMaterial(type) == Material.PLAYER_HEAD
+                            && settingsConfig.hasCustomTexture(type)) {
+                        // Create base meta cache entry (this is the expensive operation)
+                        getCustomHead(type, (Consumer<ItemMeta>) null);
+                    }
+                } catch (Exception e) {
+                    // Silently ignore errors during pre-warming
+                }
+            }
+        });
     }
 }

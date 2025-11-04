@@ -413,7 +413,7 @@ public class TimerUpdateService {
     private long calculateTimeUntilNextSpawn(SpawnerData spawner) {
         long cachedDelay = spawner.getCachedSpawnDelay();
         if (cachedDelay == 0) {
-            cachedDelay = spawner.getSpawnDelay() * 50L;
+            cachedDelay = (spawner.getSpawnDelay() + 20L) * 50L; // Convert ticks to milliseconds
             spawner.setCachedSpawnDelay(cachedDelay);
         }
 
