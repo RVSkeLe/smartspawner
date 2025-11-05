@@ -186,10 +186,9 @@ item:
   SCULK_CATALYST:
     name: "Sculk-Katalysator"
   TIDE_ARMOR_TRIM_SMITHING_TEMPLATE:
-    name: "Schmiedevorlage: Gezeiten-Rüstungsbesatz"  DIAMOND:
+    name: "Schmiedevorlage: Gezeiten-Rüstungsbesatz"
+  DIAMOND:
     name: "Diamant"
-  ENCHANTED_BOOK:
-    name: "Verzaubertes Buch"
   NETHER_STAR:
     name: "Netherstern"
   NETHERITE_INGOT:

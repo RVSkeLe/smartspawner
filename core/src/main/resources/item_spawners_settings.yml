@@ -64,18 +64,6 @@ NETHERITE_INGOT:
     material: "NETHERITE_INGOT"
     custom_texture: null
 
-# Enchanted Book spawner
-ENCHANTED_BOOK:
-  material: "ENCHANTED_BOOK"
-  experience: 5
-  loot:
-    ENCHANTED_BOOK:
-      amount: 1-1
-      chance: 100.0
-  head_texture:
-    material: "ENCHANTED_BOOK"
-    custom_texture: null
-
 # Ender Pearl spawner
 ENDER_PEARL:
   material: "ENDER_PEARL"
