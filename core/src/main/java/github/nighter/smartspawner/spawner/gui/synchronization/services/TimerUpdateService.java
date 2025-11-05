@@ -317,12 +317,13 @@ public class TimerUpdateService {
     }
 
     /**
-     * Forces immediate timer update for a specific player.
+     * Forces immediate timer update for inactive spawners.
      *
      * @param player The player
      * @param spawner The spawner
      */
-    public void forceTimerUpdate(Player player, SpawnerData spawner) {
+    public void forceTimerUpdateInactive(Player player, SpawnerData spawner) {
+        spawner.clearPreGeneratedLoot();
         if (!isTimerPlaceholdersEnabled()) {
             return;
         }
@@ -348,7 +349,7 @@ public class TimerUpdateService {
 
             int spawnerInfoSlot = slotCacheManager.getSpawnerInfoSlot();
             if (spawnerInfoSlot >= 0) {
-                String timerValue = calculateTimerDisplayInternal(spawner);
+                String timerValue = cachedInactiveText;
                 updateSpawnerInfoItemTimer(openInventory, spawner, timerValue, spawnerInfoSlot);
                 player.updateInventory();
             }
@@ -368,12 +369,12 @@ public class TimerUpdateService {
             return cachedFullText;
         }
 
-        long timeUntilNextSpawn = calculateTimeUntilNextSpawn(spawner);
-        
-        if (timeUntilNextSpawn == -1) {
+        if (spawner.getSpawnerStop().get()) {
+            spawner.clearPreGeneratedLoot();
             return cachedInactiveText;
         }
-        
+
+        long timeUntilNextSpawn = calculateTimeUntilNextSpawn(spawner);
         return TimerFormatter.formatTime(timeUntilNextSpawn);
     }
 
@@ -432,14 +433,6 @@ public class TimerUpdateService {
         long currentTime = System.currentTimeMillis();
         long lastSpawnTime = spawner.getLastSpawnTime();
         long timeElapsed = currentTime - lastSpawnTime;
-
-        boolean isSpawnerInactive = !spawner.getSpawnerActive() ||
-            (spawner.getSpawnerStop().get() && timeElapsed > cachedDelay * 2);
-
-        if (isSpawnerInactive) {
-            spawner.clearPreGeneratedLoot();
-            return -1;
-        }
 
         long timeUntilNextSpawn = cachedDelay - timeElapsed;
         timeUntilNextSpawn = Math.max(0, Math.min(timeUntilNextSpawn, cachedDelay));

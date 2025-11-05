@@ -46,7 +46,7 @@ public class SpawnerListGUI implements Listener {
         if (!(event.getInventory().getHolder(false) instanceof WorldSelectionHolder)) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        if (!player.hasPermission("smartspawner.list")) {
+        if (!player.hasPermission("smartspawner.command.list")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }

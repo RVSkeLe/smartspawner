@@ -11,7 +11,6 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.api.events.SpawnerOpenGUIEvent;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -127,12 +126,9 @@ public class SpawnerMenuUI {
             player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 1.0f, 1.0f);
         }
 
-        // Force an immediate timer update for the newly opened GUI (only if timer placeholders are enabled)
-        // This ensures the timer displays correctly from the start
-        // Skip timer update if player is in spectator mode to prevent activating spawner
-        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled()
-                && player.getGameMode() != org.bukkit.GameMode.SPECTATOR) {
-            plugin.getSpawnerGuiViewManager().forceTimerUpdate(player, spawner);
+        // Force timer update inactive for GUI if applicable
+        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled() && spawner.getSpawnerStop().get()){
+            plugin.getSpawnerGuiViewManager().forceTimerUpdateInactive(player, spawner);
         }
     }
 

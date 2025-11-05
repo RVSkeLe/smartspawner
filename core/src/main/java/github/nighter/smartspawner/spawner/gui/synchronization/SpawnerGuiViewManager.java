@@ -179,8 +179,8 @@ public class SpawnerGuiViewManager {
     /**
      * Forces immediate timer update for a specific player.
      */
-    public void forceTimerUpdate(Player player, SpawnerData spawner) {
-        timerUpdateService.forceTimerUpdate(player, spawner);
+    public void forceTimerUpdateInactive(Player player, SpawnerData spawner) {
+        timerUpdateService.forceTimerUpdateInactive(player, spawner);
     }
 
     /**

@@ -282,7 +282,7 @@ public class ListSubCommand extends BaseSubCommand {
 
     // Main spawner list GUI method with filter and sort options
     public void openSpawnerListGUI(Player player, String worldName, int page, FilterOption filter, SortOption sortType) {
-        if (!player.hasPermission("smartspawner.list")) {
+        if (!player.hasPermission("smartspawner.command.list")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }

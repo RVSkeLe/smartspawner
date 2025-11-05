@@ -113,6 +113,9 @@ public class SpawnerData {
     private volatile int preGeneratedExperience;
     private volatile boolean isPreGenerating;
 
+    // Cache for no-loot detection to avoid repeated expensive checks
+    private volatile Boolean cachedHasNoLoot = null;
+
     public SpawnerData(String id, Location location, EntityType type, SmartSpawner plugin) {
         super();
         this.plugin = plugin;
@@ -371,18 +374,29 @@ public class SpawnerData {
     /**
      * Checks if this spawner has any configured loot or experience.
      * Used to detect spawners that will never generate anything (like Allay).
+     * Result is cached for performance.
      *
      * @return true if spawner has no loot items and no experience configured
      */
     public boolean hasNoLootOrExperience() {
-        return (lootConfig == null ||
+        // Return cached value if available
+        if (cachedHasNoLoot != null) {
+            return cachedHasNoLoot;
+        }
+
+        // Calculate and cache the result
+        boolean result = (lootConfig == null ||
                 (lootConfig.getExperience() == 0 && getValidLootItems().isEmpty()));
+        cachedHasNoLoot = result;
+        return result;
     }
 
     public void setLootConfig() {
         this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
         // Mark sell value as dirty since prices may have changed
         this.sellValueDirty = true;
+        // Invalidate no-loot cache since config changed
+        this.cachedHasNoLoot = null;
     }
 
     public void setLastSellResult(SellResult sellResult) {
