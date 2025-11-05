@@ -195,8 +195,14 @@ public class SpawnerBreakListener implements Listener {
             return new SpawnerBreakResult(false, 0, durabilityLoss);
         }
 
-        EntityType entityType = spawner.getEntityType();
-        ItemStack template = spawnerItemFactory.createSmartSpawnerItem(entityType);
+        // Create the appropriate spawner item based on type
+        ItemStack template;
+        if (spawner.isItemSpawner()) {
+            template = spawnerItemFactory.createItemSpawnerItem(spawner.getSpawnedItemMaterial());
+        } else {
+            EntityType entityType = spawner.getEntityType();
+            template = spawnerItemFactory.createSmartSpawnerItem(entityType);
+        }
 
         int dropAmount;
         boolean shouldDeleteSpawner = false;

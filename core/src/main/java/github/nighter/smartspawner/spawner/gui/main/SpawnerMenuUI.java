@@ -446,7 +446,11 @@ public class SpawnerMenuUI {
             meta.setLore(lore);
         };
 
-        if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
+        // Check if this is an item spawner and use appropriate head
+        if (spawner.isItemSpawner()) {
+            // For item spawners, use the item material as the head
+            spawnerItem = SpawnerMobHeadTexture.getItemSpawnerHead(spawner.getSpawnedItemMaterial(), player, metaModifier);
+        } else if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
             // Use custom head texture for MOB_HEAD material
             spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
         } else if (spawnerInfoButton != null) {
