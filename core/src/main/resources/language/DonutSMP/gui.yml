@@ -40,6 +40,7 @@ spawner_info_item:
     - '&#FCE300Exp:&f {percent_exp_decimal}% &#FCE300Stored.'
   lore_full: ''
   lore_inactive: ''
+  lore_no_loot: '&#ff3333ɴᴏ ʟᴏᴏᴛ ᴄᴏɴꜰɪɢᴜʀᴇᴅ'
 
 exp_info_item:
   name: '&#7AFC00ᴄᴏʟʟᴇᴄᴛ ᴇxᴘ'

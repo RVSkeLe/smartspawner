@@ -41,6 +41,7 @@ public class TimerUpdateService {
     // Cached status text messages for timer display
     private String cachedInactiveText;
     private String cachedFullText;
+    private String cachedNoLootText;
 
     // Timer placeholder detection
     private volatile Boolean hasTimerPlaceholders = null;
@@ -68,6 +69,7 @@ public class TimerUpdateService {
     private void initializeCachedStrings() {
         cachedInactiveText = languageManager.getGuiItemName("spawner_info_item.lore_inactive");
         cachedFullText = languageManager.getGuiItemName("spawner_info_item.lore_full");
+        cachedNoLootText = languageManager.getGuiItemName("spawner_info_item.lore_no_loot");
         checkTimerPlaceholderUsage();
     }
 
@@ -153,6 +155,11 @@ public class TimerUpdateService {
 
         if (player != null && player.getGameMode() == GameMode.SPECTATOR) {
             return cachedInactiveText;
+        }
+
+        // Check if spawner has no configured loot or experience
+        if (spawner.hasNoLootOrExperience()) {
+            return cachedNoLootText;
         }
 
         if (spawner.getIsAtCapacity()) {
@@ -352,6 +359,11 @@ public class TimerUpdateService {
      * Internal method to calculate timer display with loot pre-generation.
      */
     private String calculateTimerDisplayInternal(SpawnerData spawner) {
+        // Check if spawner has no configured loot or experience
+        if (spawner.hasNoLootOrExperience()) {
+            return cachedNoLootText;
+        }
+
         if (spawner.getIsAtCapacity()) {
             return cachedFullText;
         }

@@ -116,6 +116,7 @@ spawner_info_item:
 
   lore_full: '&#ff5252ꜱᴛᴏʀᴀɢᴇ & ᴇxᴘ ɪꜱ ꜰᴜʟʟ!'
   lore_inactive: '&#ff3333ꜱᴘᴀᴡɴᴇʀ ɪꜱ ɪɴᴀᴄᴛɪᴠᴇ!'
+  lore_no_loot: '&#ff3333ɴᴏ ʟᴏᴏᴛ ᴄᴏɴꜰɪɢᴜʀᴇᴅ'
 
 exp_info_item:
   name: '&#2ecc71ᴇxᴘᴇʀɪᴇɴᴄᴇ: &#f8f8ff{current_exp}'

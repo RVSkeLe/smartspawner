@@ -368,6 +368,17 @@ public class SpawnerData {
         return lootConfig != null ? lootConfig.getExperience() : 0;
     }
 
+    /**
+     * Checks if this spawner has any configured loot or experience.
+     * Used to detect spawners that will never generate anything (like Allay).
+     *
+     * @return true if spawner has no loot items and no experience configured
+     */
+    public boolean hasNoLootOrExperience() {
+        return (lootConfig == null ||
+                (lootConfig.getExperience() == 0 && getValidLootItems().isEmpty()));
+    }
+
     public void setLootConfig() {
         this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
         // Mark sell value as dirty since prices may have changed
