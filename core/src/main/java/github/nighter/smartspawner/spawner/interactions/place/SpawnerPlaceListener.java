@@ -110,8 +110,26 @@ public class SpawnerPlaceListener implements Listener {
         }
 
         EntityType storedEntityType = null;
+        Material itemSpawnerMaterial = null;
+        
         if (blockMeta.hasBlockState() && blockMeta.getBlockState() instanceof CreatureSpawner) {
             storedEntityType = ((CreatureSpawner) blockMeta.getBlockState()).getSpawnedType();
+            
+            // Check if this is an item spawner
+            if (storedEntityType == EntityType.ITEM && meta.getPersistentDataContainer().has(
+                    new org.bukkit.NamespacedKey(plugin, "item_spawner_material"),
+                    org.bukkit.persistence.PersistentDataType.STRING)) {
+                String materialName = meta.getPersistentDataContainer().get(
+                        new org.bukkit.NamespacedKey(plugin, "item_spawner_material"),
+                        org.bukkit.persistence.PersistentDataType.STRING);
+                if (materialName != null) {
+                    try {
+                        itemSpawnerMaterial = Material.valueOf(materialName);
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("Invalid item spawner material: " + materialName);
+                    }
+                }
+            }
         }
 
         if(SpawnerPlaceEvent.getHandlerList().getRegisteredListeners().length != 0) {
@@ -128,7 +146,7 @@ public class SpawnerPlaceListener implements Listener {
             return;
         }
 
-        handleSpawnerSetup(block, player, storedEntityType, isVanillaSpawner, item, stackSize);
+        handleSpawnerSetup(block, player, storedEntityType, isVanillaSpawner, item, stackSize, itemSpawnerMaterial);
     }
 
     private boolean checkPlacementCooldown(Player player) {
@@ -227,7 +245,7 @@ public class SpawnerPlaceListener implements Listener {
     }
 
     private void handleSpawnerSetup(Block block, Player player, EntityType entityType,
-                                    boolean isVanillaSpawner, ItemStack item, int stackSize) {
+                                    boolean isVanillaSpawner, ItemStack item, int stackSize, Material itemSpawnerMaterial) {
         if (entityType == null || entityType == EntityType.UNKNOWN) {
             return;
         }
@@ -246,11 +264,26 @@ public class SpawnerPlaceListener implements Listener {
             }
 
             CreatureSpawner delayedSpawner = (CreatureSpawner) block.getState(false);
-            EntityType finalEntityType = getEntityType(entityType, delayedSpawner);
+            
+            // Handle item spawners differently
+            if (entityType == EntityType.ITEM && itemSpawnerMaterial != null) {
+                // Set up item spawner
+                delayedSpawner.setSpawnedType(EntityType.ITEM);
+                
+                // Create an ItemStack for the spawner to spawn
+                ItemStack spawnedItem = new ItemStack(itemSpawnerMaterial, 1);
+                delayedSpawner.setSpawnedItem(spawnedItem);
+                delayedSpawner.update(true, false);
+                
+                createSmartItemSpawner(block, player, itemSpawnerMaterial, stackSize);
+            } else {
+                // Handle regular entity spawners
+                EntityType finalEntityType = getEntityType(entityType, delayedSpawner);
 
-            delayedSpawner.setSpawnedType(finalEntityType);
-            delayedSpawner.update(true, false);
-            createSmartSpawner(block, player, finalEntityType, stackSize);
+                delayedSpawner.setSpawnedType(finalEntityType);
+                delayedSpawner.update(true, false);
+                createSmartSpawner(block, player, finalEntityType, stackSize);
+            }
 
             setupHopperIntegration(block);
         }, 2L);
@@ -279,6 +312,37 @@ public class SpawnerPlaceListener implements Listener {
         }
 
         SpawnerData spawner = new SpawnerData(spawnerId, block.getLocation(), entityType, plugin);
+        spawner.setSpawnerActive(true);
+        spawner.setStackSize(stackSize);
+        
+        // Track player interaction for last interaction field
+        spawner.updateLastInteractedPlayer(player.getName());
+
+        spawnerManager.addSpawner(spawnerId, spawner);
+        chunkSpawnerLimiter.registerSpawnerPlacement(block.getLocation(), spawner.getStackSize());
+
+        spawnerManager.queueSpawnerForSaving(spawnerId);
+
+        if (plugin.getConfig().getBoolean("particle.spawner_generate_loot", true)) {
+            showCreationParticles(block);
+        }
+
+        messageService.sendMessage(player, "spawner_activated");
+    }
+
+    private void createSmartItemSpawner(Block block, Player player, Material itemMaterial, int stackSize) {
+        String spawnerId = UUID.randomUUID().toString().substring(0, 8);
+
+        BlockState state = block.getState(false);
+        if (state instanceof CreatureSpawner spawner) {
+            spawner.setSpawnedType(EntityType.ITEM);
+            // Set the item to spawn
+            ItemStack spawnedItem = new ItemStack(itemMaterial, 1);
+            spawner.setSpawnedItem(spawnedItem);
+            spawner.update(true, false);
+        }
+
+        SpawnerData spawner = new SpawnerData(spawnerId, block.getLocation(), itemMaterial, plugin);
         spawner.setSpawnerActive(true);
         spawner.setStackSize(stackSize);
         

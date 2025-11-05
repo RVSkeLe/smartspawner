@@ -59,9 +59,10 @@ public class GiveSubCommand extends BaseSubCommand {
         LiteralArgumentBuilder<CommandSourceStack> builder = Commands.literal(getName());
         builder.requires(source -> hasPermission(source.getSender()));
 
-        // Add subcommands for regular and vanilla spawners
+        // Add subcommands for regular, vanilla, and item spawners
         builder.then(buildRegularGiveCommand());
         builder.then(buildVanillaGiveCommand());
+        builder.then(buildItemSpawnerGiveCommand());
 
         return builder;
     }
@@ -88,12 +89,34 @@ public class GiveSubCommand extends BaseSubCommand {
                                                 IntegerArgumentType.getInteger(context, "amount"))))));
     }
 
+    private LiteralArgumentBuilder<CommandSourceStack> buildItemSpawnerGiveCommand() {
+        return Commands.literal("item_spawner")
+                .then(Commands.argument("player", ArgumentTypes.player())
+                        .then(Commands.argument("itemType", StringArgumentType.word())
+                                .suggests(createItemSuggestions())
+                                .executes(context -> executeGiveItemSpawner(context, 1))
+                                .then(Commands.argument("amount", IntegerArgumentType.integer(1, MAX_AMOUNT))
+                                        .executes(context -> executeGiveItemSpawner(context,
+                                                IntegerArgumentType.getInteger(context, "amount"))))));
+    }
+
     private SuggestionProvider<CommandSourceStack> createMobSuggestions() {
         return (context, builder) -> {
             String input = builder.getRemaining().toLowerCase();
             supportedMobs.stream()
                     .map(String::toLowerCase) // Convert to lowercase for suggestions
                     .filter(mob -> mob.startsWith(input))
+                    .forEach(builder::suggest);
+            return builder.buildFuture();
+        };
+    }
+
+    private SuggestionProvider<CommandSourceStack> createItemSuggestions() {
+        return (context, builder) -> {
+            String input = builder.getRemaining().toLowerCase();
+            plugin.getItemSpawnerSettingsConfig().getValidItemSpawnerMaterials().stream()
+                    .map(material -> material.name().toLowerCase())
+                    .filter(item -> item.startsWith(input))
                     .forEach(builder::suggest);
             return builder.buildFuture();
         };
@@ -176,6 +199,83 @@ public class GiveSubCommand extends BaseSubCommand {
             return 1;
         } catch (Exception e) {
             plugin.getLogger().severe("Error executing give command: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private int executeGiveItemSpawner(CommandContext<CommandSourceStack> context, int amount) {
+        CommandSender sender = context.getSource().getSender();
+        
+        // Log command execution
+        logCommandExecution(context);
+
+        try {
+            // Get the player selector and resolve it
+            var playerSelector = context.getArgument("player", io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver.class);
+            List<Player> players = playerSelector.resolve(context.getSource());
+
+            if (players.isEmpty()) {
+                plugin.getMessageService().sendMessage(sender, "command_give_player_not_found");
+                return 0;
+            }
+
+            Player target = players.get(0);
+            String itemType = StringArgumentType.getString(context, "itemType");
+
+            // Validate item type
+            Material itemMaterial;
+            try {
+                itemMaterial = Material.valueOf(itemType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                plugin.getMessageService().sendMessage(sender, "command_give_invalid_item_type");
+                return 0;
+            }
+
+            // Verify it's a valid item spawner type
+            if (!plugin.getItemSpawnerSettingsConfig().isValidItemSpawner(itemMaterial)) {
+                plugin.getMessageService().sendMessage(sender, "command_give_invalid_item_spawner");
+                return 0;
+            }
+
+            // Create item spawner
+            ItemStack spawnerItem = spawnerItemFactory.createItemSpawnerItem(itemMaterial, amount);
+
+            // Give the item to the player
+            if (target.getInventory().firstEmpty() == -1) {
+                target.getWorld().dropItem(target.getLocation(), spawnerItem);
+                plugin.getMessageService().sendMessage(target, "command_give_inventory_full");
+            } else {
+                target.getInventory().addItem(spawnerItem);
+            }
+
+            // Play sound
+            target.playSound(target.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.0f);
+
+            // Get formatted item names for placeholders
+            String itemName = plugin.getLanguageManager().getVanillaItemName(itemMaterial);
+            String smallCapsItemName = plugin.getLanguageManager().getSmallCaps(itemName);
+
+            // Create placeholders for sender message
+            HashMap<String, String> senderPlaceholders = new HashMap<>();
+            senderPlaceholders.put("player", target.getName());
+            senderPlaceholders.put("item", itemName);
+            senderPlaceholders.put("ɪᴛᴇᴍ", smallCapsItemName);
+            senderPlaceholders.put("amount", String.valueOf(amount));
+
+            // Create placeholders for target message
+            HashMap<String, String> targetPlaceholders = new HashMap<>();
+            targetPlaceholders.put("amount", String.valueOf(amount));
+            targetPlaceholders.put("item", itemName);
+            targetPlaceholders.put("ɪᴛᴇᴍ", smallCapsItemName);
+
+            // Send messages with placeholders
+            String messageKey = "command_give_item_spawner_";
+            plugin.getMessageService().sendMessage(sender, messageKey + "given", senderPlaceholders);
+            plugin.getMessageService().sendMessage(target, messageKey + "received", targetPlaceholders);
+
+            return 1;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error executing give item spawner command: " + e.getMessage());
             return 0;
         }
     }

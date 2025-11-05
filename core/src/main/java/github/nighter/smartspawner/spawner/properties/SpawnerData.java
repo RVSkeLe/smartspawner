@@ -61,6 +61,10 @@ public class SpawnerData {
     private EntityType entityType;
     @Getter @Setter
     private EntityLootConfig lootConfig;
+    
+    // Item spawner support - stores the material being spawned for item spawners
+    @Getter @Setter
+    private Material spawnedItemMaterial;
 
     // Calculated values based on stackSize
     @Getter
@@ -122,6 +126,22 @@ public class SpawnerData {
         this.spawnerId = id;
         this.spawnerLocation = location;
         this.entityType = type;
+        this.spawnedItemMaterial = null;
+
+        initializeDefaults();
+        loadConfigurationValues();
+        calculateStackBasedValues();
+        initializeComponents();
+    }
+
+    // Constructor for item spawners
+    public SpawnerData(String id, Location location, Material itemMaterial, SmartSpawner plugin) {
+        super();
+        this.plugin = plugin;
+        this.spawnerId = id;
+        this.spawnerLocation = location;
+        this.entityType = EntityType.ITEM;
+        this.spawnedItemMaterial = itemMaterial;
 
         initializeDefaults();
         loadConfigurationValues();
@@ -670,5 +690,13 @@ public class SpawnerData {
         preGeneratedItems = null;
         preGeneratedExperience = 0;
         isPreGenerating = false;
+    }
+    
+    /**
+     * Checks if this is an item spawner (spawns items instead of entities)
+     * @return true if this spawner spawns items
+     */
+    public boolean isItemSpawner() {
+        return entityType == EntityType.ITEM && spawnedItemMaterial != null;
     }
 }
