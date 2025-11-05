@@ -26,6 +26,15 @@ custom_item:
       - "{loot_items}"
       - ""
 
+  # Appearance of item spawner items in inventory and tooltips
+  item_spawner:
+    name: "&#e67e22{ɪᴛᴇᴍ} ꜱᴘᴀᴡɴᴇʀ"
+    lore:
+      - ""
+      - "&#e67e22◈ &#e67e22ᴅᴇᴛᴀɪʟꜱ:"
+      - "  &#ecf0f1•  ꜱᴘᴀᴡɴꜱ: &#e67e22{ɪᴛᴇᴍ}"
+      - ""
+
   # Appearance of vanilla spawner items in inventory and tooltips
   # Available placeholders: {entity}, {ᴇɴᴛɪᴛʏ}
   # Delete this section if you don't want to use custom vanilla spawners name and lore

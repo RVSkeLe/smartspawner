@@ -243,6 +243,14 @@ command_give_invalid_mob_type:
   message: "&#ff5252ɪɴᴠᴀʟɪᴅ ᴍᴏʙ ᴛʏᴘᴇ"
   sound: block.note_block.pling
 
+command_give_invalid_item_type:
+  message: "&#ff5252ɪɴᴠᴀʟɪᴅ ɪᴛᴇᴍ ᴛʏᴘᴇ"
+  sound: block.note_block.pling
+
+command_give_invalid_item_spawner:
+  message: "&#ff5252ɪɴᴠᴀʟɪᴅ ɪᴛᴇᴍ ꜱᴘᴀᴡɴᴇʀ ᴛʏᴘᴇ"
+  sound: block.note_block.pling
+
 command_give_invalid_amount:
   message: "&#ff5252ɪɴᴠᴀʟɪᴅ ᴀᴍᴏᴜɴᴛ"
   sound: block.note_block.pling
@@ -261,6 +269,14 @@ command_give_spawner_received:
 
 command_give_spawner_given:
   message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
+  sound: entity.experience_orb.pickup
+
+command_give_item_spawner_received:
+  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff{amount} {ɪᴛᴇᴍ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
+  sound: entity.experience_orb.pickup
+
+command_give_item_spawner_given:
+  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} {ɪᴛᴇᴍ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
   sound: entity.experience_orb.pickup
 
 # Hologram command messages
