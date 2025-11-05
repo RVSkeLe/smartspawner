@@ -1,0 +1,113 @@
+# For detailed configuration guide and examples, please visit:
+# https://nighterdevelopment.github.io/smartspawner-docs/item_spawners_settings/
+
+# Default head material for unknown items
+default_material: "SPAWNER"
+
+# Diamond spawner
+DIAMOND:
+  material: "DIAMOND"
+  experience: 5
+  loot:
+    DIAMOND:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "DIAMOND"
+    custom_texture: null
+
+# Iron Ingot spawner
+IRON_INGOT:
+  material: "IRON_INGOT"
+  experience: 2
+  loot:
+    IRON_INGOT:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "IRON_INGOT"
+    custom_texture: null
+
+# Gold Ingot spawner
+GOLD_INGOT:
+  material: "GOLD_INGOT"
+  experience: 3
+  loot:
+    GOLD_INGOT:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "GOLD_INGOT"
+    custom_texture: null
+
+# Emerald spawner
+EMERALD:
+  material: "EMERALD"
+  experience: 4
+  loot:
+    EMERALD:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "EMERALD"
+    custom_texture: null
+
+# Netherite Ingot spawner
+NETHERITE_INGOT:
+  material: "NETHERITE_INGOT"
+  experience: 10
+  loot:
+    NETHERITE_INGOT:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "NETHERITE_INGOT"
+    custom_texture: null
+
+# Ender Pearl spawner
+ENDER_PEARL:
+  material: "ENDER_PEARL"
+  experience: 3
+  loot:
+    ENDER_PEARL:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "ENDER_PEARL"
+    custom_texture: null
+
+# Nether Star spawner
+NETHER_STAR:
+  material: "NETHER_STAR"
+  experience: 15
+  loot:
+    NETHER_STAR:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "NETHER_STAR"
+    custom_texture: null
+
+# Totem of Undying spawner
+TOTEM_OF_UNDYING:
+  material: "TOTEM_OF_UNDYING"
+  experience: 12
+  loot:
+    TOTEM_OF_UNDYING:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "TOTEM_OF_UNDYING"
+    custom_texture: null
+
+# Experience Bottle spawner
+EXPERIENCE_BOTTLE:
+  material: "EXPERIENCE_BOTTLE"
+  experience: 1
+  loot:
+    EXPERIENCE_BOTTLE:
+      amount: 1-1
+      chance: 100.0
+  head_texture:
+    material: "EXPERIENCE_BOTTLE"
+    custom_texture: null

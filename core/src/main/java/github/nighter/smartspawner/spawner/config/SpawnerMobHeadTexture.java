@@ -21,6 +21,7 @@ import java.util.function.Consumer;
 public class SpawnerMobHeadTexture {
     private static final Map<EntityType, ItemStack> HEAD_CACHE = new EnumMap<>(EntityType.class);
     private static final Map<EntityType, SkullMeta> BASE_META_CACHE = new EnumMap<>(EntityType.class);
+    private static final Map<Material, ItemStack> ITEM_HEAD_CACHE = new EnumMap<>(Material.class);
     private static final ItemStack DEFAULT_SPAWNER_BLOCK = new ItemStack(Material.SPAWNER);
 
     private static boolean isBedrockPlayer(Player player) {
@@ -170,9 +171,81 @@ public class SpawnerMobHeadTexture {
         return head;
     }
 
+    /**
+     * Get a custom head for an item spawner material
+     * 
+     * @param itemMaterial The material for the item spawner
+     * @param player The player requesting the head
+     * @param metaModifier Consumer to modify the ItemMeta (can be null)
+     * @return The configured ItemStack
+     */
+    public static ItemStack getItemSpawnerHead(Material itemMaterial, Player player, Consumer<ItemMeta> metaModifier) {
+        if (itemMaterial == null) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        if (isBedrockPlayer(player)) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        return getItemSpawnerHead(itemMaterial, metaModifier);
+    }
+
+    /**
+     * Get a custom head for an item spawner material
+     * 
+     * @param itemMaterial The material for the item spawner
+     * @param metaModifier Consumer to modify the ItemMeta (can be null)
+     * @return The configured ItemStack
+     */
+    public static ItemStack getItemSpawnerHead(Material itemMaterial, Consumer<ItemMeta> metaModifier) {
+        if (itemMaterial == null) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        SmartSpawner plugin = SmartSpawner.getInstance();
+        if (plugin == null || plugin.getItemSpawnerSettingsConfig() == null) {
+            ItemStack item = DEFAULT_SPAWNER_BLOCK.clone();
+            if (metaModifier != null) {
+                item.editMeta(metaModifier);
+            }
+            return item;
+        }
+
+        // Get head data from item spawner config
+        ItemSpawnerSettingsConfig.ItemHeadData headData = plugin.getItemSpawnerSettingsConfig().getHeadData(itemMaterial);
+        Material headMaterial = headData.getMaterial();
+
+        // For item spawners, we just use the item material as the head (no custom textures)
+        ItemStack item = new ItemStack(headMaterial);
+        if (metaModifier != null) {
+            item.editMeta(metaModifier);
+        }
+
+        // Cache the unmodified version for reuse
+        if (metaModifier == null && !ITEM_HEAD_CACHE.containsKey(itemMaterial)) {
+            ITEM_HEAD_CACHE.put(itemMaterial, item.clone());
+        }
+
+        return item;
+    }
+
     public static void clearCache() {
         HEAD_CACHE.clear();
         BASE_META_CACHE.clear();
+        ITEM_HEAD_CACHE.clear();
     }
 
     /**

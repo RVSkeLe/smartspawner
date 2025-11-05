@@ -175,6 +175,13 @@ public class SpawnerFileHandler {
                 spawnerData.set(path + ".entityType", spawner.getEntityType() != null ?
                         spawner.getEntityType().name() : null);
 
+                // Save item spawner material if this is an item spawner
+                if (spawner.isItemSpawner()) {
+                    spawnerData.set(path + ".itemSpawnerMaterial", spawner.getSpawnedItemMaterial().name());
+                } else {
+                    spawnerData.set(path + ".itemSpawnerMaterial", null);
+                }
+
                 String settings = String.format("%d,%b,%d,%b,%d,%d,%d,%d,%d,%d,%d,%d,%b",
                         spawner.getSpawnerExp(),
                         spawner.getSpawnerActive(),
@@ -325,7 +332,27 @@ public class SpawnerFileHandler {
             return null;
         }
 
-        SpawnerData spawner = new SpawnerData(spawnerId, location, entityType, plugin);
+        // Check if this is an item spawner
+        SpawnerData spawner;
+        if (entityType == EntityType.ITEM) {
+            String itemSpawnerMaterialString = spawnerData.getString(path + ".itemSpawnerMaterial");
+            if (itemSpawnerMaterialString != null) {
+                try {
+                    Material itemMaterial = Material.valueOf(itemSpawnerMaterialString);
+                    spawner = new SpawnerData(spawnerId, location, itemMaterial, plugin);
+                } catch (IllegalArgumentException e) {
+                    if (logErrors) {
+                        logger.severe("Invalid item spawner material for spawner " + spawnerId + ": " + itemSpawnerMaterialString);
+                    }
+                    return null;
+                }
+            } else {
+                // Fallback to regular entity spawner if no item material specified
+                spawner = new SpawnerData(spawnerId, location, entityType, plugin);
+            }
+        } else {
+            spawner = new SpawnerData(spawnerId, location, entityType, plugin);
+        }
 
         String settingsString = spawnerData.getString(path + ".settings");
         if (settingsString != null) {
@@ -431,6 +458,22 @@ public class SpawnerFileHandler {
             } catch (IllegalArgumentException e) {
                 logger.warning("Invalid preferred sort item for spawner " + spawnerId + ": " + preferredSortItemStr);
             }
+        }
+        
+        // Restore the physical spawner block state for item spawners
+        if (spawner.isItemSpawner()) {
+            Scheduler.runLocationTask(location, () -> {
+                org.bukkit.block.Block block = location.getBlock();
+                if (block.getType() == Material.SPAWNER) {
+                    org.bukkit.block.BlockState state = block.getState(false);
+                    if (state instanceof org.bukkit.block.CreatureSpawner cs) {
+                        cs.setSpawnedType(EntityType.ITEM);
+                        ItemStack spawnedItem = new ItemStack(spawner.getSpawnedItemMaterial(), 1);
+                        cs.setSpawnedItem(spawnedItem);
+                        cs.update(true, false);
+                    }
+                }
+            });
         }
         
         return spawner;
