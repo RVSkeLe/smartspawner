@@ -8,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.potion.PotionType;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -171,7 +172,13 @@ public class ItemSpawnerSettingsConfig {
                         sellPrice = priceManager.getPrice(lootMaterial);
                     }
                     
-                    LootItem lootItem = new LootItem(lootMaterial, minAmount, maxAmount, chance, sellPrice);
+                    // Item spawners don't need durability or potion type
+                    Integer minDurability = null;
+                    Integer maxDurability = null;
+                    PotionType potionType = null;
+                    
+                    LootItem lootItem = new LootItem(lootMaterial, minAmount, maxAmount, chance, 
+                            minDurability, maxDurability, potionType, sellPrice);
                     items.add(lootItem);
                 } catch (Exception e) {
                     plugin.getLogger().warning("Error parsing loot item " + itemKey + " for item spawner " + material.name() + ": " + e.getMessage());
