@@ -26,6 +26,20 @@ custom_item:
       - "{loot_items}"
       - ""
 
+  # Appearance of item spawner items in inventory and tooltips
+  item_spawner:
+    name: "&#3498dbꜱᴘᴀᴡɴᴇʀ {ᴇɴᴛɪᴛʏ}"
+    loot_items: "  &#ecf0f1•  {amount} {ɪᴛᴇᴍ_ɴᴀᴍᴇ} &#3498db({chance}%)"
+    loot_items_empty: "  &#ecf0f1•  ᴋʜôɴɢ ᴄó ᴠậᴛ ᴘʜẩᴍ"
+    lore:
+      - ""
+      - "&#3498db◈ &#3498dbᴛʜôɴɢ ᴛɪɴ:"
+      - "  &#ecf0f1•  ᴋɪɴʜ ɴɢʜɪệᴍ: &#3498db{exp}"
+      - ""
+      - "&#3498db◈ &#3498dbᴠậᴛ ᴘʜẩᴍ:"
+      - "{loot_items}"
+      - ""
+
   # Appearance of vanilla spawner items in inventory and tooltips
   # Available placeholders: {entity}, {ᴇɴᴛɪᴛʏ}
   # Delete this section if you don't want to use custom vanilla spawners name and lore
@@ -172,4 +186,13 @@ item:
   SCULK_CATALYST:
     name: "ᴋʜốɪ xúᴄ ᴛáᴄ ꜱᴄᴜʟᴋ"
   TIDE_ARMOR_TRIM_SMITHING_TEMPLATE:
-    name: "ᴛʀᴀɴɢ ᴛʀí ɢɪáᴘ ᴛʜủʏ ᴛʀɪềᴜ"
+    name: "ᴛʀᴀɴɢ ᴛʀí ɢɪáᴘ ᴛʜủʏ ᴛʀɪềᴜ"  DIAMOND:
+    name: "ᴋɪᴍ ᴄươɴɢ"
+  ENCHANTED_BOOK:
+    name: "ꜱáᴄʜ ᴘʜù ᴘʜép"
+  NETHER_STAR:
+    name: "ɴɢôɪ ꜱᴀᴏ ᴅịᴀ ɴɢụᴄ"
+  NETHERITE_INGOT:
+    name: "ᴛʜỏɪ ɴᴇᴛʜᴇʀɪᴛᴇ"
+  EXPERIENCE_BOTTLE:
+    name: "ᴄʜᴀɪ ᴋɪɴʜ ɴɢʜɪệᴍ"

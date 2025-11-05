@@ -186,7 +186,8 @@ item:
   SCULK_CATALYST:
     name: "Sculk Catalyst"
   TIDE_ARMOR_TRIM_SMITHING_TEMPLATE:
-    name: "Tide Armor Trim"  DIAMOND:
+    name: "Tide Armor Trim"
+  DIAMOND:
     name: "Diamond"
   ENCHANTED_BOOK:
     name: "Enchanted Book"
