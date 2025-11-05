@@ -271,14 +271,6 @@ command_give_spawner_given:
   message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
   sound: entity.experience_orb.pickup
 
-command_give_item_spawner_received:
-  message: "&#37eb9aʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ &#f8f8ff{amount} {ɪᴛᴇᴍ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ)"
-  sound: entity.experience_orb.pickup
-
-command_give_item_spawner_given:
-  message: "&#37eb9aɢᴀᴠᴇ &#f8f8ff{amount} {ɪᴛᴇᴍ} &#37eb9aꜱᴘᴀᴡɴᴇʀ(ꜱ) ᴛᴏ &#f8f8ff{player}"
-  sound: entity.experience_orb.pickup
-
 # Hologram command messages
 command_hologram_enabled:
   message: "&#f8f8ffʜᴏʟᴏɢʀᴀᴍꜱ &#37eb9aᴇɴᴀʙʟᴇᴅ &#f8f8ffꜰᴏʀ ᴀʟʟ ꜱᴘᴀᴡɴᴇʀꜱ"

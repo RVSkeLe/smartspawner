@@ -212,9 +212,43 @@ public class SpawnerItemFactory {
             String itemName = languageManager.getVanillaItemName(itemMaterial);
             String itemNameSmallCaps = languageManager.getSmallCaps(itemName);
             
+            // Get loot config for this item spawner
+            EntityLootConfig lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(itemMaterial);
+            List<LootItem> lootItems = lootConfig != null ? lootConfig.getAllItems() : Collections.emptyList();
+            
             Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("item", itemName);
-            placeholders.put("ɪᴛᴇᴍ", itemNameSmallCaps);
+            placeholders.put("entity", itemName);
+            placeholders.put("ᴇɴᴛɪᴛʏ", itemNameSmallCaps);
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.getExperience() : 0));
+            
+            // Build loot items list similar to regular spawners
+            List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
+            sortedLootItems.sort(Comparator.comparing(item -> item.getMaterial().name()));
+            if (!sortedLootItems.isEmpty()) {
+                String lootFormat = languageManager.getItemName("custom_item.item_spawner.loot_items", placeholders);
+                StringBuilder lootItemsBuilder = new StringBuilder();
+                for (LootItem item : sortedLootItems) {
+                    String lootItemName = languageManager.getVanillaItemName(item.getMaterial());
+                    String lootItemNameSmallCaps = languageManager.getSmallCaps(lootItemName);
+                    String amountRange = item.getMinAmount() == item.getMaxAmount() ?
+                            String.valueOf(item.getMinAmount()) :
+                            item.getMinAmount() + "-" + item.getMaxAmount();
+                    String chance = String.format("%.1f", item.getChance());
+                    Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
+                    itemPlaceholders.put("item_name", lootItemName);
+                    itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", lootItemNameSmallCaps);
+                    itemPlaceholders.put("amount", amountRange);
+                    itemPlaceholders.put("chance", chance);
+                    String formattedItem = languageManager.applyPlaceholdersAndColors(lootFormat, itemPlaceholders);
+                    lootItemsBuilder.append(formattedItem).append("\n");
+                }
+                if (!lootItemsBuilder.isEmpty()) {
+                    lootItemsBuilder.setLength(lootItemsBuilder.length() - 1);
+                }
+                placeholders.put("loot_items", lootItemsBuilder.toString());
+            } else {
+                placeholders.put("loot_items", languageManager.getItemName("custom_item.item_spawner.loot_items_empty", placeholders));
+            }
             
             String displayName = languageManager.getItemName("custom_item.item_spawner.name", placeholders);
             if (displayName == null || displayName.isEmpty() || displayName.equals("custom_item.item_spawner.name")) {

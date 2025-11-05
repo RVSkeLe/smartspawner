@@ -256,21 +256,21 @@ public class GiveSubCommand extends BaseSubCommand {
             String itemName = plugin.getLanguageManager().getVanillaItemName(itemMaterial);
             String smallCapsItemName = plugin.getLanguageManager().getSmallCaps(itemName);
 
-            // Create placeholders for sender message
+            // Create placeholders for sender message (use "entity" key for compatibility with spawner messages)
             HashMap<String, String> senderPlaceholders = new HashMap<>();
             senderPlaceholders.put("player", target.getName());
-            senderPlaceholders.put("item", itemName);
-            senderPlaceholders.put("ɪᴛᴇᴍ", smallCapsItemName);
+            senderPlaceholders.put("entity", itemName);
+            senderPlaceholders.put("ᴇɴᴛɪᴛʏ", smallCapsItemName);
             senderPlaceholders.put("amount", String.valueOf(amount));
 
             // Create placeholders for target message
             HashMap<String, String> targetPlaceholders = new HashMap<>();
             targetPlaceholders.put("amount", String.valueOf(amount));
-            targetPlaceholders.put("item", itemName);
-            targetPlaceholders.put("ɪᴛᴇᴍ", smallCapsItemName);
+            targetPlaceholders.put("entity", itemName);
+            targetPlaceholders.put("ᴇɴᴛɪᴛʏ", smallCapsItemName);
 
-            // Send messages with placeholders
-            String messageKey = "command_give_item_spawner_";
+            // Send messages with placeholders (use same keys as regular spawners)
+            String messageKey = "command_give_spawner_";
             plugin.getMessageService().sendMessage(sender, messageKey + "given", senderPlaceholders);
             plugin.getMessageService().sendMessage(target, messageKey + "received", targetPlaceholders);
 

@@ -7,7 +7,7 @@ default_material: "SPAWNER"
 # Diamond spawner
 DIAMOND:
   material: "DIAMOND"
-  experience: 0
+  experience: 5
   loot:
     DIAMOND:
       amount: 1-1
@@ -19,7 +19,7 @@ DIAMOND:
 # Iron Ingot spawner
 IRON_INGOT:
   material: "IRON_INGOT"
-  experience: 0
+  experience: 2
   loot:
     IRON_INGOT:
       amount: 1-1
@@ -31,7 +31,7 @@ IRON_INGOT:
 # Gold Ingot spawner
 GOLD_INGOT:
   material: "GOLD_INGOT"
-  experience: 0
+  experience: 3
   loot:
     GOLD_INGOT:
       amount: 1-1
@@ -43,7 +43,7 @@ GOLD_INGOT:
 # Emerald spawner
 EMERALD:
   material: "EMERALD"
-  experience: 0
+  experience: 4
   loot:
     EMERALD:
       amount: 1-1
@@ -55,7 +55,7 @@ EMERALD:
 # Netherite Ingot spawner
 NETHERITE_INGOT:
   material: "NETHERITE_INGOT"
-  experience: 0
+  experience: 10
   loot:
     NETHERITE_INGOT:
       amount: 1-1
@@ -67,7 +67,7 @@ NETHERITE_INGOT:
 # Enchanted Book spawner
 ENCHANTED_BOOK:
   material: "ENCHANTED_BOOK"
-  experience: 0
+  experience: 5
   loot:
     ENCHANTED_BOOK:
       amount: 1-1
@@ -79,7 +79,7 @@ ENCHANTED_BOOK:
 # Ender Pearl spawner
 ENDER_PEARL:
   material: "ENDER_PEARL"
-  experience: 0
+  experience: 3
   loot:
     ENDER_PEARL:
       amount: 1-1
@@ -91,7 +91,7 @@ ENDER_PEARL:
 # Nether Star spawner
 NETHER_STAR:
   material: "NETHER_STAR"
-  experience: 0
+  experience: 15
   loot:
     NETHER_STAR:
       amount: 1-1
@@ -103,7 +103,7 @@ NETHER_STAR:
 # Totem of Undying spawner
 TOTEM_OF_UNDYING:
   material: "TOTEM_OF_UNDYING"
-  experience: 0
+  experience: 12
   loot:
     TOTEM_OF_UNDYING:
       amount: 1-1
@@ -115,7 +115,7 @@ TOTEM_OF_UNDYING:
 # Experience Bottle spawner
 EXPERIENCE_BOTTLE:
   material: "EXPERIENCE_BOTTLE"
-  experience: 0
+  experience: 1
   loot:
     EXPERIENCE_BOTTLE:
       amount: 1-1
