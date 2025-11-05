@@ -170,7 +170,13 @@ public class SpawnerData {
         this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
         this.cachedSpawnDelay = (this.spawnDelay + 20L) * 50L; // Add 1 second buffer for GUI display and convert tick to ms
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
-        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        
+        // Load loot config based on spawner type
+        if (isItemSpawner() && spawnedItemMaterial != null) {
+            this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
+        } else {
+            this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        }
     }
 
     public void recalculateAfterConfigReload() {
@@ -412,7 +418,12 @@ public class SpawnerData {
     }
 
     public void setLootConfig() {
-        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        // Load loot config based on spawner type
+        if (isItemSpawner() && spawnedItemMaterial != null) {
+            this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
+        } else {
+            this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        }
         // Mark sell value as dirty since prices may have changed
         this.sellValueDirty = true;
         // Invalidate no-loot cache since config changed

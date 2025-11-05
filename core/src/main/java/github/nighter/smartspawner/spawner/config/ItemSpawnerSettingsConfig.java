@@ -1,6 +1,9 @@
 package github.nighter.smartspawner.spawner.config;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
+import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.loot.LootItem;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -9,6 +12,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages the item spawner settings configuration
@@ -22,6 +26,9 @@ public class ItemSpawnerSettingsConfig {
     private Material defaultMaterial;
     private final Map<Material, ItemHeadData> itemHeadMap = new EnumMap<>(Material.class);
     private final Set<Material> validItemSpawnerMaterials = new HashSet<>();
+    
+    // Loot data for item spawners
+    private final Map<Material, EntityLootConfig> itemLootConfigs = new ConcurrentHashMap<>();
     
     public ItemSpawnerSettingsConfig(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -77,6 +84,7 @@ public class ItemSpawnerSettingsConfig {
     private void parseConfig() {
         itemHeadMap.clear();
         validItemSpawnerMaterials.clear();
+        itemLootConfigs.clear();
         
         // Get default material
         String defaultMaterialName = config.getString("default_material", "SPAWNER");
@@ -116,11 +124,64 @@ public class ItemSpawnerSettingsConfig {
             // Parse head texture data
             parseHeadTexture(material, itemSection);
             
+            // Parse loot data
+            parseLootData(material, itemSection);
+            
             // Add to valid materials set
             validItemSpawnerMaterials.add(material);
         }
         
         plugin.getLogger().info("Loaded " + validItemSpawnerMaterials.size() + " item spawner configurations");
+    }
+    
+    /**
+     * Parse loot configuration for an item spawner
+     */
+    private void parseLootData(Material material, ConfigurationSection itemSection) {
+        int experience = itemSection.getInt("experience", 0);
+        List<LootItem> items = new ArrayList<>();
+        
+        // Cache price manager reference for better performance
+        ItemPriceManager priceManager = plugin.getItemPriceManager();
+        
+        ConfigurationSection lootSection = itemSection.getConfigurationSection("loot");
+        if (lootSection != null) {
+            for (String itemKey : lootSection.getKeys(false)) {
+                ConfigurationSection lootItemSection = lootSection.getConfigurationSection(itemKey);
+                if (lootItemSection == null) continue;
+                
+                try {
+                    // Get the material
+                    Material lootMaterial;
+                    try {
+                        lootMaterial = Material.valueOf(itemKey.toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("Material '" + itemKey + "' is not available in server version " +
+                                plugin.getServer().getBukkitVersion() + " - skipping for item spawner " + material.name());
+                        continue;
+                    }
+                    
+                    String[] amounts = lootItemSection.getString("amount", "1-1").split("-");
+                    int minAmount = Integer.parseInt(amounts[0]);
+                    int maxAmount = Integer.parseInt(amounts.length > 1 ? amounts[1] : amounts[0]);
+                    double chance = lootItemSection.getDouble("chance", 100.0);
+                    
+                    double sellPrice = 0.0;
+                    if (priceManager != null) {
+                        sellPrice = priceManager.getPrice(lootMaterial);
+                    }
+                    
+                    LootItem lootItem = new LootItem(lootMaterial, minAmount, maxAmount, chance, sellPrice);
+                    items.add(lootItem);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Error parsing loot item " + itemKey + " for item spawner " + material.name() + ": " + e.getMessage());
+                }
+            }
+        }
+        
+        // Create and store EntityLootConfig
+        EntityLootConfig lootConfig = new EntityLootConfig(experience, items);
+        itemLootConfigs.put(material, lootConfig);
     }
     
     /**
@@ -157,6 +218,13 @@ public class ItemSpawnerSettingsConfig {
      */
     public ItemHeadData getHeadData(Material material) {
         return itemHeadMap.getOrDefault(material, new ItemHeadData(defaultMaterial, null));
+    }
+    
+    /**
+     * Get the loot configuration for an item spawner material
+     */
+    public EntityLootConfig getLootConfig(Material material) {
+        return itemLootConfigs.get(material);
     }
     
     /**

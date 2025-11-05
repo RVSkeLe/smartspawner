@@ -7,6 +7,11 @@ default_material: "SPAWNER"
 # Diamond spawner
 DIAMOND:
   material: "DIAMOND"
+  experience: 0
+  loot:
+    DIAMOND:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "DIAMOND"
     custom_texture: null
@@ -14,6 +19,11 @@ DIAMOND:
 # Iron Ingot spawner
 IRON_INGOT:
   material: "IRON_INGOT"
+  experience: 0
+  loot:
+    IRON_INGOT:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "IRON_INGOT"
     custom_texture: null
@@ -21,6 +31,11 @@ IRON_INGOT:
 # Gold Ingot spawner
 GOLD_INGOT:
   material: "GOLD_INGOT"
+  experience: 0
+  loot:
+    GOLD_INGOT:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "GOLD_INGOT"
     custom_texture: null
@@ -28,6 +43,11 @@ GOLD_INGOT:
 # Emerald spawner
 EMERALD:
   material: "EMERALD"
+  experience: 0
+  loot:
+    EMERALD:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "EMERALD"
     custom_texture: null
@@ -35,6 +55,11 @@ EMERALD:
 # Netherite Ingot spawner
 NETHERITE_INGOT:
   material: "NETHERITE_INGOT"
+  experience: 0
+  loot:
+    NETHERITE_INGOT:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "NETHERITE_INGOT"
     custom_texture: null
@@ -42,6 +67,11 @@ NETHERITE_INGOT:
 # Enchanted Book spawner
 ENCHANTED_BOOK:
   material: "ENCHANTED_BOOK"
+  experience: 0
+  loot:
+    ENCHANTED_BOOK:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "ENCHANTED_BOOK"
     custom_texture: null
@@ -49,6 +79,11 @@ ENCHANTED_BOOK:
 # Ender Pearl spawner
 ENDER_PEARL:
   material: "ENDER_PEARL"
+  experience: 0
+  loot:
+    ENDER_PEARL:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "ENDER_PEARL"
     custom_texture: null
@@ -56,6 +91,11 @@ ENDER_PEARL:
 # Nether Star spawner
 NETHER_STAR:
   material: "NETHER_STAR"
+  experience: 0
+  loot:
+    NETHER_STAR:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "NETHER_STAR"
     custom_texture: null
@@ -63,6 +103,11 @@ NETHER_STAR:
 # Totem of Undying spawner
 TOTEM_OF_UNDYING:
   material: "TOTEM_OF_UNDYING"
+  experience: 0
+  loot:
+    TOTEM_OF_UNDYING:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "TOTEM_OF_UNDYING"
     custom_texture: null
@@ -70,6 +115,11 @@ TOTEM_OF_UNDYING:
 # Experience Bottle spawner
 EXPERIENCE_BOTTLE:
   material: "EXPERIENCE_BOTTLE"
+  experience: 0
+  loot:
+    EXPERIENCE_BOTTLE:
+      amount: 1-1
+      chance: 100.0
   head_texture:
     material: "EXPERIENCE_BOTTLE"
     custom_texture: null
