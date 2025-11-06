@@ -191,4 +191,89 @@ public class SpawnerItemFactory {
         }
         return spawner;
     }
+
+    public ItemStack createItemSpawnerItem(Material itemMaterial) {
+        return createItemSpawnerItem(itemMaterial, 1);
+    }
+
+    public ItemStack createItemSpawnerItem(Material itemMaterial, int amount) {
+        ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
+        ItemMeta meta = spawner.getItemMeta();
+        if (meta != null && itemMaterial != null) {
+            if (meta instanceof BlockStateMeta blockMeta) {
+                BlockState blockState = blockMeta.getBlockState();
+                if (blockState instanceof CreatureSpawner cs) {
+                    // Set to ITEM type for item spawners
+                    cs.setSpawnedType(EntityType.ITEM);
+                    blockMeta.setBlockState(cs);
+                }
+            }
+            
+            String itemName = languageManager.getVanillaItemName(itemMaterial);
+            String itemNameSmallCaps = languageManager.getSmallCaps(itemName);
+            
+            // Get loot config for this item spawner
+            EntityLootConfig lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(itemMaterial);
+            List<LootItem> lootItems = lootConfig != null ? lootConfig.getAllItems() : Collections.emptyList();
+            
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("entity", itemName);
+            placeholders.put("ᴇɴᴛɪᴛʏ", itemNameSmallCaps);
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.getExperience() : 0));
+            
+            // Build loot items list similar to regular spawners
+            List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
+            sortedLootItems.sort(Comparator.comparing(item -> item.getMaterial().name()));
+            if (!sortedLootItems.isEmpty()) {
+                String lootFormat = languageManager.getItemName("custom_item.item_spawner.loot_items", placeholders);
+                StringBuilder lootItemsBuilder = new StringBuilder();
+                for (LootItem item : sortedLootItems) {
+                    String lootItemName = languageManager.getVanillaItemName(item.getMaterial());
+                    String lootItemNameSmallCaps = languageManager.getSmallCaps(lootItemName);
+                    String amountRange = item.getMinAmount() == item.getMaxAmount() ?
+                            String.valueOf(item.getMinAmount()) :
+                            item.getMinAmount() + "-" + item.getMaxAmount();
+                    String chance = String.format("%.1f", item.getChance());
+                    Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
+                    itemPlaceholders.put("item_name", lootItemName);
+                    itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", lootItemNameSmallCaps);
+                    itemPlaceholders.put("amount", amountRange);
+                    itemPlaceholders.put("chance", chance);
+                    String formattedItem = languageManager.applyPlaceholdersAndColors(lootFormat, itemPlaceholders);
+                    lootItemsBuilder.append(formattedItem).append("\n");
+                }
+                if (!lootItemsBuilder.isEmpty()) {
+                    lootItemsBuilder.setLength(lootItemsBuilder.length() - 1);
+                }
+                placeholders.put("loot_items", lootItemsBuilder.toString());
+            } else {
+                placeholders.put("loot_items", languageManager.getItemName("custom_item.item_spawner.loot_items_empty", placeholders));
+            }
+            
+            String displayName = languageManager.getItemName("custom_item.item_spawner.name", placeholders);
+            if (displayName == null || displayName.isEmpty() || displayName.equals("custom_item.item_spawner.name")) {
+                // Fallback to a generic name if not configured
+                displayName = "§6" + itemName + " Spawner";
+            }
+            meta.setDisplayName(displayName);
+            
+            List<String> lore = languageManager.getItemLoreWithMultilinePlaceholders("custom_item.item_spawner.lore", placeholders);
+            if (lore != null && !lore.isEmpty()) {
+                meta.setLore(lore);
+            }
+            
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+            
+            // Store the item material in persistent data
+            meta.getPersistentDataContainer().set(
+                    new NamespacedKey(plugin, "item_spawner_material"),
+                    PersistentDataType.STRING,
+                    itemMaterial.name()
+            );
+            
+            spawner.setItemMeta(meta);
+        }
+        VersionInitializer.hideTooltip(spawner);
+        return spawner;
+    }
 }

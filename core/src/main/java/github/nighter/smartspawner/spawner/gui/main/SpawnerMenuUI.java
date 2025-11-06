@@ -133,9 +133,14 @@ public class SpawnerMenuUI {
     }
 
     private Inventory createMenu(SpawnerData spawner) {
-        // Get entity name with caching
-        String entityName = languageManager.getFormattedMobName(spawner.getEntityType());
-        String entityNameSmallCaps = languageManager.getSmallCaps(languageManager.getFormattedMobName(spawner.getEntityType()));
+        // Get entity name with caching - for item spawners, use item name
+        String entityName;
+        if (spawner.isItemSpawner()) {
+            entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+        } else {
+            entityName = languageManager.getFormattedMobName(spawner.getEntityType());
+        }
+        String entityNameSmallCaps = languageManager.getSmallCaps(entityName);
 
         // Use string builder for efficient placeholder creation
         Map<String, String> placeholders = new HashMap<>(4);
@@ -342,7 +347,13 @@ public class SpawnerMenuUI {
 
         // Entity information
         if (usedPlaceholders.contains("entity") || usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
-            String entityName = languageManager.getFormattedMobName(entityType);
+            String entityName;
+            // For item spawners, use the item name instead of "Item Spawner"
+            if (spawner.isItemSpawner()) {
+                entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+            } else {
+                entityName = languageManager.getFormattedMobName(entityType);
+            }
             if (usedPlaceholders.contains("entity")) {
                 placeholders.put("entity", entityName);
             }
@@ -446,7 +457,11 @@ public class SpawnerMenuUI {
             meta.setLore(lore);
         };
 
-        if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
+        // Check if this is an item spawner and use appropriate head
+        if (spawner.isItemSpawner()) {
+            // For item spawners, use the item material as the head
+            spawnerItem = SpawnerMobHeadTexture.getItemSpawnerHead(spawner.getSpawnedItemMaterial(), player, metaModifier);
+        } else if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
             // Use custom head texture for MOB_HEAD material
             spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
         } else if (spawnerInfoButton != null) {

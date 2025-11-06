@@ -11,6 +11,7 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
 import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
+import github.nighter.smartspawner.spawner.config.ItemSpawnerSettingsConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
@@ -80,6 +81,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
     private SpawnerSettingsConfig spawnerSettingsConfig;
+    private ItemSpawnerSettingsConfig itemSpawnerSettingsConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -229,6 +231,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         
         // Initialize new unified spawner settings config (but don't load yet)
         this.spawnerSettingsConfig = new SpawnerSettingsConfig(this);
+        this.itemSpawnerSettingsConfig = new ItemSpawnerSettingsConfig(this);
         
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
@@ -244,6 +247,11 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         // This is needed because loot configuration requires price manager
         if (spawnerSettingsConfig != null) {
             spawnerSettingsConfig.load();
+        }
+        
+        // Load item spawner settings
+        if (itemSpawnerSettingsConfig != null) {
+            itemSpawnerSettingsConfig.load();
         }
         
         // Pre-warm the head texture cache after settings are loaded
@@ -403,6 +411,11 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             spawnerSettingsConfig.reload();
             // Clear head cache to force regeneration with new textures
             SpawnerMobHeadTexture.clearCache();
+        }
+        
+        // Reload item spawner settings config
+        if (itemSpawnerSettingsConfig != null) {
+            itemSpawnerSettingsConfig.reload();
         }
         
         // Reload logging system

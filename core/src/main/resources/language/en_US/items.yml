@@ -26,6 +26,20 @@ custom_item:
       - "{loot_items}"
       - ""
 
+  # Appearance of item spawner items in inventory and tooltips
+  item_spawner:
+    name: "&#3498db{ᴇɴᴛɪᴛʏ} ꜱᴘᴀᴡɴᴇʀ"
+    loot_items: "  &#ecf0f1•  {amount} {ɪᴛᴇᴍ_ɴᴀᴍᴇ} &#3498db({chance}%)"
+    loot_items_empty: "  &#ecf0f1•  ɴᴏɴᴇ"
+    lore:
+      - ""
+      - "&#3498db◈ &#3498dbᴅᴇᴛᴀɪʟꜱ:"
+      - "  &#ecf0f1•  ᴇxᴘᴇʀɪᴇɴᴄᴇ ɢɪᴠᴇ: &#3498db{exp}"
+      - ""
+      - "&#3498db◈ &#3498dbᴅʀᴏᴘꜱ:"
+      - "{loot_items}"
+      - ""
+
   # Appearance of vanilla spawner items in inventory and tooltips
   # Available placeholders: {entity}, {ᴇɴᴛɪᴛʏ}
   # Delete this section if you don't want to use custom vanilla spawners name and lore
@@ -173,3 +187,11 @@ item:
     name: "Sculk Catalyst"
   TIDE_ARMOR_TRIM_SMITHING_TEMPLATE:
     name: "Tide Armor Trim"
+  DIAMOND:
+    name: "Diamond"
+  NETHER_STAR:
+    name: "Nether Star"
+  NETHERITE_INGOT:
+    name: "Netherite Ingot"
+  EXPERIENCE_BOTTLE:
+    name: "Experience Bottle"

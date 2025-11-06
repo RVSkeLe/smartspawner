@@ -243,6 +243,14 @@ command_give_invalid_mob_type:
   message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ᴍᴏʙ ᴛʏᴘ"
   sound: block.note_block.pling
 
+command_give_invalid_item_type:
+  message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ɪᴛᴇᴍ ᴛʏᴘ"
+  sound: block.note_block.pling
+
+command_give_invalid_item_spawner:
+  message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ɪᴛᴇᴍ ꜱᴘᴀᴡɴᴇʀ ᴛʏᴘ"
+  sound: block.note_block.pling
+
 command_give_invalid_amount:
   message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇ ᴀɴᴢᴀʜʟ"
   sound: block.note_block.pling
