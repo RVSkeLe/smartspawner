@@ -199,6 +199,12 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClick(Player player, SpawnerData spawner) {
+        // Check anti-macro cooldown before opening storage GUI
+        if (!plugin.getSpawnerStorageAction().canAccessStorageGUI(player.getUniqueId())) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
+        }
+        
         String title = languageManager.getGuiTitle("gui_title_storage");
         Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
 
@@ -208,6 +214,12 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClickBedrock(Player player, SpawnerData spawner) {
+        // Check anti-macro cooldown before opening storage GUI
+        if (!plugin.getSpawnerStorageAction().canAccessStorageGUI(player.getUniqueId())) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
+        }
+        
         String title = languageManager.getGuiTitle("gui_title_storage");
         Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);

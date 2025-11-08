@@ -61,8 +61,11 @@ public class SpawnerStorageAction implements Listener {
     // Transaction locking system to prevent concurrent drop operations
     private final Set<UUID> activeDropTransactions = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Long> transactionStartTimes = new ConcurrentHashMap<>();
+    // Storage GUI access cooldown system to prevent macro abuse
+    private final Map<UUID, Long> storageAccessCooldowns = new ConcurrentHashMap<>();
     private static final long TRANSACTION_TIMEOUT_MS = 5000; // 5 seconds max per transaction
     private static final long DROP_COOLDOWN_MS = 500; // 500ms cooldown between drops
+    private static final long STORAGE_ACCESS_COOLDOWN_MS = 500; // 500ms cooldown before re-accessing storage GUI
     private Random random = new Random();
     private GuiLayout layout;
 
@@ -303,6 +306,22 @@ public class SpawnerStorageAction implements Listener {
 
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
+            // Calculate new total pages after item drop
+            int newTotalPages = calculateTotalPages(spawner);
+            int currentPage = holder.getCurrentPage();
+            
+            // Clamp current page to valid range (e.g., if on page 6 but only 5 pages remain)
+            int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+            
+            // Update holder with new total pages
+            holder.setTotalPages(newTotalPages);
+            if (adjustedPage != currentPage) {
+                holder.setCurrentPage(adjustedPage);
+            }
+            
+            // Update the inventory title to reflect new page count
+            updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
+            
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
             if (!spawner.isInteracted()) {
                 spawner.markInteracted();
@@ -529,6 +548,22 @@ public class SpawnerStorageAction implements Listener {
 
             StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
             if (holder != null) {
+                // Calculate new total pages after item removal
+                int newTotalPages = calculateTotalPages(spawner);
+                int currentPage = holder.getCurrentPage();
+                
+                // Clamp current page to valid range (e.g., if on page 6 but only 5 pages remain)
+                int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+                
+                // Update holder with new total pages
+                holder.setTotalPages(newTotalPages);
+                if (adjustedPage != currentPage) {
+                    holder.setCurrentPage(adjustedPage);
+                }
+                
+                // Update the inventory title to reflect new page count
+                updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
+                
                 spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
                 if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
@@ -609,6 +644,25 @@ public class SpawnerStorageAction implements Listener {
         long last = lastItemClickTime.getOrDefault(playerId, 0L);
         lastItemClickTime.put(playerId, now);
         return (now - last) < DROP_COOLDOWN_MS;
+    }
+
+    /**
+     * Checks if a player can access the storage GUI based on cooldown.
+     * Implements 500ms cooldown after closing storage GUI to prevent macro abuse.
+     * Thread-safe for multiple players viewing the same spawner.
+     * 
+     * @param playerId The player's UUID
+     * @return true if player can access storage GUI, false if still on cooldown
+     */
+    public boolean canAccessStorageGUI(UUID playerId) {
+        long now = System.currentTimeMillis();
+        Long lastClose = storageAccessCooldowns.get(playerId);
+        
+        if (lastClose == null) {
+            return true;
+        }
+        
+        return (now - lastClose) >= STORAGE_ACCESS_COOLDOWN_MS;
     }
 
     /**
@@ -723,6 +777,9 @@ public class SpawnerStorageAction implements Listener {
         // This prevents stuck transactions from disconnected players
         activeDropTransactions.remove(playerId);
         transactionStartTimes.remove(playerId);
+        
+        // Clean up storage access cooldown to prevent memory leaks
+        storageAccessCooldowns.remove(playerId);
     }
 
     private void openMainMenu(Player player, SpawnerData spawner) {
@@ -1256,6 +1313,9 @@ public class SpawnerStorageAction implements Listener {
         if (event.getPlayer() instanceof Player player) {
             UUID playerId = player.getUniqueId();
             openStorageInventories.remove(playerId);
+            
+            // Record storage GUI close time for anti-macro cooldown
+            storageAccessCooldowns.put(playerId, System.currentTimeMillis());
         }
 
         SpawnerData spawner = holder.getSpawnerData();

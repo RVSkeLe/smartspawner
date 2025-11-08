@@ -488,6 +488,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         return timeFormatter.getTimeFromConfig(path, defaultValue);
     }
 
+    public SpawnerStorageAction getSpawnerStorageAction() {
+        return spawnerStorageAction;
+    }
+
     public void debug(String message) {
         if (debugMode) {
             getLogger().info("[DEBUG] " + message);
