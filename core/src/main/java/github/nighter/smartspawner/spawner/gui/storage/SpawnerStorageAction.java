@@ -306,21 +306,24 @@ public class SpawnerStorageAction implements Listener {
 
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
-            // Calculate new total pages after item drop
+            // Only recalculate and update title if page count might have changed
+            // This optimization avoids expensive operations on every single item drop
+            int oldTotalPages = holder.getTotalPages();
             int newTotalPages = calculateTotalPages(spawner);
-            int currentPage = holder.getCurrentPage();
             
-            // Clamp current page to valid range (e.g., if on page 6 but only 5 pages remain)
-            int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
-            
-            // Update holder with new total pages
-            holder.setTotalPages(newTotalPages);
-            if (adjustedPage != currentPage) {
-                holder.setCurrentPage(adjustedPage);
+            if (oldTotalPages != newTotalPages) {
+                // Page count changed - update holder and title
+                int currentPage = holder.getCurrentPage();
+                int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+                
+                holder.setTotalPages(newTotalPages);
+                if (adjustedPage != currentPage) {
+                    holder.setCurrentPage(adjustedPage);
+                }
+                
+                // Update the inventory title to reflect new page count
+                updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
             }
-            
-            // Update the inventory title to reflect new page count
-            updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
             
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
             if (!spawner.isInteracted()) {
@@ -548,21 +551,24 @@ public class SpawnerStorageAction implements Listener {
 
             StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
             if (holder != null) {
-                // Calculate new total pages after item removal
+                // Only recalculate and update title if page count might have changed
+                // This optimization avoids expensive operations on every single item take
+                int oldTotalPages = holder.getTotalPages();
                 int newTotalPages = calculateTotalPages(spawner);
-                int currentPage = holder.getCurrentPage();
                 
-                // Clamp current page to valid range (e.g., if on page 6 but only 5 pages remain)
-                int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
-                
-                // Update holder with new total pages
-                holder.setTotalPages(newTotalPages);
-                if (adjustedPage != currentPage) {
-                    holder.setCurrentPage(adjustedPage);
+                if (oldTotalPages != newTotalPages) {
+                    // Page count changed - update holder and title
+                    int currentPage = holder.getCurrentPage();
+                    int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+                    
+                    holder.setTotalPages(newTotalPages);
+                    if (adjustedPage != currentPage) {
+                        holder.setCurrentPage(adjustedPage);
+                    }
+                    
+                    // Update the inventory title to reflect new page count
+                    updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
                 }
-                
-                // Update the inventory title to reflect new page count
-                updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
                 
                 spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
