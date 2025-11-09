@@ -114,6 +114,10 @@ public class StorageUpdateService {
 
         if (needsNewInventory) {
             try {
+                // Update holder metadata first
+                holder.setTotalPages(newTotalPages);
+                holder.updateOldUsedSlots();
+                
                 // Update inventory title and contents
                 String newTitle = getStorageTitle(targetPage, newTotalPages);
                 viewer.getOpenInventory().setTitle(newTitle);

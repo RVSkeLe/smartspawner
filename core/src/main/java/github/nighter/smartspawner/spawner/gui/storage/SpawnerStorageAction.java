@@ -325,6 +325,10 @@ public class SpawnerStorageAction implements Listener {
                 updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
             }
             
+            // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+            // This ensures other viewers get the correct page calculation
+            holder.updateOldUsedSlots();
+            
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
             if (!spawner.isInteracted()) {
                 spawner.markInteracted();
@@ -447,15 +451,23 @@ public class SpawnerStorageAction implements Listener {
             // 11. Drop items in world (only after VirtualInventory confirmed removal)
             dropItemsInDirection(player, pageItems);
 
-            // 12. Update page metadata
+            // 12. Update page metadata and GUI
             int newTotalPages = calculateTotalPages(spawner);
-            if (holder.getCurrentPage() > newTotalPages) {
-                holder.setCurrentPage(Math.max(1, newTotalPages));
+            int currentPage = holder.getCurrentPage();
+            if (currentPage > newTotalPages) {
+                currentPage = Math.max(1, newTotalPages);
+                holder.setCurrentPage(currentPage);
             }
             holder.setTotalPages(newTotalPages);
             holder.updateOldUsedSlots();
+            
+            // Update display for current player BEFORE notifying other viewers
+            // This ensures the current player sees the updated page immediately
+            SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
+            lootManager.updateDisplay(inventory, spawner, currentPage, newTotalPages);
+            updateInventoryTitle(player, inventory, spawner, currentPage, newTotalPages);
 
-            // 13. Update spawner state
+            // 13. Update spawner state and notify other viewers
             spawner.updateHologramData();
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
@@ -473,12 +485,11 @@ public class SpawnerStorageAction implements Listener {
                         .location(spawner.getSpawnerLocation())
                         .entityType(spawner.getEntityType())
                         .metadata("items_dropped", itemsFound)
-                        .metadata("page_number", holder.getCurrentPage())
+                        .metadata("page_number", currentPage)
                 );
             }
 
-            // 15. Refresh display and provide feedback
-            updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+            // 15. Provide feedback
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 0.8f);
 
         } finally {
@@ -569,6 +580,10 @@ public class SpawnerStorageAction implements Listener {
                     // Update the inventory title to reflect new page count
                     updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
                 }
+                
+                // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+                // This ensures other viewers get the correct page calculation
+                holder.updateOldUsedSlots();
                 
                 spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
@@ -1123,6 +1138,10 @@ public class SpawnerStorageAction implements Listener {
                     
                     // Update the inventory title to reflect new page count
                     updateInventoryTitle(player, sourceInventory, spawner, adjustedPage, newTotalPages);
+
+                    // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+                    // This ensures other viewers get the correct page calculation
+                    holder.updateOldUsedSlots();
 
                     spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
