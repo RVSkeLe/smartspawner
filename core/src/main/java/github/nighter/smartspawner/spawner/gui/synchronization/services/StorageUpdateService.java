@@ -92,8 +92,10 @@ public class StorageUpdateService {
         boolean pagesChanged = oldTotalPages != newTotalPages;
         
         if (!pagesChanged) {
-            // Just update contents - no title update needed
+            // Just update contents - no title update needed, but MUST update oldUsedSlots
+            // to prevent stale values in future calculations
             spawnerStorageUI.updateDisplay(inventory, spawner, currentPage, newTotalPages);
+            holder.updateOldUsedSlots();
             viewer.updateInventory();
             return;
         }
@@ -114,6 +116,10 @@ public class StorageUpdateService {
 
         if (needsNewInventory) {
             try {
+                // Update holder metadata first
+                holder.setTotalPages(newTotalPages);
+                holder.updateOldUsedSlots();
+                
                 // Update inventory title and contents
                 String newTitle = getStorageTitle(targetPage, newTotalPages);
                 viewer.getOpenInventory().setTitle(newTitle);
@@ -158,13 +164,13 @@ public class StorageUpdateService {
             cachedStorageTitleFormat = languageManager.getGuiTitle("gui_title_storage");
         }
         
-        // Fast path: no placeholders
-        if (!cachedStorageTitleFormat.contains("%current_page%") && 
-            !cachedStorageTitleFormat.contains("%total_pages%")) {
+        // Fast path: no placeholders (check for correct placeholder format)
+        if (!cachedStorageTitleFormat.contains("{current_page}") && 
+            !cachedStorageTitleFormat.contains("{total_pages}")) {
             return cachedStorageTitleFormat;
         }
         
-        // Use placeholder replacement
+        // Use placeholder replacement - always get fresh title with current values
         return languageManager.getGuiTitle("gui_title_storage", Map.of(
             "current_page", String.valueOf(page),
             "total_pages", String.valueOf(totalPages)
