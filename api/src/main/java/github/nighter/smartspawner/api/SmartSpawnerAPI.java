@@ -60,20 +60,4 @@ public interface SmartSpawnerAPI {
      * @return An ItemStack representing the item spawner
      */
     ItemStack createItemSpawnerItem(Material itemMaterial, int amount);
-
-    /**
-     * Gets the entity type from a SmartSpawner item
-     *
-     * @param item The SmartSpawner item to check
-     * @return The EntityType of the SmartSpawner, or null if the item is not a valid spawner
-     */
-    EntityType getSpawnerEntityType(ItemStack item);
-
-    /**
-     * Checks if an item is a valid spawner created by SmartSpawner
-     *
-     * @param item The item to check
-     * @return true if the item is a valid SmartSpawner, false otherwise
-     */
-    boolean isValidSpawner(ItemStack item);
 }

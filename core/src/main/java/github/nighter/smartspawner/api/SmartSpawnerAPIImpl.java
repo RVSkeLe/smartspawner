@@ -52,34 +52,4 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
     public ItemStack createItemSpawnerItem(Material itemMaterial, int amount) {
         return itemFactory.createItemSpawnerItem(itemMaterial, amount);
     }
-
-    @Override
-    public EntityType getSpawnerEntityType(ItemStack item) {
-        if (!isValidSpawner(item)) {
-            return null;
-        }
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta instanceof BlockStateMeta) {
-            BlockStateMeta blockMeta = (BlockStateMeta) meta;
-            BlockState blockState = blockMeta.getBlockState();
-
-            if (blockState instanceof CreatureSpawner) {
-                CreatureSpawner cs = (CreatureSpawner) blockState;
-                return cs.getSpawnedType();
-            }
-        }
-
-        return null;
-    }
-
-    @Override
-    public boolean isValidSpawner(ItemStack item) {
-        if (item == null || item.getType() != org.bukkit.Material.SPAWNER) {
-            return false;
-        }
-
-        ItemMeta meta = item.getItemMeta();
-        return meta instanceof BlockStateMeta;
-    }
 }
