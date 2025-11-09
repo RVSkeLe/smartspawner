@@ -1,10 +1,12 @@
 package github.nighter.smartspawner.spawner.item;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.api.events.SpawnerItemCreateEvent;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.loot.LootItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
@@ -64,11 +66,53 @@ public class SpawnerItemFactory {
         }
     }
 
+    /**
+     * Creates a smart spawner item with custom features and loot tables.
+     * This method is an alias for createCustomSpawnerItem for backward compatibility.
+     *
+     * @param entityType The entity type for the spawner
+     * @return The created spawner ItemStack
+     * @deprecated Use {@link #createCustomSpawnerItem(EntityType)} for clearer naming
+     */
+    @Deprecated
     public ItemStack createSmartSpawnerItem(EntityType entityType) {
-        return createSmartSpawnerItem(entityType, 1);
+        return createCustomSpawnerItem(entityType, 1);
     }
 
+    /**
+     * Creates a smart spawner item with custom features and loot tables.
+     * This method is an alias for createCustomSpawnerItem for backward compatibility.
+     *
+     * @param entityType The entity type for the spawner
+     * @param amount The amount of spawner items to create
+     * @return The created spawner ItemStack
+     * @deprecated Use {@link #createCustomSpawnerItem(EntityType, int)} for clearer naming
+     */
+    @Deprecated
     public ItemStack createSmartSpawnerItem(EntityType entityType, int amount) {
+        return createCustomSpawnerItem(entityType, amount);
+    }
+
+    /**
+     * Creates a custom spawner item with SmartSpawner features and loot tables.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param entityType The entity type for the spawner
+     * @return The created spawner ItemStack, or null if the event was cancelled
+     */
+    public ItemStack createCustomSpawnerItem(EntityType entityType) {
+        return createCustomSpawnerItem(entityType, 1);
+    }
+
+    /**
+     * Creates a custom spawner item with SmartSpawner features and loot tables.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param entityType The entity type for the spawner
+     * @param amount The amount of spawner items to create
+     * @return The created spawner ItemStack, or null if the event was cancelled
+     */
+    public ItemStack createCustomSpawnerItem(EntityType entityType, int amount) {
         cleanupCacheIfNeeded();
         if (amount == 1) {
             ItemStack cachedItem = spawnerItemCache.get(entityType);
@@ -150,13 +194,42 @@ public class SpawnerItemFactory {
                 }
             }
         }
-        return spawner;
+        
+        // Fire SpawnerItemCreateEvent
+        SpawnerItemCreateEvent event = new SpawnerItemCreateEvent(
+            SpawnerItemCreateEvent.SpawnerType.SMART_SPAWNER,
+            entityType,
+            amount,
+            spawner
+        );
+        Bukkit.getPluginManager().callEvent(event);
+        
+        if (event.isCancelled()) {
+            return null;
+        }
+        
+        return event.getResult();
     }
 
+    /**
+     * Creates a vanilla spawner item without custom features.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param entityType The entity type for the spawner
+     * @return The created vanilla spawner ItemStack, or null if the event was cancelled
+     */
     public ItemStack createVanillaSpawnerItem(EntityType entityType) {
         return createVanillaSpawnerItem(entityType, 1);
     }
 
+    /**
+     * Creates a vanilla spawner item without custom features.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param entityType The entity type for the spawner
+     * @param amount The amount of spawner items to create
+     * @return The created vanilla spawner ItemStack, or null if the event was cancelled
+     */
     public ItemStack createVanillaSpawnerItem(EntityType entityType, int amount) {
         ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
         ItemMeta meta = spawner.getItemMeta();
@@ -189,13 +262,42 @@ public class SpawnerItemFactory {
             );
             spawner.setItemMeta(meta);
         }
-        return spawner;
+        
+        // Fire SpawnerItemCreateEvent
+        SpawnerItemCreateEvent event = new SpawnerItemCreateEvent(
+            SpawnerItemCreateEvent.SpawnerType.VANILLA_SPAWNER,
+            entityType,
+            amount,
+            spawner
+        );
+        Bukkit.getPluginManager().callEvent(event);
+        
+        if (event.isCancelled()) {
+            return null;
+        }
+        
+        return event.getResult();
     }
 
+    /**
+     * Creates an item spawner item that spawns items instead of entities.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param itemMaterial The material type for the item spawner
+     * @return The created item spawner ItemStack, or null if the event was cancelled
+     */
     public ItemStack createItemSpawnerItem(Material itemMaterial) {
         return createItemSpawnerItem(itemMaterial, 1);
     }
 
+    /**
+     * Creates an item spawner item that spawns items instead of entities.
+     * Fires a SpawnerItemCreateEvent that can be cancelled or modified by listeners.
+     *
+     * @param itemMaterial The material type for the item spawner
+     * @param amount The amount of spawner items to create
+     * @return The created item spawner ItemStack, or null if the event was cancelled
+     */
     public ItemStack createItemSpawnerItem(Material itemMaterial, int amount) {
         ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
         ItemMeta meta = spawner.getItemMeta();
@@ -274,6 +376,19 @@ public class SpawnerItemFactory {
             spawner.setItemMeta(meta);
         }
         VersionInitializer.hideTooltip(spawner);
-        return spawner;
+        
+        // Fire SpawnerItemCreateEvent
+        SpawnerItemCreateEvent event = new SpawnerItemCreateEvent(
+            itemMaterial,
+            amount,
+            spawner
+        );
+        Bukkit.getPluginManager().callEvent(event);
+        
+        if (event.isCancelled()) {
+            return null;
+        }
+        
+        return event.getResult();
     }
 }

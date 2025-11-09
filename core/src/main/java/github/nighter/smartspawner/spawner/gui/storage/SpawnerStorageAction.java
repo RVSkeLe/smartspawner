@@ -453,19 +453,22 @@ public class SpawnerStorageAction implements Listener {
 
             // 12. Update page metadata and GUI
             int newTotalPages = calculateTotalPages(spawner);
-            int currentPage = holder.getCurrentPage();
-            if (currentPage > newTotalPages) {
-                currentPage = Math.max(1, newTotalPages);
-                holder.setCurrentPage(currentPage);
+            int adjustedPage = holder.getCurrentPage();
+            if (adjustedPage > newTotalPages) {
+                adjustedPage = Math.max(1, newTotalPages);
+                holder.setCurrentPage(adjustedPage);
             }
             holder.setTotalPages(newTotalPages);
             holder.updateOldUsedSlots();
             
+            // Store final page for lambda use (must be effectively final)
+            final int finalPage = adjustedPage;
+            
             // Update display for current player BEFORE notifying other viewers
             // This ensures the current player sees the updated page immediately
             SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
-            lootManager.updateDisplay(inventory, spawner, currentPage, newTotalPages);
-            updateInventoryTitle(player, inventory, spawner, currentPage, newTotalPages);
+            lootManager.updateDisplay(inventory, spawner, finalPage, newTotalPages);
+            updateInventoryTitle(player, inventory, spawner, finalPage, newTotalPages);
 
             // 13. Update spawner state and notify other viewers
             spawner.updateHologramData();
@@ -485,7 +488,7 @@ public class SpawnerStorageAction implements Listener {
                         .location(spawner.getSpawnerLocation())
                         .entityType(spawner.getEntityType())
                         .metadata("items_dropped", itemsFound)
-                        .metadata("page_number", currentPage)
+                        .metadata("page_number", finalPage)
                 );
             }
 
