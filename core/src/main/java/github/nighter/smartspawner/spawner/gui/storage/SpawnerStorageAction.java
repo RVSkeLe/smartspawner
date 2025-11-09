@@ -387,14 +387,12 @@ public class SpawnerStorageAction implements Listener {
 
             // 6. Collect items from GUI display
             List<ItemStack> pageItems = new ArrayList<>();
-            Map<Integer, ItemStack> guiSnapshot = new HashMap<>(); // For rollback
             int itemsFoundCount = 0;
 
             for (int i = 0; i < STORAGE_SLOTS; i++) {
                 ItemStack item = inventory.getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
                     pageItems.add(item.clone());
-                    guiSnapshot.put(i, item.clone()); // Save for potential rollback
                     itemsFoundCount += item.getAmount();
                 }
             }
@@ -1074,31 +1072,9 @@ public class SpawnerStorageAction implements Listener {
             final int itemsBeforeTransfer = totalItemCount;
             
             Scheduler.runLocationTask(spawnerLoc, () -> {
-                // Double-check player is still online before transfer
-                if (!player.isOnline()) {
-                    // Player disconnected - rollback by re-adding items to VirtualInventory
-                    virtualInv.addItems(itemsToTransfer);
-                    return;
-                }
-                
                 TransferResult result = transferItemsSecure(player, sourceInventory, sourceItems, virtualInv);
                 
-                // 10. Handle partial transfers with rollback
-                if (result.totalMoved < itemsBeforeTransfer) {
-                    // Some items couldn't fit - return the remainder to VirtualInventory
-                    List<ItemStack> itemsNotMoved = new ArrayList<>();
-                    for (Map.Entry<Integer, ItemStack> entry : sourceItems.entrySet()) {
-                        ItemStack currentItem = sourceInventory.getItem(entry.getKey());
-                        if (currentItem != null && currentItem.getType() != Material.AIR) {
-                            itemsNotMoved.add(currentItem.clone());
-                        }
-                    }
-                    if (!itemsNotMoved.isEmpty()) {
-                        virtualInv.addItems(itemsNotMoved);
-                    }
-                }
-                
-                // 11. Send feedback to player
+                // 10. Send feedback to player
                 sendTransferMessage(player, result);
                 player.updateInventory();
 
@@ -1134,7 +1110,7 @@ public class SpawnerStorageAction implements Listener {
                         spawner.markInteracted();
                     }
                     
-                    // 13. Log take all items action
+                    // 12. Log take all items action
                     if (plugin.getSpawnerActionLogger() != null) {
                         int itemsLeft = spawner.getVirtualInventory().getUsedSlots();
                         plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_TAKE_ALL, builder -> 
@@ -1149,7 +1125,7 @@ public class SpawnerStorageAction implements Listener {
             });
 
         } finally {
-            // 14. ALWAYS release transaction lock (prevents deadlocks)
+            // 13. ALWAYS release transaction lock (prevents deadlocks)
             releaseDropTransaction(playerId);
         }
     }
