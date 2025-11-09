@@ -82,12 +82,6 @@ public class SpawnerMenuAction implements Listener {
 
         event.setCancelled(true);
         SpawnerData spawner = holder.getSpawnerData();
-        
-        // Validate spawner still exists - prevent exploits on broken spawners
-        if (!isSpawnerValid(spawner)) {
-            player.closeInventory();
-            return;
-        }
 
         // Verify click was in the actual menu and not player inventory
         if (event.getClickedInventory() == null ||
@@ -270,23 +264,6 @@ public class SpawnerMenuAction implements Listener {
         long last = lastInfoClickTime.getOrDefault(player.getUniqueId(), 0L);
         lastInfoClickTime.put(player.getUniqueId(), now);
         return (now - last) < 300; // 300ms threshold
-    }
-
-    /**
-     * Validates that a spawner still exists in the manager.
-     * Prevents exploits when spawner is broken while GUI is open.
-     *
-     * @param spawner The spawner to validate
-     * @return true if spawner is valid, false otherwise
-     */
-    private boolean isSpawnerValid(SpawnerData spawner) {
-        if (spawner == null) {
-            return false;
-        }
-        
-        var spawnerManager = plugin.getSpawnerManager();
-        SpawnerData current = spawnerManager.getSpawnerById(spawner.getSpawnerId());
-        return current != null && current == spawner;
     }
 
     @EventHandler

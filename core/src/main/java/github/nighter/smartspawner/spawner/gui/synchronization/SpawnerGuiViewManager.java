@@ -220,25 +220,30 @@ public class SpawnerGuiViewManager {
 
             // Handle storage page updates - calculate pages on the correct thread
             Inventory openInv = viewer.getOpenInventory().getTopInventory();
-            if (openInv != null && openInv.getHolder(false) instanceof StoragePageHolder) {
+            if (openInv.getHolder(false) instanceof StoragePageHolder holder) {
                 // Schedule storage update - page calculation happens inside
                 Location loc = viewer.getLocation();
-                if (loc != null) {
-                    Scheduler.runLocationTask(loc, () -> {
-                        if (!viewer.isOnline()) {
+
+                if (!holder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
+                    continue;
+                }
+                Scheduler.runLocationTask(loc, () -> {
+                    if (!viewer.isOnline()) {
+                        return;
+                    }
+
+                    Inventory inv = viewer.getOpenInventory().getTopInventory();
+                    if (inv.getHolder(false) instanceof StoragePageHolder spHolder) {
+
+                        if (!spHolder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
                             return;
                         }
+                        int oldPages = storageUpdateService.calculateTotalPages(holder.getOldUsedSlots());
+                        int newPages = storageUpdateService.calculateTotalPages(spawner.getVirtualInventory().getUsedSlots());
 
-                        Inventory inv = viewer.getOpenInventory().getTopInventory();
-                        if (inv != null && inv.getHolder(false) instanceof StoragePageHolder) {
-                            StoragePageHolder holder = (StoragePageHolder) inv.getHolder(false);
-                            int oldPages = storageUpdateService.calculateTotalPages(holder.getOldUsedSlots());
-                            int newPages = storageUpdateService.calculateTotalPages(spawner.getVirtualInventory().getUsedSlots());
-
-                            storageUpdateService.processStorageUpdateDirect(viewer, inv, spawner, holder, oldPages, newPages);
-                        }
-                    });
-                }
+                        storageUpdateService.processStorageUpdateDirect(viewer, inv, spawner, holder, oldPages, newPages);
+                    }
+                });
             }
         }
     }

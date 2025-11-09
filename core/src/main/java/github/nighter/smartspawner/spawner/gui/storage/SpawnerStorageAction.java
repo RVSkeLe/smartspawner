@@ -398,7 +398,7 @@ public class SpawnerStorageAction implements Listener {
     private void handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
         UUID playerId = player.getUniqueId();
         
-        // 1. Cooldown check - prevents spam clicking (500ms debounce)
+        // 1. Cooldown check - prevents spam clicking
         if (isDropOperationTooFrequent(playerId)) {
             return;
         }
