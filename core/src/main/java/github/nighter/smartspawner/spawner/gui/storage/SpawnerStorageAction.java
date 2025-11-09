@@ -64,7 +64,7 @@ public class SpawnerStorageAction implements Listener {
     // Storage GUI access cooldown system to prevent macro abuse
     private final Map<UUID, Long> storageAccessCooldowns = new ConcurrentHashMap<>();
     private static final long TRANSACTION_TIMEOUT_MS = 5000; // 5 seconds max per transaction
-    private static final long DROP_COOLDOWN_MS = 500; // 500ms cooldown between drops
+    private static final long DROP_COOLDOWN_MS = 150;
     private static final long STORAGE_ACCESS_COOLDOWN_MS = 500; // 500ms cooldown before re-accessing storage GUI
     private Random random = new Random();
     private GuiLayout layout;
@@ -104,14 +104,6 @@ public class SpawnerStorageAction implements Listener {
         }
 
         SpawnerData spawner = holder.getSpawnerData();
-        
-        // Validate spawner still exists - prevent exploits on broken spawners
-        if (!isSpawnerValid(spawner)) {
-            event.setCancelled(true);
-            player.closeInventory();
-            return;
-        }
-        
         int slot = event.getRawSlot();
 
         if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
@@ -208,33 +200,7 @@ public class SpawnerStorageAction implements Listener {
         if (!(event.getInventory().getHolder(false) instanceof StoragePageHolder holder)) {
             return;
         }
-        
-        // Validate spawner still exists
-        if (!isSpawnerValid(holder.getSpawnerData())) {
-            event.setCancelled(true);
-            if (event.getWhoClicked() instanceof Player player) {
-                player.closeInventory();
-            }
-            return;
-        }
-        
         event.setCancelled(true);
-    }
-
-    /**
-     * Validates that a spawner still exists in the manager.
-     * Prevents exploits when spawner is broken while GUI is open.
-     *
-     * @param spawner The spawner to validate
-     * @return true if spawner is valid, false otherwise
-     */
-    private boolean isSpawnerValid(SpawnerData spawner) {
-        if (spawner == null) {
-            return false;
-        }
-        
-        SpawnerData current = spawnerManager.getSpawnerById(spawner.getSpawnerId());
-        return current != null && current == spawner;
     }
 
     private boolean isControlSlot(int slot) {
@@ -273,14 +239,9 @@ public class SpawnerStorageAction implements Listener {
             messageService.sendMessage(player, "action_in_progress");
             return;
         }
-        
+
         try {
-            // 3. Validate spawner still exists (prevents exploit on broken spawners)
-            if (!isSpawnerValid(spawner)) {
-                player.closeInventory();
-                return;
-            }
-            
+
             // 4. Validate inventory is still open (prevents exploit on early close)
             if (!isPlayerInventoryOpen(player, inventory)) {
                 return;
@@ -452,12 +413,6 @@ public class SpawnerStorageAction implements Listener {
             // 3. Validate holder exists
             StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
             if (holder == null) {
-                return;
-            }
-
-            // 4. Validate spawner still exists (prevents exploit on broken spawners)
-            if (!isSpawnerValid(spawner)) {
-                player.closeInventory();
                 return;
             }
 
@@ -635,9 +590,9 @@ public class SpawnerStorageAction implements Listener {
                                 SpawnerData spawner, boolean singleItem) {
         UUID playerId = player.getUniqueId();
         
-        // 1. Cooldown check - prevents rapid click exploits (300ms debounce)
+        // 1. Cooldown check - prevents rapid click exploits (150ms debounce)
         // Note: This check is intentionally before transaction lock to avoid unnecessary locking
-        if (isClickTooFrequent(player)) {
+        if (isDropOperationTooFrequent(playerId)) {
             return;
         }
         
@@ -648,11 +603,6 @@ public class SpawnerStorageAction implements Listener {
         }
         
         try {
-            // 3. Validate spawner still exists (prevents exploit on broken spawners)
-            if (!isSpawnerValid(spawner)) {
-                player.closeInventory();
-                return;
-            }
             
             // 4. Validate inventory is still open (prevents exploit on early close)
             if (!isPlayerInventoryOpen(player, sourceInv)) {
@@ -1202,12 +1152,6 @@ public class SpawnerStorageAction implements Listener {
             }
 
             SpawnerData spawner = holder.getSpawnerData();
-            
-            // 4. Validate spawner still exists (prevents exploit on broken spawners)
-            if (!isSpawnerValid(spawner)) {
-                player.closeInventory();
-                return;
-            }
 
             // 5. Validate inventory is still open (prevents exploit on early close)
             if (!isPlayerInventoryOpen(player, sourceInventory)) {
