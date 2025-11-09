@@ -241,101 +241,182 @@ public class SpawnerStorageAction implements Listener {
         return layout != null && layout.isSlotUsed(slot);
     }
 
+    /**
+     * Handles dropping a single or full stack of items with comprehensive dupe prevention.
+     * 
+     * Security measures implemented:
+     * 1. Transaction locking to prevent concurrent operations
+     * 2. Pre-drop validation of items in VirtualInventory
+     * 3. Atomic operation: VirtualInventory update BEFORE item drop
+     * 4. Spawner existence validation
+     * 5. Inventory open state validation
+     * 6. Cooldown enforcement to prevent rapid drop exploits
+     * 
+     * @param player The player dropping items
+     * @param spawner The spawner data
+     * @param inventory The storage inventory
+     * @param slot The slot being dropped
+     * @param item The item stack in the slot
+     * @param dropStack True to drop entire stack, false to drop one item
+     */
     private void handleItemDrop(Player player, SpawnerData spawner, Inventory inventory,
                                 int slot, ItemStack item, boolean dropStack) {
-        int amountToDrop = dropStack ? item.getAmount() : 1;
-
-        ItemStack droppedItem = item.clone();
-        droppedItem.setAmount(Math.min(amountToDrop, item.getAmount()));
-
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
-        List<ItemStack> itemsToRemove = new ArrayList<>();
-        itemsToRemove.add(droppedItem);
-        spawner.removeItemsAndUpdateSellValue(itemsToRemove);
-
-        int remaining = item.getAmount() - amountToDrop;
-        if (remaining <= 0) {
-            inventory.setItem(slot, null);
-        } else {
-            ItemStack remainingItem = item.clone();
-            remainingItem.setAmount(remaining);
-            inventory.setItem(slot, remainingItem);
-        }
-
-        Location playerLoc = player.getLocation();
-        World world = player.getWorld();
-        UUID playerUUID = player.getUniqueId();
-
-        double yaw = Math.toRadians(playerLoc.getYaw());
-        double pitch = Math.toRadians(playerLoc.getPitch());
-
-        double sinYaw = -Math.sin(yaw);
-        double cosYaw = Math.cos(yaw);
-        double cosPitch = Math.cos(pitch);
-        double sinPitch = -Math.sin(pitch);
-
-        Location dropLocation = playerLoc.clone();
-        dropLocation.add(sinYaw * 0.3, 1.2, cosYaw * 0.3);
-        Item droppedItemWorld = world.dropItem(dropLocation, droppedItem, drop -> {
-            drop.setThrower(playerUUID);
-            drop.setPickupDelay(40);
-        });
-
-        Vector velocity = new Vector(
-                sinYaw * cosPitch * 0.3 + (random.nextDouble() - 0.5) * 0.1,
-                sinPitch * 0.3 + 0.1 + (random.nextDouble() - 0.5) * 0.1,
-                cosYaw * cosPitch * 0.3 + (random.nextDouble() - 0.5) * 0.1
-        );
-        droppedItemWorld.setVelocity(velocity);
+        UUID playerId = player.getUniqueId();
         
-        // Log item drop action
-        if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_DROP, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("item_type", droppedItem.getType().name())
-                    .metadata("amount_dropped", droppedItem.getAmount())
-                    .metadata("drop_stack", dropStack)
-            );
+        // 1. Cooldown check - prevents rapid drop exploits (500ms debounce)
+        if (isDropOperationTooFrequent(playerId)) {
+            return;
         }
-
-        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
-
-        spawner.updateHologramData();
-
-        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
-        if (holder != null) {
-            // Only recalculate and update title if page count might have changed
-            // This optimization avoids expensive operations on every single item drop
-            int oldTotalPages = holder.getTotalPages();
-            int newTotalPages = calculateTotalPages(spawner);
+        
+        // 2. Transaction lock - prevent concurrent drop operations per player
+        if (!acquireDropTransaction(playerId)) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
+        }
+        
+        try {
+            // 3. Validate spawner still exists (prevents exploit on broken spawners)
+            if (!isSpawnerValid(spawner)) {
+                player.closeInventory();
+                return;
+            }
             
-            if (oldTotalPages != newTotalPages) {
-                // Page count changed - update holder and title
-                int currentPage = holder.getCurrentPage();
-                int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+            // 4. Validate inventory is still open (prevents exploit on early close)
+            if (!isPlayerInventoryOpen(player, inventory)) {
+                return;
+            }
+            
+            // 5. Re-validate item still exists in GUI slot
+            ItemStack currentItem = inventory.getItem(slot);
+            if (currentItem == null || currentItem.getType() == Material.AIR || !currentItem.isSimilar(item)) {
+                return;
+            }
+            
+            int amountToDrop = dropStack ? item.getAmount() : 1;
+            
+            // 6. Create dropped item and validate
+            ItemStack droppedItem = item.clone();
+            droppedItem.setAmount(Math.min(amountToDrop, item.getAmount()));
+            
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+            List<ItemStack> itemsToRemove = new ArrayList<>();
+            itemsToRemove.add(droppedItem);
+            
+            // 7. PRE-DROP VALIDATION: Verify items actually exist in VirtualInventory
+            if (!validateItemsExistInVirtualInventory(itemsToRemove, virtualInv)) {
+                messageService.sendMessage(player, "items_not_available");
+                // Refresh display to show actual inventory state
+                StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+                if (holder != null) {
+                    updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+                }
+                return;
+            }
+            
+            // 8. CRITICAL: Remove from VirtualInventory FIRST (atomic operation)
+            boolean removalSuccess = spawner.removeItemsAndUpdateSellValue(itemsToRemove);
+            
+            if (!removalSuccess) {
+                // Removal failed - items don't exist in VirtualInventory
+                messageService.sendMessage(player, "drop_failed");
+                // Refresh display to show actual inventory state
+                StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+                if (holder != null) {
+                    updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
+                }
+                return;
+            }
+            
+            // 9. Update GUI display AFTER successful VirtualInventory update
+            int remaining = item.getAmount() - amountToDrop;
+            if (remaining <= 0) {
+                inventory.setItem(slot, null);
+            } else {
+                ItemStack remainingItem = item.clone();
+                remainingItem.setAmount(remaining);
+                inventory.setItem(slot, remainingItem);
+            }
+            
+            // 10. Drop items in world (only after VirtualInventory confirmed removal)
+            Location playerLoc = player.getLocation();
+            World world = player.getWorld();
+            UUID playerUUID = player.getUniqueId();
+            
+            double yaw = Math.toRadians(playerLoc.getYaw());
+            double pitch = Math.toRadians(playerLoc.getPitch());
+            
+            double sinYaw = -Math.sin(yaw);
+            double cosYaw = Math.cos(yaw);
+            double cosPitch = Math.cos(pitch);
+            double sinPitch = -Math.sin(pitch);
+            
+            Location dropLocation = playerLoc.clone();
+            dropLocation.add(sinYaw * 0.3, 1.2, cosYaw * 0.3);
+            Item droppedItemWorld = world.dropItem(dropLocation, droppedItem, drop -> {
+                drop.setThrower(playerUUID);
+                drop.setPickupDelay(40);
+            });
+            
+            Vector velocity = new Vector(
+                    sinYaw * cosPitch * 0.3 + (random.nextDouble() - 0.5) * 0.1,
+                    sinPitch * 0.3 + 0.1 + (random.nextDouble() - 0.5) * 0.1,
+                    cosYaw * cosPitch * 0.3 + (random.nextDouble() - 0.5) * 0.1
+            );
+            droppedItemWorld.setVelocity(velocity);
+            
+            // 11. Log item drop action for audit trail
+            if (plugin.getSpawnerActionLogger() != null) {
+                plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_DROP, builder -> 
+                    builder.player(player.getName(), player.getUniqueId())
+                        .location(spawner.getSpawnerLocation())
+                        .entityType(spawner.getEntityType())
+                        .metadata("item_type", droppedItem.getType().name())
+                        .metadata("amount_dropped", droppedItem.getAmount())
+                        .metadata("drop_stack", dropStack)
+                );
+            }
+            
+            // 12. Provide feedback
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
+            
+            // 13. Update spawner state and notify other viewers
+            spawner.updateHologramData();
+            
+            StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+            if (holder != null) {
+                // Only recalculate and update title if page count might have changed
+                int oldTotalPages = holder.getTotalPages();
+                int newTotalPages = calculateTotalPages(spawner);
                 
-                holder.setTotalPages(newTotalPages);
-                if (adjustedPage != currentPage) {
-                    holder.setCurrentPage(adjustedPage);
+                if (oldTotalPages != newTotalPages) {
+                    // Page count changed - update holder and title
+                    int currentPage = holder.getCurrentPage();
+                    int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+                    
+                    holder.setTotalPages(newTotalPages);
+                    if (adjustedPage != currentPage) {
+                        holder.setCurrentPage(adjustedPage);
+                    }
+                    
+                    // Update the inventory title to reflect new page count
+                    updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
                 }
                 
-                // Update the inventory title to reflect new page count
-                updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
+                // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+                holder.updateOldUsedSlots();
+                spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+                
+                if (!spawner.isInteracted()) {
+                    spawner.markInteracted();
+                }
+                if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
+                    spawner.setIsAtCapacity(false);
+                }
             }
             
-            // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
-            // This ensures other viewers get the correct page calculation
-            holder.updateOldUsedSlots();
-            
-            spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
-            if (!spawner.isInteracted()) {
-                spawner.markInteracted();
-            }
-            if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
-                spawner.setIsAtCapacity(false);
-            }
+        } finally {
+            // 14. ALWAYS release transaction lock (prevents deadlocks)
+            releaseDropTransaction(playerId);
         }
     }
 
@@ -532,57 +613,165 @@ public class SpawnerStorageAction implements Listener {
         filterConfigUI.openFilterConfigGUI(player, spawner);
     }
 
+    /**
+     * Handles taking a single or full stack of items from storage with comprehensive dupe prevention.
+     * 
+     * Security measures implemented:
+     * 1. Transaction locking to prevent concurrent operations
+     * 2. Pre-operation validation of items in VirtualInventory
+     * 3. Atomic operation: VirtualInventory update BEFORE GUI/player inventory modification
+     * 4. Spawner existence validation
+     * 5. Inventory open state validation
+     * 6. Cooldown enforcement to prevent rapid click exploits
+     * 
+     * @param player The player taking items
+     * @param sourceInv The storage inventory
+     * @param slot The slot being clicked
+     * @param item The item stack in the slot
+     * @param spawner The spawner data
+     * @param singleItem True to take 1 item, false to take entire stack
+     */
     private void takeSingleItem(Player player, Inventory sourceInv, int slot, ItemStack item,
                                 SpawnerData spawner, boolean singleItem) {
-        PlayerInventory playerInv = player.getInventory();
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
-
-        ItemMoveResult result = ItemMoveHelper.moveItems(
-                item,
-                singleItem ? 1 : item.getAmount(),
-                playerInv,
-                virtualInv
-        );
-        if (result.getAmountMoved() > 0) {
-            updateInventorySlot(sourceInv, slot, item, result.getAmountMoved());
-            spawner.removeItemsAndUpdateSellValue(result.getMovedItems());
-            player.updateInventory();
-
-            spawner.updateHologramData();
-
-            StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
-            if (holder != null) {
-                // Only recalculate and update title if page count might have changed
-                // This optimization avoids expensive operations on every single item take
-                int oldTotalPages = holder.getTotalPages();
-                int newTotalPages = calculateTotalPages(spawner);
-                
-                if (oldTotalPages != newTotalPages) {
-                    // Page count changed - update holder and title
-                    int currentPage = holder.getCurrentPage();
-                    int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
-                    
-                    holder.setTotalPages(newTotalPages);
-                    if (adjustedPage != currentPage) {
-                        holder.setCurrentPage(adjustedPage);
-                    }
-                    
-                    // Update the inventory title to reflect new page count
-                    updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
+        UUID playerId = player.getUniqueId();
+        
+        // 1. Cooldown check - prevents rapid click exploits (300ms debounce)
+        // Note: This check is intentionally before transaction lock to avoid unnecessary locking
+        if (isClickTooFrequent(player)) {
+            return;
+        }
+        
+        // 2. Transaction lock - prevent concurrent take operations per player
+        if (!acquireDropTransaction(playerId)) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
+        }
+        
+        try {
+            // 3. Validate spawner still exists (prevents exploit on broken spawners)
+            if (!isSpawnerValid(spawner)) {
+                player.closeInventory();
+                return;
+            }
+            
+            // 4. Validate inventory is still open (prevents exploit on early close)
+            if (!isPlayerInventoryOpen(player, sourceInv)) {
+                return;
+            }
+            
+            // 5. Re-validate item still exists in GUI slot (could have been taken by another viewer)
+            ItemStack currentItem = sourceInv.getItem(slot);
+            if (currentItem == null || currentItem.getType() == Material.AIR || !currentItem.isSimilar(item)) {
+                return;
+            }
+            
+            PlayerInventory playerInv = player.getInventory();
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+            
+            int amountToTake = singleItem ? 1 : item.getAmount();
+            
+            // 6. PRE-OPERATION VALIDATION: Create list of items to remove and verify they exist
+            List<ItemStack> itemsToRemove = new ArrayList<>();
+            ItemStack itemToRemove = item.clone();
+            itemToRemove.setAmount(amountToTake);
+            itemsToRemove.add(itemToRemove);
+            
+            if (!validateItemsExistInVirtualInventory(itemsToRemove, virtualInv)) {
+                messageService.sendMessage(player, "items_not_available");
+                // Refresh display to show actual inventory state
+                StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
+                if (holder != null) {
+                    updatePageContent(player, spawner, holder.getCurrentPage(), sourceInv, false);
                 }
-                
-                // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
-                // This ensures other viewers get the correct page calculation
-                holder.updateOldUsedSlots();
-                
-                spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
-
-                if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
-                    spawner.setIsAtCapacity(false);
+                return;
+            }
+            
+            // 7. CRITICAL: Remove from VirtualInventory FIRST (atomic operation)
+            // This is the key security fix - VirtualInventory must update before items are transferred
+            boolean removalSuccess = spawner.removeItemsAndUpdateSellValue(itemsToRemove);
+            
+            if (!removalSuccess) {
+                // Removal failed - items don't exist in VirtualInventory
+                messageService.sendMessage(player, "take_failed");
+                // Refresh display to show actual inventory state
+                StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
+                if (holder != null) {
+                    updatePageContent(player, spawner, holder.getCurrentPage(), sourceInv, false);
+                }
+                return;
+            }
+            
+            // 8. Now attempt to transfer items to player inventory (after VirtualInventory confirmed removal)
+            ItemMoveResult result = ItemMoveHelper.moveItems(
+                    item,
+                    amountToTake,
+                    playerInv,
+                    virtualInv  // Note: virtualInv is passed but not modified by moveItems
+            );
+            
+            // 9. If player inventory is full, we need to add items back to VirtualInventory
+            if (result.getAmountMoved() < amountToTake) {
+                // Player couldn't take all items - return the difference to VirtualInventory
+                int amountNotMoved = amountToTake - result.getAmountMoved();
+                if (amountNotMoved > 0) {
+                    ItemStack itemToReturn = item.clone();
+                    itemToReturn.setAmount(amountNotMoved);
+                    List<ItemStack> itemsToReturn = new ArrayList<>();
+                    itemsToReturn.add(itemToReturn);
+                    virtualInv.addItems(itemsToReturn);
+                    
+                    // Adjust the items we actually moved
+                    itemsToRemove.clear();
+                    if (result.getAmountMoved() > 0) {
+                        ItemStack actuallyMoved = item.clone();
+                        actuallyMoved.setAmount(result.getAmountMoved());
+                        itemsToRemove.add(actuallyMoved);
+                    }
                 }
             }
-        } else {
-            messageService.sendMessage(player, "inventory_full");
+            
+            // 10. Update GUI display AFTER VirtualInventory has been updated
+            if (result.getAmountMoved() > 0) {
+                updateInventorySlot(sourceInv, slot, item, result.getAmountMoved());
+                player.updateInventory();
+                spawner.updateHologramData();
+                
+                StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
+                if (holder != null) {
+                    // Only recalculate and update title if page count might have changed
+                    int oldTotalPages = holder.getTotalPages();
+                    int newTotalPages = calculateTotalPages(spawner);
+                    
+                    if (oldTotalPages != newTotalPages) {
+                        // Page count changed - update holder and title
+                        int currentPage = holder.getCurrentPage();
+                        int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+                        
+                        holder.setTotalPages(newTotalPages);
+                        if (adjustedPage != currentPage) {
+                            holder.setCurrentPage(adjustedPage);
+                        }
+                        
+                        // Update the inventory title to reflect new page count
+                        updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
+                    }
+                    
+                    // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+                    holder.updateOldUsedSlots();
+                    spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+                    
+                    if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
+                        spawner.setIsAtCapacity(false);
+                    }
+                }
+            } else {
+                // Nothing was moved - show inventory full message
+                messageService.sendMessage(player, "inventory_full");
+            }
+            
+        } finally {
+            // 11. ALWAYS release transaction lock (prevents deadlocks)
+            releaseDropTransaction(playerId);
         }
     }
 
