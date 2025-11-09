@@ -346,9 +346,8 @@ public class SpawnerStorageAction implements Listener {
      * 1. Transaction locking to prevent concurrent operations
      * 2. Pre-drop validation of items in VirtualInventory
      * 3. Atomic operation: VirtualInventory update BEFORE item drop
-     * 4. Rollback mechanism if VirtualInventory update fails
-     * 5. Post-drop verification
-     * 6. Edge case handling for disconnects, lag, and rapid clicks
+     * 4. Post-drop verification
+     * 5. Edge case handling for disconnects, lag, and rapid clicks
      * 
      * @param player The player dropping items
      * @param spawner The spawner data
@@ -430,17 +429,7 @@ public class SpawnerStorageAction implements Listener {
                 return;
             }
 
-            // 9. Validate inventory still open after VirtualInventory update
-            // Player may have closed inventory during the update
-            if (!isPlayerInventoryOpen(player, inventory)) {
-                // Rollback: Items removed from VirtualInventory but inventory closed
-                // Re-add items to VirtualInventory using addItems() (VirtualInventory.java line 135)
-                // This ensures items are not lost and prevents duplication
-                virtualInv.addItems(pageItems);
-                return;
-            }
-
-            // 10. Clear GUI display AFTER successful VirtualInventory update
+            // 9. Clear GUI display AFTER successful VirtualInventory update
             for (int i = 0; i < STORAGE_SLOTS; i++) {
                 ItemStack item = inventory.getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
@@ -448,10 +437,10 @@ public class SpawnerStorageAction implements Listener {
                 }
             }
 
-            // 11. Drop items in world (only after VirtualInventory confirmed removal)
+            // 10. Drop items in world (only after VirtualInventory confirmed removal)
             dropItemsInDirection(player, pageItems);
 
-            // 12. Update page metadata and GUI
+            // 11. Update page metadata and GUI
             int newTotalPages = calculateTotalPages(spawner);
             int adjustedPage = holder.getCurrentPage();
             if (adjustedPage > newTotalPages) {
@@ -470,7 +459,7 @@ public class SpawnerStorageAction implements Listener {
             lootManager.updateDisplay(inventory, spawner, finalPage, newTotalPages);
             updateInventoryTitle(player, inventory, spawner, finalPage, newTotalPages);
 
-            // 13. Update spawner state and notify other viewers
+            // 12. Update spawner state and notify other viewers
             spawner.updateHologramData();
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
@@ -481,7 +470,7 @@ public class SpawnerStorageAction implements Listener {
                 spawner.markInteracted();
             }
 
-            // 14. Log successful drop operation
+            // 13. Log successful drop operation
             if (plugin.getSpawnerActionLogger() != null) {
                 plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DROP_PAGE_ITEMS, builder -> 
                     builder.player(player.getName(), player.getUniqueId())
@@ -492,11 +481,11 @@ public class SpawnerStorageAction implements Listener {
                 );
             }
 
-            // 15. Provide feedback
+            // 14. Provide feedback
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.8f, 0.8f);
 
         } finally {
-            // 16. ALWAYS release transaction lock (prevents deadlocks)
+            // 15. ALWAYS release transaction lock (prevents deadlocks)
             releaseDropTransaction(playerId);
         }
     }
@@ -996,10 +985,9 @@ public class SpawnerStorageAction implements Listener {
      * 1. Transaction locking to prevent concurrent operations
      * 2. Pre-operation validation of items in VirtualInventory
      * 3. Atomic operation: VirtualInventory update BEFORE player inventory modification
-     * 4. Rollback mechanism if player inventory cannot accept items
-     * 5. Post-operation verification
-     * 6. Edge case handling for disconnects, lag, and rapid clicks
-     * 7. Region-aware scheduling for Folia compatibility
+     * 4. Post-operation verification
+     * 5. Edge case handling for disconnects, lag, and rapid clicks
+     * 6. Region-aware scheduling for Folia compatibility
      * 
      * @param player The player taking items
      * @param sourceInventory The storage inventory
@@ -1080,16 +1068,7 @@ public class SpawnerStorageAction implements Listener {
                 return;
             }
 
-            // 9. Validate inventory still open after VirtualInventory update
-            // Player may have closed inventory during the update
-            if (!isPlayerInventoryOpen(player, sourceInventory)) {
-                // Rollback: Items removed from VirtualInventory but inventory closed
-                // Re-add items to VirtualInventory to prevent item loss
-                virtualInv.addItems(itemsToTransfer);
-                return;
-            }
-
-            // 10. Now transfer items to player inventory (after VirtualInventory confirmed removal)
+            // 9. Now transfer items to player inventory (after VirtualInventory confirmed removal)
             // Use region-locked task for cross-region safety in Folia
             Location spawnerLoc = spawner.getSpawnerLocation();
             final int itemsBeforeTransfer = totalItemCount;
@@ -1104,7 +1083,7 @@ public class SpawnerStorageAction implements Listener {
                 
                 TransferResult result = transferItemsSecure(player, sourceInventory, sourceItems, virtualInv);
                 
-                // 11. Handle partial transfers with rollback
+                // 10. Handle partial transfers with rollback
                 if (result.totalMoved < itemsBeforeTransfer) {
                     // Some items couldn't fit - return the remainder to VirtualInventory
                     List<ItemStack> itemsNotMoved = new ArrayList<>();
@@ -1119,7 +1098,7 @@ public class SpawnerStorageAction implements Listener {
                     }
                 }
                 
-                // 12. Send feedback to player
+                // 11. Send feedback to player
                 sendTransferMessage(player, result);
                 player.updateInventory();
 
