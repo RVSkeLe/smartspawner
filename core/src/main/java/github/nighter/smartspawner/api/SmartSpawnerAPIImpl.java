@@ -2,6 +2,7 @@ package github.nighter.smartspawner.api;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
+import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.EntityType;
@@ -30,6 +31,26 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
     @Override
     public ItemStack createSpawnerItem(EntityType entityType, int amount) {
         return itemFactory.createSmartSpawnerItem(entityType, amount);
+    }
+
+    @Override
+    public ItemStack createVanillaSpawnerItem(EntityType entityType) {
+        return itemFactory.createVanillaSpawnerItem(entityType);
+    }
+
+    @Override
+    public ItemStack createVanillaSpawnerItem(EntityType entityType, int amount) {
+        return itemFactory.createVanillaSpawnerItem(entityType, amount);
+    }
+
+    @Override
+    public ItemStack createItemSpawnerItem(Material itemMaterial) {
+        return itemFactory.createItemSpawnerItem(itemMaterial);
+    }
+
+    @Override
+    public ItemStack createItemSpawnerItem(Material itemMaterial, int amount) {
+        return itemFactory.createItemSpawnerItem(itemMaterial, amount);
     }
 
     @Override
