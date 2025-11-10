@@ -88,7 +88,6 @@ public class SpawnerBreakListener implements Listener {
 
         if (spawner != null) {
             handleSmartSpawnerBreak(block, spawner, player);
-            plugin.getRangeChecker().deactivateSpawner(spawner);
         } else {
             CreatureSpawner creatureSpawner = (CreatureSpawner) block.getState(false);
             if(callAPIEvent(player, block.getLocation(), 1)) {
@@ -286,7 +285,7 @@ public class SpawnerBreakListener implements Listener {
         block.setType(Material.AIR);
 
         String spawnerId = spawner.getSpawnerId();
-
+        plugin.getRangeChecker().deactivateSpawner(spawner);
         spawnerManager.removeSpawner(spawnerId);
         spawnerFileHandler.markSpawnerDeleted(spawnerId);
     }
