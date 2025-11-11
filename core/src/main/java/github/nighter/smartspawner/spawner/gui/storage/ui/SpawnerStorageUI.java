@@ -172,6 +172,13 @@ public class SpawnerStorageUI {
     }
 
     public void updateDisplay(Inventory inventory, SpawnerData spawner, int page, int totalPages) {
+        if (!spawner.getInventoryLock().tryLock()) {
+            if (plugin.isDebugMode()) {
+                plugin.debug("Skipping GUI update - inventory operation in progress for spawner " + spawner.getSpawnerId());
+            }
+            return;
+        }
+
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);
         }
@@ -223,27 +230,31 @@ public class SpawnerStorageUI {
 
     private void addPageItems(Map<Integer, ItemStack> updates, Set<Integer> slotsToEmpty,
                               SpawnerData spawner, int page) {
-        // Get display items directly from virtual inventory
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
-        Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
+        try {
+            // Get display items directly from VirtualInventory (source of truth)
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+            Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
 
-        if (displayItems.isEmpty()) {
-            return;
-        }
-
-        // Calculate start index for current page
-        int startIndex = (page - 1) * StoragePageHolder.MAX_ITEMS_PER_PAGE;
-
-        // Add items for this page
-        for (Map.Entry<Integer, ItemStack> entry : displayItems.entrySet()) {
-            int globalIndex = entry.getKey();
-
-            // Check if item belongs on this page
-            if (globalIndex >= startIndex && globalIndex < startIndex + StoragePageHolder.MAX_ITEMS_PER_PAGE) {
-                int displaySlot = globalIndex - startIndex;
-                updates.put(displaySlot, entry.getValue());
-                slotsToEmpty.remove(displaySlot);
+            if (displayItems.isEmpty()) {
+                return;
             }
+
+            // Calculate start index for current page
+            int startIndex = (page - 1) * StoragePageHolder.MAX_ITEMS_PER_PAGE;
+
+            // Add items for this page
+            for (Map.Entry<Integer, ItemStack> entry : displayItems.entrySet()) {
+                int globalIndex = entry.getKey();
+
+                // Check if item belongs on this page
+                if (globalIndex >= startIndex && globalIndex < startIndex + StoragePageHolder.MAX_ITEMS_PER_PAGE) {
+                    int displaySlot = globalIndex - startIndex;
+                    updates.put(displaySlot, entry.getValue());
+                    slotsToEmpty.remove(displaySlot);
+                }
+            }
+        } finally {
+            spawner.getInventoryLock().unlock();
         }
     }
 

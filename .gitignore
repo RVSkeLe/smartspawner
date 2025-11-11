@@ -64,17 +64,6 @@ local.properties
 .factorypath
 
 ##############################
-## NetBeans
-##############################
-nbproject/private/
-build/
-nbbuild/
-dist/
-nbdist/
-nbactions.xml
-nb-configuration.xml
-
-##############################
 ## Visual Studio Code
 ##############################
 .vscode/
@@ -91,3 +80,4 @@ nb-configuration.xml
 *.log
 javac.*.args
 *.backup
+LOCK_STRATEGY.md

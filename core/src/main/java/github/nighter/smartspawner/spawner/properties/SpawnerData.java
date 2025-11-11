@@ -637,6 +637,7 @@ public class SpawnerData {
     /**
      * Adds items to virtual inventory and updates accumulated sell value
      * This is the preferred method to add items to maintain accurate sell value cache
+     * THREAD-SAFE: Uses inventoryLock to ensure atomicity
      * @param items Items to add
      */
     public void addItemsAndUpdateSellValue(List<ItemStack> items) {
@@ -644,26 +645,33 @@ public class SpawnerData {
             return;
         }
 
-        // Consolidate items being added for efficient price lookup
-        Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
-        for (ItemStack item : items) {
-            if (item == null || item.getAmount() <= 0) continue;
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
-            itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
-        }
+        // CRITICAL: Acquire inventoryLock to ensure VirtualInventory remains source of truth
+        inventoryLock.lock();
+        try {
+            // Consolidate items being added for efficient price lookup
+            Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
+            for (ItemStack item : items) {
+                if (item == null || item.getAmount() <= 0) continue;
+                VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+                itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
+            }
 
-        // Add to inventory
-        virtualInventory.addItems(items);
+            // Add to VirtualInventory (source of truth) - this operation is atomic within the lock
+            virtualInventory.addItems(items);
 
-        // Update sell value
-        if (!sellValueDirty) {
-            Map<String, Double> priceCache = createPriceCache();
-            incrementSellValue(itemsToAdd, priceCache);
+            // Update sell value atomically
+            if (!sellValueDirty) {
+                Map<String, Double> priceCache = createPriceCache();
+                incrementSellValue(itemsToAdd, priceCache);
+            }
+        } finally {
+            inventoryLock.unlock();
         }
     }
 
     /**
      * Removes items from virtual inventory and updates accumulated sell value
+     * THREAD-SAFE: Uses inventoryLock to ensure atomicity
      * @param items Items to remove
      * @return true if items were removed successfully
      */
@@ -672,16 +680,22 @@ public class SpawnerData {
             return true;
         }
 
-        // Remove from inventory
-        boolean removed = virtualInventory.removeItems(items);
+        // CRITICAL: Acquire inventoryLock to ensure VirtualInventory remains source of truth
+        inventoryLock.lock();
+        try {
+            // Remove from VirtualInventory (source of truth) - atomic operation within lock
+            boolean removed = virtualInventory.removeItems(items);
 
-        // Update sell value if removal was successful
-        if (removed && !sellValueDirty) {
-            Map<String, Double> priceCache = createPriceCache();
-            decrementSellValue(items, priceCache);
+            // Update sell value atomically if removal was successful
+            if (removed && !sellValueDirty) {
+                Map<String, Double> priceCache = createPriceCache();
+                decrementSellValue(items, priceCache);
+            }
+
+            return removed;
+        } finally {
+            inventoryLock.unlock();
         }
-
-        return removed;
     }
     
     public synchronized void storePreGeneratedLoot(List<ItemStack> items, int experience) {

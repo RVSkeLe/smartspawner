@@ -54,6 +54,7 @@ import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.updates.LanguageUpdater;
 import github.nighter.smartspawner.updates.UpdateChecker;
 import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -109,6 +110,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerFileHandler spawnerFileHandler;
     private SpawnerManager spawnerManager;
     private HopperHandler hopperHandler;
+    private SpawnerLocationLockManager spawnerLocationLockManager;
 
     // Event handlers and utilities
     private NaturalSpawnerListener naturalSpawnerListener;
@@ -264,6 +266,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void initializeCoreComponents() {
         this.spawnerFileHandler = new SpawnerFileHandler(this);
         this.spawnerManager = new SpawnerManager(this);
+        this.spawnerLocationLockManager = new SpawnerLocationLockManager(this);
         this.spawnerManager.reloadAllHolograms();
         this.guiLayoutConfig = new GuiLayoutConfig(this);
         this.spawnerStorageUI = new SpawnerStorageUI(this);

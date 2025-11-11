@@ -97,40 +97,57 @@ public class SpawnerStorageAction implements Listener {
         SpawnerData spawner = holder.getSpawnerData();
         int slot = event.getRawSlot();
 
-        if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
-                event.getAction() == InventoryAction.DROP_ALL_SLOT) {
-
-            if (slot >= 0 && slot < STORAGE_SLOTS) {
-                ItemStack clickedItem = event.getCurrentItem();
-                if (clickedItem != null && clickedItem.getType() != Material.AIR) {
-                    event.setCancelled(true);
-
-                    boolean dropStack = event.getAction() == InventoryAction.DROP_ALL_SLOT;
-                    handleItemDrop(player, spawner, event.getInventory(), slot, clickedItem, dropStack);
-                    return;
-                }
-            }
-        }
-
+        // Cancel event immediately to prevent any vanilla behavior
         event.setCancelled(true);
 
-        if (slot < 0 || slot >= INVENTORY_SIZE) {
+        // CRITICAL: Check if inventoryLock is available before ANY operation
+        if (!tryAcquireInventoryLock(spawner, player)) {
             return;
         }
 
-        if (isControlSlot(slot)) {
-            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
-            return;
-        }
+        try {
+            // Verify GUI is still valid and synced
+            if (!isGuiSyncValid(player, holder, spawner)) {
+                player.closeInventory();
+                return;
+            }
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType() == Material.AIR) {
-            return;
-        }
+            if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
+                    event.getAction() == InventoryAction.DROP_ALL_SLOT) {
 
-        ItemClickHandler handler = clickHandlers.get(event.getClick());
-        if (handler != null) {
-            handler.handle(player, event.getInventory(), slot, clickedItem, spawner);
+                if (slot >= 0 && slot < STORAGE_SLOTS) {
+                    ItemStack clickedItem = event.getCurrentItem();
+                    if (clickedItem != null && clickedItem.getType() != Material.AIR) {
+                        boolean dropStack = event.getAction() == InventoryAction.DROP_ALL_SLOT;
+                        handleItemDrop(player, spawner, event.getInventory(), slot, clickedItem, dropStack);
+                        return;
+                    }
+                }
+            }
+
+            if (slot < 0 || slot >= INVENTORY_SIZE) {
+                return;
+            }
+
+            if (isControlSlot(slot)) {
+                handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
+                return;
+            }
+
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem == null || clickedItem.getType() == Material.AIR) {
+                return;
+            }
+
+            ItemClickHandler handler = clickHandlers.get(event.getClick());
+            if (handler != null) {
+                handler.handle(player, event.getInventory(), slot, clickedItem, spawner);
+            }
+        } finally {
+            // CRITICAL: Always release locks in reverse order (LIFO - Last In First Out)
+            // This matches the acquisition order and prevents deadlock
+            spawner.getInventoryLock().unlock();
+            spawner.getLootGenerationLock().unlock();
         }
     }
 
@@ -189,14 +206,113 @@ public class SpawnerStorageAction implements Listener {
         return layout != null && layout.isSlotUsed(slot);
     }
 
+    /**
+     * Try to acquire both lootGenerationLock and inventoryLock with timeout to prevent deadlock.
+     * CRITICAL: Must acquire locks in consistent order to prevent deadlock:
+     * 1. lootGenerationLock (to ensure no loot is being added)
+     * 2. inventoryLock (to ensure VirtualInventory consistency)
+     *
+     * @return true if both locks acquired, false otherwise
+     */
+    private boolean tryAcquireInventoryLock(SpawnerData spawner, Player player) {
+        try {
+            // STEP 1: Try to acquire lootGenerationLock first
+            // This ensures no loot is currently being generated/added to VirtualInventory
+            if (!spawner.getLootGenerationLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                // Loot generation is in progress - must wait for it to complete
+                return false;
+            }
+
+            // STEP 2: Try to acquire inventoryLock
+            try {
+                if (!spawner.getInventoryLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    // Release lootGenerationLock before returning
+                    spawner.getLootGenerationLock().unlock();
+                    return false;
+                }
+            } catch (InterruptedException e) {
+                // Failed to acquire inventoryLock - release lootGenerationLock
+                spawner.getLootGenerationLock().unlock();
+                Thread.currentThread().interrupt();
+                return false;
+            }
+
+            // Both locks acquired successfully
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    /**
+     * Validate that GUI is properly synced with VirtualInventory (source of truth).
+     * This prevents race conditions where GUI shows stale data.
+     *
+     * CRITICAL: This is called AFTER acquiring lootGenerationLock, which ensures:
+     * 1. No loot is currently being added to VirtualInventory
+     * 2. Any pending loot generation has completed
+     * 3. GUI updates from loot generation have been dispatched
+     */
+    private boolean isGuiSyncValid(Player player, StoragePageHolder holder, SpawnerData spawner) {
+        // Verify holder belongs to this spawner
+        if (!holder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
+            plugin.getLogger().warning("GUI sync error: holder spawner mismatch for player " + player.getName());
+            return false;
+        }
+
+        // Verify current inventory matches holder
+        Inventory currentInv = player.getOpenInventory().getTopInventory();
+        if (!(currentInv.getHolder(false) instanceof StoragePageHolder currentHolder)) {
+            return false;
+        }
+
+        if (!currentHolder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
+            return false;
+        }
+
+        // Verify that holder's cached state matches VirtualInventory
+        // This ensures GUI has been updated with latest loot generation
+        int actualUsedSlots = spawner.getVirtualInventory().getUsedSlots();
+        int cachedUsedSlots = holder.getOldUsedSlots();
+
+        // If there's a significant difference, GUI is out of sync
+        // Allow small differences due to concurrent operations
+        if (Math.abs(actualUsedSlots - cachedUsedSlots) > StoragePageHolder.MAX_ITEMS_PER_PAGE) {
+            if (plugin.isDebugMode()) {
+                plugin.debug("GUI out of sync for player " + player.getName() +
+                           ": actual=" + actualUsedSlots + ", cached=" + cachedUsedSlots);
+            }
+            // Trigger a refresh from VirtualInventory
+            refreshGuiFromVirtualInventory(player, spawner, currentInv);
+            return false;
+        }
+
+        // All validations passed - GUI is synced with VirtualInventory (source of truth)
+        return true;
+    }
+
     private void handleItemDrop(Player player, SpawnerData spawner, Inventory inventory,
                                 int slot, ItemStack item, boolean dropStack) {
+        // Note: Lock is already held by caller (onInventoryClick)
+
+        // CRITICAL: Verify item in slot matches what VirtualInventory expects
+        ItemStack actualItem = inventory.getItem(slot);
+        if (actualItem == null || !actualItem.isSimilar(item) || actualItem.getAmount() != item.getAmount()) {
+            // Desync detected - refresh GUI from VirtualInventory (source of truth)
+            plugin.getLogger().warning("Item desync detected in slot " + slot + " for player " + player.getName());
+            refreshGuiFromVirtualInventory(player, spawner, inventory);
+            return;
+        }
+
         int amountToDrop = dropStack ? item.getAmount() : 1;
 
         ItemStack droppedItem = item.clone();
         droppedItem.setAmount(Math.min(amountToDrop, item.getAmount()));
         List<ItemStack> itemsToRemove = new ArrayList<>();
         itemsToRemove.add(droppedItem);
+
+        // Remove from VirtualInventory FIRST (source of truth)
         spawner.removeItemsAndUpdateSellValue(itemsToRemove);
 
         int remaining = item.getAmount() - amountToDrop;
@@ -286,6 +402,8 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -298,11 +416,13 @@ public class SpawnerStorageAction implements Listener {
         List<ItemStack> pageItems = new ArrayList<>();
         int itemsFoundCount = 0;
 
+        // CRITICAL: Collect items from GUI display (which should match VirtualInventory)
         for (int i = 0; i < STORAGE_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
             if (item != null && item.getType() != Material.AIR) {
                 pageItems.add(item.clone());
                 itemsFoundCount += item.getAmount();
+                // Clear GUI slot immediately
                 inventory.setItem(i, null);
             }
         }
@@ -313,6 +433,9 @@ public class SpawnerStorageAction implements Listener {
         }
 
         final int itemsFound = itemsFoundCount;
+
+        // CRITICAL: Remove from VirtualInventory FIRST (source of truth)
+        // This operation is atomic and thread-safe
         spawner.removeItemsAndUpdateSellValue(pageItems);
 
         dropItemsInDirection(player, pageItems);
@@ -395,6 +518,17 @@ public class SpawnerStorageAction implements Listener {
 
     private void takeSingleItem(Player player, Inventory sourceInv, int slot, ItemStack item,
                                 SpawnerData spawner, boolean singleItem) {
+        // Note: Lock is already held by caller (onInventoryClick)
+
+        // CRITICAL: Verify item in slot matches what we expect
+        ItemStack actualItem = sourceInv.getItem(slot);
+        if (actualItem == null || !actualItem.isSimilar(item) || actualItem.getAmount() != item.getAmount()) {
+            // Desync detected - refresh GUI from VirtualInventory
+            plugin.getLogger().warning("Item desync detected in takeSingleItem for player " + player.getName());
+            refreshGuiFromVirtualInventory(player, spawner, sourceInv);
+            return;
+        }
+
         PlayerInventory playerInv = player.getInventory();
         VirtualInventory virtualInv = spawner.getVirtualInventory();
 
@@ -405,8 +539,12 @@ public class SpawnerStorageAction implements Listener {
                 virtualInv
         );
         if (result.amountMoved() > 0) {
+            // Update GUI slot to match VirtualInventory state
             updateInventorySlot(sourceInv, slot, item, result.amountMoved());
+
+            // CRITICAL: Remove from VirtualInventory (source of truth) - this updates sell value atomically
             spawner.removeItemsAndUpdateSellValue(result.movedItems());
+
             player.updateInventory();
 
             spawner.updateHologramData();
@@ -538,6 +676,8 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void handleSortItemsClick(Player player, SpawnerData spawner, Inventory inventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -595,10 +735,11 @@ public class SpawnerStorageAction implements Listener {
         }
         spawnerManager.queueSpawnerForSaving(spawner.getSpawnerId());
 
-        // Re-sort the virtual inventory
+        // CRITICAL: Re-sort VirtualInventory (source of truth)
+        // This operation is atomic and thread-safe
         spawner.getVirtualInventory().sortItems(nextSort);
 
-        // Update the display
+        // Update GUI display to reflect VirtualInventory state
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
             updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
@@ -641,6 +782,8 @@ public class SpawnerStorageAction implements Listener {
     }
 
     public void handleTakeAllItems(Player player, Inventory sourceInventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -648,6 +791,7 @@ public class SpawnerStorageAction implements Listener {
         SpawnerData spawner = holder.getSpawnerData();
         VirtualInventory virtualInv = spawner.getVirtualInventory();
 
+        // CRITICAL: Collect items from GUI (which should be synced with VirtualInventory)
         Map<Integer, ItemStack> sourceItems = new HashMap<>();
         for (int i = 0; i < STORAGE_SLOTS; i++) {
             ItemStack item = sourceInventory.getItem(i);
@@ -661,6 +805,7 @@ public class SpawnerStorageAction implements Listener {
             return;
         }
 
+        // Transfer items and update VirtualInventory atomically
         TransferResult result = transferItems(player, sourceInventory, sourceItems, virtualInv);
         sendTransferMessage(player, result);
         player.updateInventory();
@@ -767,10 +912,16 @@ public class SpawnerStorageAction implements Listener {
             }
         }
 
+        // CRITICAL: Update VirtualInventory atomically (source of truth)
         if (!itemsToRemove.isEmpty()) {
             StoragePageHolder holder = (StoragePageHolder) sourceInventory.getHolder(false);
-            holder.getSpawnerData().removeItemsAndUpdateSellValue(itemsToRemove);
-            holder.getSpawnerData().updateHologramData();
+            SpawnerData spawnerData = holder.getSpawnerData();
+
+            // This operation is atomic and updates sell value
+            spawnerData.removeItemsAndUpdateSellValue(itemsToRemove);
+            spawnerData.updateHologramData();
+
+            // Update holder's cached state
             holder.updateOldUsedSlots();
         }
 
@@ -785,6 +936,33 @@ public class SpawnerStorageAction implements Listener {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("amount", String.valueOf(result.totalMoved));
             messageService.sendMessage(player, "take_all_items", placeholders);
+        }
+    }
+
+    private void refreshGuiFromVirtualInventory(Player player, SpawnerData spawner, Inventory inventory) {
+        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+        if (holder == null) {
+            return;
+        }
+
+        // Recalculate pages from VirtualInventory
+        int totalPages = calculateTotalPages(spawner);
+        int currentPage = Math.max(1, Math.min(holder.getCurrentPage(), totalPages));
+
+        holder.setTotalPages(totalPages);
+        holder.setCurrentPage(currentPage);
+        holder.updateOldUsedSlots();
+
+        // Refresh display from VirtualInventory
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
+        spawnerStorageUI.updateDisplay(inventory, spawner, currentPage, totalPages);
+
+        // Notify other viewers to sync as well
+        spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+
+        if (plugin.isDebugMode()) {
+            plugin.debug("GUI refreshed from VirtualInventory for player " + player.getName() +
+                        " on spawner " + spawner.getSpawnerId());
         }
     }
 

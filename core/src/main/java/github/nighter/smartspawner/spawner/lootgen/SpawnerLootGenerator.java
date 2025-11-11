@@ -334,7 +334,19 @@ public class SpawnerLootGenerator {
         return calculateSlots(simulatedItems);
     }
 
+    /**
+     * Handle GUI updates after loot has been added to VirtualInventory.
+     *
+     * CRITICAL: This method is called while lootGenerationLock is held, which ensures:
+     * 1. VirtualInventory is in a consistent state (loot has been added)
+     * 2. No storage operations can interfere during GUI update dispatch
+     * 3. All viewers will receive the updated state before any storage operations are allowed
+     *
+     * This guarantees that VirtualInventory remains the single source of truth.
+     */
     private void handleGuiUpdates(SpawnerData spawner) {
+        // Dispatch GUI updates to all viewers
+        // Storage operations will be blocked until lootGenerationLock is released
         spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
         // Show particles if needed
