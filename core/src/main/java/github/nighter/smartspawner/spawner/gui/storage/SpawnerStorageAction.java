@@ -53,13 +53,13 @@ public class SpawnerStorageAction implements Listener {
     private static final int INVENTORY_SIZE = 54;
     private static final int STORAGE_SLOTS = 45;
 
+    private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
     private final Map<ClickType, ItemClickHandler> clickHandlers;
     private final Map<UUID, Inventory> openStorageInventories = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
-    private final Set<UUID> activeDropTransactions = ConcurrentHashMap.newKeySet();
+    private static final long CLICK_DELAY_MS = 300;
     private final Random random = new Random();
     private GuiLayout layout;
-    private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
 
     public SpawnerStorageAction(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -269,7 +269,7 @@ public class SpawnerStorageAction implements Listener {
                 }
 
                 // Update the inventory title to reflect new page count
-                updateInventoryTitle(player, inventory, spawner, adjustedPage, newTotalPages);
+                updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
             }
 
             // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
@@ -430,7 +430,7 @@ public class SpawnerStorageAction implements Listener {
                     }
 
                     // Update the inventory title to reflect new page count
-                    updateInventoryTitle(player, sourceInv, spawner, adjustedPage, newTotalPages);
+                    updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
                 }
 
                 // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
@@ -460,7 +460,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void updatePageContent(Player player, SpawnerData spawner, int newPage, Inventory inventory, boolean uiClickSound) {
-        SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
 
         int totalPages = calculateTotalPages(spawner);
@@ -470,9 +470,9 @@ public class SpawnerStorageAction implements Listener {
         holder.setCurrentPage(newPage);
         holder.updateOldUsedSlots();
 
-        lootManager.updateDisplay(inventory, spawner, newPage, totalPages);
+        spawnerStorageUI.updateDisplay(inventory, spawner, newPage, totalPages);
 
-        updateInventoryTitle(player, inventory, spawner, newPage, totalPages);
+        updateInventoryTitle(player, spawner, newPage, totalPages);
 
         if (uiClickSound) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
@@ -484,8 +484,7 @@ public class SpawnerStorageAction implements Listener {
         return Math.max(1, (int) Math.ceil((double) usedSlots / StoragePageHolder.MAX_ITEMS_PER_PAGE));
     }
 
-    private void updateInventoryTitle(Player player, Inventory inventory, SpawnerData spawner, int page, int totalPages) {
-        // Use placeholder-based title format for consistency
+    private void updateInventoryTitle(Player player, SpawnerData spawner, int page, int totalPages) {
         String newTitle = languageManager.getGuiTitle("gui_title_storage", Map.of(
                 "current_page", String.valueOf(page),
                 "total_pages", String.valueOf(totalPages)
@@ -502,14 +501,13 @@ public class SpawnerStorageAction implements Listener {
         long now = System.currentTimeMillis();
         long last = lastItemClickTime.getOrDefault(player.getUniqueId(), 0L);
         lastItemClickTime.put(player.getUniqueId(), now);
-        return (now - last) < 300;
+        return (now - last) < CLICK_DELAY_MS;
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
         lastItemClickTime.remove(playerId);
-        activeDropTransactions.remove(playerId);
     }
 
     private void openMainMenu(Player player, SpawnerData spawner) {
@@ -729,12 +727,12 @@ public class SpawnerStorageAction implements Listener {
             if (adjustedPage != currentPage) {
                 holder.setCurrentPage(adjustedPage);
                 // Refresh display to show the correct page content
-                SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
-                lootManager.updateDisplay(sourceInventory, spawner, adjustedPage, newTotalPages);
+                SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
+                spawnerStorageUI.updateDisplay(sourceInventory, spawner, adjustedPage, newTotalPages);
             }
 
             // Update the inventory title to reflect new page count
-            updateInventoryTitle(player, sourceInventory, spawner, adjustedPage, newTotalPages);
+            updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
 
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
