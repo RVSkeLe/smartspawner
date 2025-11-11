@@ -6,7 +6,7 @@ import github.nighter.smartspawner.hooks.rpg.AuraSkillsIntegration;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
@@ -193,14 +193,7 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClick(Player player, SpawnerData spawner) {
-        // Check anti-macro cooldown before opening storage GUI
-        if (!plugin.getSpawnerStorageAction().canAccessStorageGUI(player.getUniqueId())) {
-            messageService.sendMessage(player, "action_in_progress");
-            return;
-        }
-        
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
+        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, 1, -1);
 
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.closeInventory();
@@ -208,14 +201,7 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClickBedrock(Player player, SpawnerData spawner) {
-        // Check anti-macro cooldown before opening storage GUI
-        if (!plugin.getSpawnerStorageAction().canAccessStorageGUI(player.getUniqueId())) {
-            messageService.sendMessage(player, "action_in_progress");
-            return;
-        }
-        
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
+        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }

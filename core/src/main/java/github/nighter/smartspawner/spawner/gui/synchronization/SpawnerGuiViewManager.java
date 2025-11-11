@@ -241,7 +241,7 @@ public class SpawnerGuiViewManager {
                         int oldPages = storageUpdateService.calculateTotalPages(holder.getOldUsedSlots());
                         int newPages = storageUpdateService.calculateTotalPages(spawner.getVirtualInventory().getUsedSlots());
 
-                        storageUpdateService.processStorageUpdateDirect(viewer, inv, spawner, holder, oldPages, newPages);
+                        storageUpdateService.processStorageUpdateDirect(viewer, inv, spawner, spHolder, oldPages, newPages);
                     }
                 });
             }

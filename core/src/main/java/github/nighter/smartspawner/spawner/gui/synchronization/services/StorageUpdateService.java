@@ -3,7 +3,7 @@ package github.nighter.smartspawner.spawner.gui.synchronization.services;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.language.LanguageManager;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.storage.StoragePageHolder;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Location;
@@ -128,7 +128,6 @@ public class StorageUpdateService {
                 // Fall back to creating a new inventory
                 Inventory newInv = spawnerStorageUI.createInventory(
                         spawner,
-                        languageManager.getGuiTitle("gui_title_storage"),
                         targetPage,
                         newTotalPages
                 );

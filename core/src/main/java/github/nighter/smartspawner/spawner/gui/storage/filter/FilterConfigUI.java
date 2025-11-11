@@ -2,7 +2,7 @@ package github.nighter.smartspawner.spawner.gui.storage.filter;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.loot.LootItem;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Bukkit;
@@ -277,8 +277,7 @@ public class FilterConfigUI implements Listener {
         player.closeInventory();
 
         // Open storage UI (page 1 with no specific slot focus)
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = storageUI.createInventory(spawner, title, 1, -1);
+        Inventory pageInventory = storageUI.createInventory(spawner, 1, -1);
         player.openInventory(pageInventory);
     }
 

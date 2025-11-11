@@ -1,10 +1,11 @@
-package github.nighter.smartspawner.spawner.gui.storage;
+package github.nighter.smartspawner.spawner.gui.storage.ui;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
+import github.nighter.smartspawner.spawner.gui.storage.StoragePageHolder;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
@@ -18,7 +19,6 @@ import org.bukkit.Material;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class SpawnerStorageUI {
     private static final int INVENTORY_SIZE = 54;
@@ -150,7 +150,7 @@ public class SpawnerStorageUI {
         ));
     }
 
-    public Inventory createInventory(SpawnerData spawner, String title, int page, int totalPages) {
+    public Inventory createInventory(SpawnerData spawner, int page, int totalPages) {
         // Get total pages efficiently
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);
@@ -165,11 +165,6 @@ public class SpawnerStorageUI {
                 INVENTORY_SIZE,
                 getStorageTitle(page, totalPages)
         );
-
-        // Cache inventory reference in holder for better performance
-        StoragePageHolder holder = (StoragePageHolder) pageInv.getHolder(false);
-        holder.setInventory(pageInv);
-        holder.updateOldUsedSlots();
 
         // Populate the inventory
         updateDisplay(pageInv, spawner, page, totalPages);
