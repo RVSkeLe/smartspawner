@@ -379,13 +379,13 @@ public class SpawnerStorageUI {
         if (spawner.getLootConfig() != null && spawner.getLootConfig().getAllItems() != null) {
             boolean first = true;
             var sortedLoot = spawner.getLootConfig().getAllItems().stream()
-                .sorted(Comparator.comparing(item -> item.getMaterial().name()))
+                .sorted(Comparator.comparing(item -> item.material().name()))
                 .toList();
 
             for (var lootItem : sortedLoot) {
                 if (!first) availableItems.append("\n");
-                String itemName = languageManager.getVanillaItemName(lootItem.getMaterial());
-                String format = currentSort == lootItem.getMaterial() ? selectedItemFormat : unselectedItemFormat;
+                String itemName = languageManager.getVanillaItemName(lootItem.material());
+                String format = currentSort == lootItem.material() ? selectedItemFormat : unselectedItemFormat;
                 
                 // Replace {item_name} placeholder in format string
                 String formattedItem = format.replace("{item_name}", itemName);

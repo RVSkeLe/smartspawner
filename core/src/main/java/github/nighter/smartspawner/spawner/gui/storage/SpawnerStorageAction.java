@@ -11,7 +11,7 @@ import github.nighter.smartspawner.spawner.gui.storage.utils.ItemMoveResult;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
@@ -49,7 +49,6 @@ public class SpawnerStorageAction implements Listener {
     private final FilterConfigUI filterConfigUI;
     private final SpawnerSellManager spawnerSellManager;
     private final SpawnerManager spawnerManager;
-    private GuiLayoutConfig guiLayoutConfig;
 
     private static final int INVENTORY_SIZE = 54;
     private static final int STORAGE_SLOTS = 45;
@@ -58,10 +57,7 @@ public class SpawnerStorageAction implements Listener {
     private final Map<UUID, Inventory> openStorageInventories = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
     private final Set<UUID> activeDropTransactions = ConcurrentHashMap.newKeySet();
-    private final Map<UUID, Long> transactionStartTimes = new ConcurrentHashMap<>();
-    private static final long TRANSACTION_TIMEOUT_MS = 5000; // 5 seconds max per transaction
-    private static final long DROP_COOLDOWN_MS = 500; // 500ms cooldown between drops
-    private Random random = new Random();
+    private final Random random = new Random();
     private GuiLayout layout;
     private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
 
@@ -79,7 +75,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     public void loadConfig() {
-        this.guiLayoutConfig = plugin.getGuiLayoutConfig();
+        GuiLayoutConfig guiLayoutConfig = plugin.getGuiLayoutConfig();
         layout = guiLayoutConfig.getCurrentLayout();
     }
 
@@ -318,8 +314,6 @@ public class SpawnerStorageAction implements Listener {
         }
 
         final int itemsFound = itemsFoundCount;
-
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
         spawner.removeItemsAndUpdateSellValue(pageItems);
 
         dropItemsInDirection(player, pageItems);
@@ -511,112 +505,11 @@ public class SpawnerStorageAction implements Listener {
         return (now - last) < 300;
     }
 
-    /**
-     * Checks if a drop operation is too frequent for the given player.
-     * Uses a 500ms cooldown to prevent rapid click exploits.
-     *
-     * @param playerId The player's UUID
-     * @return true if the operation is too frequent, false otherwise
-     */
-    private boolean isDropOperationTooFrequent(UUID playerId) {
-        long now = System.currentTimeMillis();
-        long last = lastItemClickTime.getOrDefault(playerId, 0L);
-        lastItemClickTime.put(playerId, now);
-        return (now - last) < DROP_COOLDOWN_MS;
-    }
-
-    /**
-     * Attempts to acquire a drop transaction lock for the player.
-     * Includes timeout mechanism to prevent stuck transactions.
-     *
-     * @param playerId The player's UUID
-     * @return true if lock acquired, false if already in transaction
-     */
-    private boolean acquireDropTransaction(UUID playerId) {
-        // Check for expired transactions and clean them up
-        cleanupExpiredTransactions();
-
-        // Try to add to active transactions (returns false if already exists)
-        if (activeDropTransactions.add(playerId)) {
-            transactionStartTimes.put(playerId, System.currentTimeMillis());
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Releases the drop transaction lock for the player.
-     * Should ALWAYS be called in a finally block.
-     *
-     * @param playerId The player's UUID
-     */
-    private void releaseDropTransaction(UUID playerId) {
-        activeDropTransactions.remove(playerId);
-        transactionStartTimes.remove(playerId);
-    }
-
-    /**
-     * Cleans up transactions that have exceeded the timeout limit.
-     * Prevents deadlocks from crashed operations or server lag.
-     */
-    private void cleanupExpiredTransactions() {
-        long now = System.currentTimeMillis();
-        List<UUID> expiredTransactions = new ArrayList<>();
-
-        for (Map.Entry<UUID, Long> entry : transactionStartTimes.entrySet()) {
-            if (now - entry.getValue() > TRANSACTION_TIMEOUT_MS) {
-                expiredTransactions.add(entry.getKey());
-            }
-        }
-
-        for (UUID playerId : expiredTransactions) {
-            activeDropTransactions.remove(playerId);
-            transactionStartTimes.remove(playerId);
-        }
-    }
-
-    /**
-     * Validates that all items in the list exist in the VirtualInventory.
-     * Pre-drop validation layer to prevent duplication exploits.
-     *
-     * @param items Items to validate
-     * @param virtualInv The virtual inventory to check against
-     * @return true if all items exist in sufficient quantities, false otherwise
-     */
-    private boolean validateItemsExistInVirtualInventory(List<ItemStack> items, VirtualInventory virtualInv) {
-        if (items == null || items.isEmpty()) {
-            return true;
-        }
-
-        // Build a map of item signatures to required amounts
-        Map<VirtualInventory.ItemSignature, Long> requiredItems = new HashMap<>();
-        for (ItemStack item : items) {
-            if (item == null || item.getAmount() <= 0) continue;
-            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
-            requiredItems.merge(sig, (long) item.getAmount(), Long::sum);
-        }
-
-        // Check against VirtualInventory's consolidated items
-        Map<VirtualInventory.ItemSignature, Long> consolidatedItems = virtualInv.getConsolidatedItems();
-
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : requiredItems.entrySet()) {
-            Long available = consolidatedItems.get(entry.getKey());
-            if (available == null || available < entry.getValue()) {
-                // Not enough of this item type in VirtualInventory
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID playerId = event.getPlayer().getUniqueId();
         lastItemClickTime.remove(playerId);
         activeDropTransactions.remove(playerId);
-        transactionStartTimes.remove(playerId);
     }
 
     private void openMainMenu(Player player, SpawnerData spawner) {
@@ -667,7 +560,7 @@ public class SpawnerStorageAction implements Listener {
 
         // Build sorted list of available materials
         var sortedLoot = lootItems.stream()
-                .map(LootItem::getMaterial)
+                .map(LootItem::material)
                 .distinct() // Remove duplicates if any
                 .sorted(Comparator.comparing(Material::name))
                 .toList();
@@ -730,9 +623,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void openLootPage(Player player, SpawnerData spawner, int page, boolean refresh) {
-        SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
-        String title = languageManager.getGuiTitle("gui_title_storage");
-
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         int totalPages = calculateTotalPages(spawner);
 
         final int finalPage = Math.max(1, Math.min(page, totalPages));
@@ -757,7 +648,7 @@ public class SpawnerStorageAction implements Listener {
             var lootItems = spawner.getLootConfig().getAllItems();
             if (!lootItems.isEmpty()) {
                 var sortedLoot = lootItems.stream()
-                        .map(LootItem::getMaterial)
+                        .map(LootItem::material)
                         .distinct()
                         .sorted(Comparator.comparing(Material::name))
                         .toList();
@@ -780,7 +671,7 @@ public class SpawnerStorageAction implements Listener {
             spawner.getVirtualInventory().sortItems(currentSort);
         }
 
-        Inventory pageInventory = lootManager.createInventory(spawner, finalPage, totalPages);
+        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, finalPage, totalPages);
         openStorageInventories.put(playerId, pageInventory);
 
         // Log storage GUI opening

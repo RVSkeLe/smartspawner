@@ -3,7 +3,7 @@ package github.nighter.smartspawner.spawner.gui.storage.filter;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;

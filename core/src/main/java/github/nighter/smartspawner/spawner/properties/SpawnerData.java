@@ -2,8 +2,8 @@ package github.nighter.smartspawner.spawner.properties;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.hologram.SpawnerHologram;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.sell.SellResult;
 import lombok.Getter;
 import lombok.Setter;
@@ -394,7 +394,7 @@ public class SpawnerData {
     }
 
     public int getEntityExperienceValue() {
-        return lootConfig != null ? lootConfig.getExperience() : 0;
+        return lootConfig != null ? lootConfig.experience() : 0;
     }
 
     /**
@@ -412,7 +412,7 @@ public class SpawnerData {
 
         // Calculate and cache the result
         boolean result = (lootConfig == null ||
-                (lootConfig.getExperience() == 0 && getValidLootItems().isEmpty()));
+                (lootConfig.experience() == 0 && getValidLootItems().isEmpty()));
         cachedHasNoLoot = result;
         return result;
     }
@@ -562,11 +562,11 @@ public class SpawnerData {
         java.util.List<LootItem> allLootItems = lootConfig.getAllItems();
 
         for (LootItem lootItem : allLootItems) {
-            if (lootItem.getSellPrice() > 0.0) {
+            if (lootItem.sellPrice() > 0.0) {
                 ItemStack template = lootItem.createItemStack(new java.util.Random());
                 if (template != null) {
                     String key = createItemKey(template);
-                    cache.put(key, lootItem.getSellPrice());
+                    cache.put(key, lootItem.sellPrice());
                 }
             }
         }

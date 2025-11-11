@@ -5,8 +5,8 @@ import github.nighter.smartspawner.commands.prices.holders.PricesHolder;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -21,7 +21,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class PricesGUI implements Listener {
     private final SmartSpawner plugin;
@@ -99,7 +98,7 @@ public class PricesGUI implements Listener {
             for (LootItem lootItem : lootConfig.getAllItems()) {
                 if (!lootItem.isAvailable()) continue;
 
-                Material material = lootItem.getMaterial();
+                Material material = lootItem.material();
                 double finalPrice = priceManager.getPrice(material);
                 
                 if (finalPrice > 0) {

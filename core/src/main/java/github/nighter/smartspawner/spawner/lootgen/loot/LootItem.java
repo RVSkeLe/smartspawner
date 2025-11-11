@@ -1,6 +1,5 @@
-package github.nighter.smartspawner.spawner.loot;
+package github.nighter.smartspawner.spawner.lootgen.loot;
 
-import lombok.Getter;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
@@ -10,29 +9,8 @@ import org.bukkit.potion.PotionType;
 
 import java.util.Random;
 
-@Getter
-public class LootItem {
-    private final Material material;
-    private final int minAmount;
-    private final int maxAmount;
-    private final double chance;
-    private final Integer minDurability;
-    private final Integer maxDurability;
-    private final PotionType potionType;
-    private final double sellPrice;
-
-    public LootItem(Material material, int minAmount, int maxAmount, double chance,
-                    Integer minDurability, Integer maxDurability, PotionType potionType,
-                    double sellPrice) {
-        this.material = material;
-        this.minAmount = minAmount;
-        this.maxAmount = maxAmount;
-        this.chance = chance;
-        this.minDurability = minDurability;
-        this.maxDurability = maxDurability;
-        this.potionType = potionType;
-        this.sellPrice = sellPrice;
-    }
+public record LootItem(Material material, int minAmount, int maxAmount, double chance, Integer minDurability,
+                       Integer maxDurability, PotionType potionType, double sellPrice) {
 
     public ItemStack createItemStack(Random random) {
         if (material == null) {

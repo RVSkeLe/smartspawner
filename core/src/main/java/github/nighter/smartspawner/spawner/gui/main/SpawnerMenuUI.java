@@ -4,8 +4,8 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
@@ -248,16 +248,16 @@ public class SpawnerMenuUI {
 
         if (!possibleLootItems.isEmpty()) {
             // Sort items by name for consistent display
-            possibleLootItems.sort(Comparator.comparing(item -> languageManager.getVanillaItemName(item.getMaterial())));
+            possibleLootItems.sort(Comparator.comparing(item -> languageManager.getVanillaItemName(item.material())));
 
             for (LootItem lootItem : possibleLootItems) {
-                Material material = lootItem.getMaterial();
+                Material material = lootItem.material();
                 long amount = materialAmountMap.getOrDefault(material, 0L);
 
                 String materialName = languageManager.getVanillaItemName(material);
                 String materialNameSmallCaps = languageManager.getSmallCaps(languageManager.getVanillaItemName(material));
                 String formattedAmount = languageManager.formatNumber(amount);
-                String chance = String.format("%.1f", lootItem.getChance()) + "%";
+                String chance = String.format("%.1f", lootItem.chance()) + "%";
 
                 // Format the line with minimal string operations
                 String line = lootItemFormat

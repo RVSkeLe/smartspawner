@@ -3,8 +3,8 @@ package github.nighter.smartspawner.spawner.item;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.nms.VersionInitializer;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
@@ -94,19 +94,19 @@ public class SpawnerItemFactory {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("entity", entityTypeName);
             placeholders.put("ᴇɴᴛɪᴛʏ", entityTypeNameSmallCaps);
-            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.getExperience() : 0));
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.experience() : 0));
             List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
-            sortedLootItems.sort(Comparator.comparing(item -> item.getMaterial().name()));
+            sortedLootItems.sort(Comparator.comparing(item -> item.material().name()));
             if (!sortedLootItems.isEmpty()) {
                 String lootFormat = languageManager.getItemName("custom_item.spawner.loot_items", placeholders);
                 StringBuilder lootItemsBuilder = new StringBuilder();
                 for (LootItem item : sortedLootItems) {
-                    String itemName = languageManager.getVanillaItemName(item.getMaterial());
+                    String itemName = languageManager.getVanillaItemName(item.material());
                     String itemNameSmallCaps = languageManager.getSmallCaps(itemName);
-                    String amountRange = item.getMinAmount() == item.getMaxAmount() ?
-                            String.valueOf(item.getMinAmount()) :
-                            item.getMinAmount() + "-" + item.getMaxAmount();
-                    String chance = String.format("%.1f", item.getChance());
+                    String amountRange = item.minAmount() == item.maxAmount() ?
+                            String.valueOf(item.minAmount()) :
+                            item.minAmount() + "-" + item.maxAmount();
+                    String chance = String.format("%.1f", item.chance());
                     Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
                     itemPlaceholders.put("item_name", itemName);
                     itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", itemNameSmallCaps);
@@ -219,21 +219,21 @@ public class SpawnerItemFactory {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("entity", itemName);
             placeholders.put("ᴇɴᴛɪᴛʏ", itemNameSmallCaps);
-            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.getExperience() : 0));
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.experience() : 0));
             
             // Build loot items list similar to regular spawners
             List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
-            sortedLootItems.sort(Comparator.comparing(item -> item.getMaterial().name()));
+            sortedLootItems.sort(Comparator.comparing(item -> item.material().name()));
             if (!sortedLootItems.isEmpty()) {
                 String lootFormat = languageManager.getItemName("custom_item.item_spawner.loot_items", placeholders);
                 StringBuilder lootItemsBuilder = new StringBuilder();
                 for (LootItem item : sortedLootItems) {
-                    String lootItemName = languageManager.getVanillaItemName(item.getMaterial());
+                    String lootItemName = languageManager.getVanillaItemName(item.material());
                     String lootItemNameSmallCaps = languageManager.getSmallCaps(lootItemName);
-                    String amountRange = item.getMinAmount() == item.getMaxAmount() ?
-                            String.valueOf(item.getMinAmount()) :
-                            item.getMinAmount() + "-" + item.getMaxAmount();
-                    String chance = String.format("%.1f", item.getChance());
+                    String amountRange = item.minAmount() == item.maxAmount() ?
+                            String.valueOf(item.minAmount()) :
+                            item.minAmount() + "-" + item.maxAmount();
+                    String chance = String.format("%.1f", item.chance());
                     Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
                     itemPlaceholders.put("item_name", lootItemName);
                     itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", lootItemNameSmallCaps);

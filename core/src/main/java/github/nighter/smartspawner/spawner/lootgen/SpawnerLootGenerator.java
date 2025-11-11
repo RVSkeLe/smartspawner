@@ -6,10 +6,9 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 
 import org.bukkit.*;
-import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -90,7 +89,7 @@ public class SpawnerLootGenerator {
                 LootResult loot = generateLoot(minMobs, maxMobs, spawner);
 
                 // Only proceed if we generated something
-                if (loot.getItems().isEmpty() && loot.getExperience() == 0) {
+                if (loot.items().isEmpty() && loot.experience() == 0) {
                     return;
                 }
 
@@ -110,10 +109,10 @@ public class SpawnerLootGenerator {
                         boolean changed = false;
 
                         // Process experience if there's any to add and not at max
-                        if (loot.getExperience() > 0 && spawner.getSpawnerExp() < spawner.getMaxStoredExp()) {
+                        if (loot.experience() > 0 && spawner.getSpawnerExp() < spawner.getMaxStoredExp()) {
                             int currentExp = spawner.getSpawnerExp();
                             int maxExp = spawner.getMaxStoredExp();
-                            int newExp = Math.min(currentExp + loot.getExperience(), maxExp);
+                            int newExp = Math.min(currentExp + loot.experience(), maxExp);
 
                             if (newExp != currentExp) {
                                 spawner.setSpawnerExp(newExp);
@@ -126,8 +125,8 @@ public class SpawnerLootGenerator {
                         usedSlots.set(spawner.getVirtualInventory().getUsedSlots());
 
                         // Process items if there are any to add and inventory isn't completely full
-                        if (!loot.getItems().isEmpty() && usedSlots.get() < maxSlots.get()) {
-                            List<ItemStack> itemsToAdd = new ArrayList<>(loot.getItems());
+                        if (!loot.items().isEmpty() && usedSlots.get() < maxSlots.get()) {
+                            List<ItemStack> itemsToAdd = new ArrayList<>(loot.items());
 
                             // Get exact calculation of slots with the new items
                             int totalRequiredSlots = calculateRequiredSlots(itemsToAdd, spawner.getVirtualInventory());
@@ -199,7 +198,7 @@ public class SpawnerLootGenerator {
 
             // Calculate binomial distribution - how many mobs will drop this item
             for (int i = 0; i < mobCount; i++) {
-                if (random.nextDouble() * 100 <= lootItem.getChance()) {
+                if (random.nextDouble() * 100 <= lootItem.chance()) {
                     successfulDrops++;
                 }
             }
@@ -410,8 +409,8 @@ public class SpawnerLootGenerator {
             Scheduler.runTaskAsync(() -> {
                 LootResult loot = generateLoot(minMobs, maxMobs, spawner);
                 callback.onLootGenerated(
-                    loot.getItems() != null ? new ArrayList<>(loot.getItems()) : Collections.emptyList(),
-                    loot.getExperience()
+                    loot.items() != null ? new ArrayList<>(loot.items()) : Collections.emptyList(),
+                    loot.experience()
                 );
             });
         } finally {
