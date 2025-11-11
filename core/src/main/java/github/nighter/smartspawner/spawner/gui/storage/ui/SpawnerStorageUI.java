@@ -150,7 +150,7 @@ public class SpawnerStorageUI {
         ));
     }
 
-    public Inventory createInventory(SpawnerData spawner, int page, int totalPages) {
+    public Inventory createStorageInventory(SpawnerData spawner, int page, int totalPages) {
         // Get total pages efficiently
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);

@@ -55,7 +55,6 @@ public class SpawnerStorageAction implements Listener {
 
     private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
     private final Map<ClickType, ItemClickHandler> clickHandlers;
-    private final Map<UUID, Inventory> openStorageInventories = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
     private static final long CLICK_DELAY_MS = 300;
     private final Random random = new Random();
@@ -493,7 +492,7 @@ public class SpawnerStorageAction implements Listener {
         try {
             player.getOpenInventory().setTitle(newTitle);
         } catch (Exception e) {
-            openLootPage(player, spawner, page, false);
+            openLootPage(player, spawner, page);
         }
     }
 
@@ -620,57 +619,11 @@ public class SpawnerStorageAction implements Listener {
         }
     }
 
-    private void openLootPage(Player player, SpawnerData spawner, int page, boolean refresh) {
+    private void openLootPage(Player player, SpawnerData spawner, int page) {
         SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         int totalPages = calculateTotalPages(spawner);
-
         final int finalPage = Math.max(1, Math.min(page, totalPages));
-
-        UUID playerId = player.getUniqueId();
-        Inventory existingInventory = openStorageInventories.get(playerId);
-
-        if (existingInventory != null && !refresh && existingInventory.getHolder(false) instanceof StoragePageHolder) {
-            StoragePageHolder holder = (StoragePageHolder) existingInventory.getHolder(false);
-
-            holder.setTotalPages(totalPages);
-            holder.setCurrentPage(finalPage);
-            holder.updateOldUsedSlots();
-
-            updatePageContent(player, spawner, finalPage, existingInventory, false);
-            return;
-        }
-
-        // Initialize sort preference on first open
-        Material currentSort = spawner.getPreferredSortItem();
-        if (currentSort == null && spawner.getLootConfig() != null && spawner.getLootConfig().getAllItems() != null) {
-            var lootItems = spawner.getLootConfig().getAllItems();
-            if (!lootItems.isEmpty()) {
-                var sortedLoot = lootItems.stream()
-                        .map(LootItem::material)
-                        .distinct()
-                        .sorted(Comparator.comparing(Material::name))
-                        .toList();
-
-                if (!sortedLoot.isEmpty()) {
-                    Material firstItem = sortedLoot.getFirst();
-                    spawner.setPreferredSortItem(firstItem);
-                    currentSort = firstItem;
-
-                    if (!spawner.isInteracted()) {
-                        spawner.markInteracted();
-                    }
-                    spawnerManager.queueSpawnerForSaving(spawner.getSpawnerId());
-                }
-            }
-        }
-
-        // Apply sort to virtual inventory if a sort preference exists
-        if (currentSort != null) {
-            spawner.getVirtualInventory().sortItems(currentSort);
-        }
-
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, finalPage, totalPages);
-        openStorageInventories.put(playerId, pageInventory);
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, finalPage, totalPages);
 
         // Log storage GUI opening
         if (plugin.getSpawnerActionLogger() != null) {
@@ -683,10 +636,7 @@ public class SpawnerStorageAction implements Listener {
             );
         }
 
-        Sound sound = refresh ? Sound.ITEM_ARMOR_EQUIP_DIAMOND : Sound.UI_BUTTON_CLICK;
-        float pitch = refresh ? 1.2f : 1.0f;
-        player.playSound(player.getLocation(), sound, 1.0f, pitch);
-
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }
 
@@ -852,10 +802,6 @@ public class SpawnerStorageAction implements Listener {
             return;
         }
 
-        if (event.getPlayer() instanceof Player player) {
-            UUID playerId = player.getUniqueId();
-            openStorageInventories.remove(playerId);
-        }
 
         SpawnerData spawner = holder.getSpawnerData();
         if (spawner.isInteracted()){

@@ -193,15 +193,14 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClick(Player player, SpawnerData spawner) {
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, 1, -1);
-
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.closeInventory();
         player.openInventory(pageInventory);
     }
 
     public void handleStorageClickBedrock(Player player, SpawnerData spawner) {
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, 1, -1);
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }

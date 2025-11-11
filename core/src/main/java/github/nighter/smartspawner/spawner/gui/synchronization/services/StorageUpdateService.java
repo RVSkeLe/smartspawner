@@ -126,7 +126,7 @@ public class StorageUpdateService {
                 spawnerStorageUI.updateDisplay(inventory, spawner, targetPage, newTotalPages);
             } catch (Exception e) {
                 // Fall back to creating a new inventory
-                Inventory newInv = spawnerStorageUI.createInventory(
+                Inventory newInv = spawnerStorageUI.createStorageInventory(
                         spawner,
                         targetPage,
                         newTotalPages

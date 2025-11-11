@@ -226,6 +226,22 @@ public class SpawnerData {
         if (plugin.getConfig().getBoolean("hologram.enabled", false)) {
             createHologram();
         }
+
+        if (this.preferredSortItem == null && this.lootConfig != null && this.lootConfig.getAllItems() != null) {
+            var lootItems = this.lootConfig.getAllItems();
+            if (!lootItems.isEmpty()) {
+                var sortedLoot = lootItems.stream()
+                        .map(LootItem::material)
+                        .distinct()
+                        .sorted(Comparator.comparing(Material::name))
+                        .toList();
+
+                if (!sortedLoot.isEmpty()) {
+                    this.preferredSortItem = sortedLoot.getFirst();
+                }
+            }
+        }
+        this.virtualInventory.sortItems(this.preferredSortItem);
     }
 
     private void createHologram() {
