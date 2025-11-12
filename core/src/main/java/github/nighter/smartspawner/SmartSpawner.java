@@ -40,7 +40,6 @@ import github.nighter.smartspawner.spawner.interactions.place.SpawnerPlaceListen
 import github.nighter.smartspawner.spawner.interactions.stack.SpawnerStackHandler;
 import github.nighter.smartspawner.spawner.interactions.type.SpawnEggHandler;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
@@ -116,7 +115,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private NaturalSpawnerListener naturalSpawnerListener;
     private SpawnerLootGenerator spawnerLootGenerator;
     private SpawnerRangeChecker rangeChecker;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
     private SpawnerGuiViewManager spawnerGuiViewManager;
     private SpawnerExplosionListener spawnerExplosionListener;
     private SpawnerBreakListener spawnerBreakListener;
@@ -307,7 +305,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     private void initializeHandlers() {
-        this.chunkSpawnerLimiter = new ChunkSpawnerLimiter(this);
         this.spawnerStackerUI = new SpawnerStackerUI(this);
         this.spawnEggHandler = new SpawnEggHandler(this);
         this.spawnerStackHandler = new SpawnerStackHandler(this);

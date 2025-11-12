@@ -170,13 +170,6 @@ natural_spawner_break_blocked:
   sound: block.note_block.pling
 
 # ------------------------------------------------------
-#              Spawner - Limit Interaction
-# ------------------------------------------------------
-spawner_chunk_limit_reached:
-  action_bar: "&#ff5252ᴄʜᴜɴᴋ ꜱᴘᴀᴡɴᴇʀ ʟɪᴍɪᴛ ᴇʀʀᴇɪᴄʜᴛ: &#f8f8ff{limit}"
-  sound: block.note_block.pling
-
-# ------------------------------------------------------
 #              Sell Integration Messages
 # ------------------------------------------------------
 sale_failed:

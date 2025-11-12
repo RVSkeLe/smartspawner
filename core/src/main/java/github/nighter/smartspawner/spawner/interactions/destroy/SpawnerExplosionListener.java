@@ -60,13 +60,7 @@ public class SpawnerExplosionListener implements Listener {
                     } else {
                         spawnerData.getSpawnerStop().set(true);
                         String spawnerId = spawnerData.getSpawnerId();
-                        int stackSize = spawnerData.getStackSize();
-
                         cleanupAssociatedHopper(block);
-
-                        // Unregister spawner from chunk limiter
-                        plugin.getChunkSpawnerLimiter().unregisterSpawner(block.getLocation(), stackSize);
-
                         if (SpawnerExplodeEvent.getHandlerList().getRegisteredListeners().length != 0) {
                             e = new SpawnerExplodeEvent(null, spawnerData.getSpawnerLocation(), 1, true);
                         }

@@ -5,17 +5,12 @@ import github.nighter.smartspawner.api.events.SpawnerPlaceEvent;
 import github.nighter.smartspawner.extras.HopperHandler;
 import github.nighter.smartspawner.hooks.protections.CheckStackBlock;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -30,8 +25,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-
-import java.util.HashMap;
+import org.bukkit.persistence.PersistentDataType;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,17 +38,14 @@ public class SpawnerPlaceListener implements Listener {
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
     private final HopperHandler hopperHandler;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
 
     private final Map<UUID, Long> lastPlacementTime = new ConcurrentHashMap<>();
-    private final Map<UUID, Integer> playerItemCounts = new ConcurrentHashMap<>();
 
     public SpawnerPlaceListener(SmartSpawner plugin) {
         this.plugin = plugin;
         this.messageService = plugin.getMessageService();
         this.spawnerManager = plugin.getSpawnerManager();
         this.hopperHandler = plugin.getHopperHandler();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
     }
 
     @EventHandler
@@ -98,17 +89,6 @@ public class SpawnerPlaceListener implements Listener {
 
         int stackSize = calculateStackSize(player, item, isVanillaSpawner);
 
-        if (!isVanillaSpawner) {
-            if (!chunkSpawnerLimiter.canPlaceSpawner(player, block.getLocation()) ||
-                    !chunkSpawnerLimiter.canStackSpawner(player, block.getLocation(), stackSize - 1)) {
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("limit", String.valueOf(chunkSpawnerLimiter.getMaxSpawnersPerChunk()));
-                messageService.sendMessage(player, "spawner_chunk_limit_reached", placeholders);
-                event.setCancelled(true);
-                return;
-            }
-        }
-
         EntityType storedEntityType = null;
         Material itemSpawnerMaterial = null;
         
@@ -117,11 +97,9 @@ public class SpawnerPlaceListener implements Listener {
             
             // Check if this is an item spawner
             if (storedEntityType == EntityType.ITEM && meta.getPersistentDataContainer().has(
-                    new org.bukkit.NamespacedKey(plugin, "item_spawner_material"),
-                    org.bukkit.persistence.PersistentDataType.STRING)) {
+                    new NamespacedKey(plugin, "item_spawner_material"), PersistentDataType.STRING)) {
                 String materialName = meta.getPersistentDataContainer().get(
-                        new org.bukkit.NamespacedKey(plugin, "item_spawner_material"),
-                        org.bukkit.persistence.PersistentDataType.STRING);
+                        new NamespacedKey(plugin, "item_spawner_material"), PersistentDataType.STRING);
                 if (materialName != null) {
                     try {
                         itemSpawnerMaterial = Material.valueOf(materialName);
@@ -146,7 +124,7 @@ public class SpawnerPlaceListener implements Listener {
             return;
         }
 
-        handleSpawnerSetup(block, player, storedEntityType, isVanillaSpawner, item, stackSize, itemSpawnerMaterial);
+        handleSpawnerSetup(block, player, storedEntityType, isVanillaSpawner, stackSize, itemSpawnerMaterial);
     }
 
     private boolean checkPlacementCooldown(Player player) {
@@ -234,18 +212,14 @@ public class SpawnerPlaceListener implements Listener {
         }
 
         if (player.isSneaking()) {
-            return Math.min(item.getAmount(), getMaxAllowedStackSize());
+            return Math.min(item.getAmount(), plugin.getConfig().getInt("spawner_properties.default.max_stack_size", 10000));
         } else {
             return 1;
         }
     }
 
-    private int getMaxAllowedStackSize() {
-        return plugin.getConfig().getInt("spawner.max_stack_size", 64);
-    }
-
     private void handleSpawnerSetup(Block block, Player player, EntityType entityType,
-                                    boolean isVanillaSpawner, ItemStack item, int stackSize, Material itemSpawnerMaterial) {
+                                    boolean isVanillaSpawner, int stackSize, Material itemSpawnerMaterial) {
         if (entityType == null || entityType == EntityType.UNKNOWN) {
             return;
         }
@@ -317,10 +291,7 @@ public class SpawnerPlaceListener implements Listener {
         
         // Track player interaction for last interaction field
         spawner.updateLastInteractedPlayer(player.getName());
-
         spawnerManager.addSpawner(spawnerId, spawner);
-        chunkSpawnerLimiter.registerSpawnerPlacement(block.getLocation(), spawner.getStackSize());
-
         spawnerManager.queueSpawnerForSaving(spawnerId);
 
         if (plugin.getConfig().getBoolean("particle.spawner_generate_loot", true)) {
@@ -350,8 +321,6 @@ public class SpawnerPlaceListener implements Listener {
         spawner.updateLastInteractedPlayer(player.getName());
 
         spawnerManager.addSpawner(spawnerId, spawner);
-        chunkSpawnerLimiter.registerSpawnerPlacement(block.getLocation(), spawner.getStackSize());
-
         spawnerManager.queueSpawnerForSaving(spawnerId);
 
         if (plugin.getConfig().getBoolean("particle.spawner_generate_loot", true)) {
@@ -384,6 +353,5 @@ public class SpawnerPlaceListener implements Listener {
 
     public void cleanupPlayer(UUID playerId) {
         lastPlacementTime.remove(playerId);
-        playerItemCounts.remove(playerId);
     }
 }

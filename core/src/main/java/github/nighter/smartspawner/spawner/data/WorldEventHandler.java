@@ -146,9 +146,6 @@ public class WorldEventHandler implements Listener {
         if (pendingCount > 0) {
             logger.info("Pending spawners will be loaded when their worlds become available.");
         }
-        
-        // Initialize chunk spawner limits after spawners are loaded
-        plugin.getChunkSpawnerLimiter().reloadConfig();
     }
 
     /**
@@ -182,9 +179,6 @@ public class WorldEventHandler implements Listener {
 
         if (loadedCount > 0) {
             logger.info("Loaded " + loadedCount + " pending spawners for world: " + worldName);
-            
-            // Reinitialize chunk spawner limits after loading pending spawners
-            plugin.getChunkSpawnerLimiter().reloadConfig();
 
             // Restart hoppers for the spawners in this world
             if (plugin.getHopperHandler() != null) {

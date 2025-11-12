@@ -68,16 +68,6 @@ spawner_break:
     level: 1            # Minimum level of Silk Touch required
 
 #---------------------------------------------------
-#               Spawner Limitations
-#---------------------------------------------------
-spawner_limits:
-  # Maximum number of spawners (including stacks) allowed per chunk
-  # Set to -1 for unlimited spawners per chunk
-  # Each spawner in a stack counts toward the limit (not just 1 per stack)
-  # Example: 1 spawner with 64 stack + 1 spawner with 6 stack = 70 total count in chunk
-  max_per_chunk: -1
-
-#---------------------------------------------------
 #           Natural/Vanilla Spawner Settings
 #---------------------------------------------------
 # Controls behavior of naturally generated dungeon spawners
@@ -188,7 +178,9 @@ hologram:
   # {used_slots} - Used inventory slots
   # {max_slots} - Total inventory slots
   # {percent_storage_decimal} - Storage usage as percentage (e.g., "75.5" for 75.5% full)
+  # {percent_storage_rounded} - Storage usage as rounded percentage (e.g., "76" for 76% full)
   # {percent_exp_decimal} - Experience storage as percentage (e.g., "50.0" for 50.0% full)
+  # {percent_exp_rounded} - Experience storage as rounded percentage (e.g., "50" for 50% full)
   text:
     - '[&#f8f8ff{stack_size}] &#7b68ee{ᴇɴᴛɪᴛʏ} ꜱᴘᴀᴡɴᴇʀ'
     - '&#ab7afd• &#e6e6faxᴘ: &#37eb9a{current_exp}&#f8f8ff/&#37eb9a{max_exp}'

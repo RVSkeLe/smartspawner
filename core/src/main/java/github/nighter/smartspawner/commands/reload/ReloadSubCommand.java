@@ -70,7 +70,6 @@ public class ReloadSubCommand extends BaseSubCommand {
             plugin.getSpawnerItemFactory().reload();
             plugin.getSpawnerManager().reloadAllHolograms();
             plugin.reload();
-            plugin.getChunkSpawnerLimiter().reloadConfig();
 
             // Log new cache stats after reload if in debug mode
             if (plugin.getConfig().getBoolean("debug", false)) {

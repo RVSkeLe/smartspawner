@@ -9,7 +9,6 @@ import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
 import lombok.Getter;
 import org.bukkit.*;
@@ -38,7 +37,6 @@ public class SpawnerBreakListener implements Listener {
     private final HopperHandler hopperHandler;
     private final SpawnerItemFactory spawnerItemFactory;
     private final SpawnerFileHandler spawnerFileHandler;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
     private final SpawnerLocationLockManager locationLockManager;
 
     public SpawnerBreakListener(SmartSpawner plugin) {
@@ -48,7 +46,6 @@ public class SpawnerBreakListener implements Listener {
         this.hopperHandler = plugin.getHopperHandler();
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerFileHandler = plugin.getSpawnerFileHandler();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
         this.locationLockManager = plugin.getSpawnerLocationLockManager();
     }
 
@@ -179,9 +176,6 @@ public class SpawnerBreakListener implements Listener {
             if (world != null) {
                 block.setType(Material.AIR);
 
-                // Unregister vanilla spawner from chunk limiter (stack size 1)
-                chunkSpawnerLimiter.unregisterSpawner(location, 1);
-
                 if (directToInventory) {
                     giveSpawnersToPlayer(player, 1, spawnerItem);
                     player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
@@ -247,20 +241,14 @@ public class SpawnerBreakListener implements Listener {
             if (currentStackSize <= MAX_STACK_SIZE) {
                 dropAmount = currentStackSize;
                 if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-                // Unregister entire spawner stack
-                chunkSpawnerLimiter.unregisterSpawner(location, currentStackSize);
             } else {
                 dropAmount = MAX_STACK_SIZE;
                 if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-                // Unregister only the dropped amount
-                chunkSpawnerLimiter.unregisterSpawner(location, MAX_STACK_SIZE);
                 spawner.setStackSize(currentStackSize - MAX_STACK_SIZE);
             }
         } else {
             dropAmount = 1;
             if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-            // Unregister only 1 spawner
-            chunkSpawnerLimiter.unregisterSpawner(location, 1);
             if (currentStackSize <= 1) {
                 shouldDeleteSpawner = true;
             } else {

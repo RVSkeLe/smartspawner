@@ -9,7 +9,6 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
 import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.Bukkit;
@@ -42,7 +41,6 @@ public class SpawnerStackerHandler implements Listener {
     private final SpawnerMenuUI spawnerMenuUI;
     private final LanguageManager languageManager;
     private final SpawnerItemFactory spawnerItemFactory;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
     private final SpawnerLocationLockManager locationLockManager;
 
     // Sound constants
@@ -78,7 +76,6 @@ public class SpawnerStackerHandler implements Listener {
         this.messageService = plugin.getMessageService();
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerMenuUI = plugin.getSpawnerMenuUI();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
         this.locationLockManager = plugin.getSpawnerLocationLockManager();
 
         // Start cleanup task - increased interval for less overhead
@@ -317,9 +314,6 @@ public class SpawnerStackerHandler implements Listener {
                 if (e.isCancelled()) return;
             }
 
-            // Update chunk limiter - unregister the removed spawners
-            chunkSpawnerLimiter.unregisterSpawner(spawner.getSpawnerLocation(), actualChange);
-
             // Update stack size and give spawners to player
             // setStackSize internally uses dataLock for thread safety
             spawner.setStackSize(targetSize);
@@ -361,15 +355,6 @@ public class SpawnerStackerHandler implements Listener {
 
         // Limit change to available space
         int actualChange = Math.min(changeAmount, spaceLeft);
-
-        // Check chunk limits before proceeding
-        if (!chunkSpawnerLimiter.canStackSpawner(player, spawner.getSpawnerLocation(), actualChange)) {
-            Map<String, String> placeholders = new HashMap<>(2);
-            placeholders.put("limit", String.valueOf(chunkSpawnerLimiter.getMaxSpawnersPerChunk()));
-            messageService.sendMessage(player, "spawner_chunk_limit_reached", placeholders);
-            return;
-        }
-
         EntityType requiredType = spawner.getEntityType();
 
         // Analyze inventory in a single pass to get both counts and check types
@@ -396,9 +381,6 @@ public class SpawnerStackerHandler implements Listener {
             Bukkit.getPluginManager().callEvent(e);
             if (e.isCancelled()) return;
         }
-
-        // Update chunk limiter - register the added spawners
-        chunkSpawnerLimiter.registerSpawnerStack(spawner.getSpawnerLocation(), actualChange);
 
         removeValidSpawnersFromInventory(player, requiredType, actualChange, scanResult.spawnerSlots);
         spawner.setStackSize(currentSize + actualChange);
