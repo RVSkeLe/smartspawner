@@ -473,6 +473,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         if (spawnerClickManager != null) spawnerClickManager.cleanup();
         if (spawnerStackerHandler != null) spawnerStackerHandler.cleanupAll();
         if (spawnerStorageUI != null) spawnerStorageUI.cleanup();
+        if (spawnerLocationLockManager !=null) spawnerLocationLockManager.shutdown();
     }
 
     // Spawner Provider for ShopGUI+ integration
@@ -489,10 +490,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
 
     public long getTimeFromConfig(String path, String defaultValue) {
         return timeFormatter.getTimeFromConfig(path, defaultValue);
-    }
-
-    public SpawnerStorageAction getSpawnerStorageAction() {
-        return spawnerStorageAction;
     }
 
     public void debug(String message) {
