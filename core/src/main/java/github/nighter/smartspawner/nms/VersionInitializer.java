@@ -45,7 +45,7 @@ public class VersionInitializer {
             tooltipDisplayClass = Class.forName("io.papermc.paper.datacomponent.item.TooltipDisplay");
             supportsDataComponentAPI = true;
             plugin.getLogger().info("Server supports DataComponent API (Paper 1.21.5+)");
-        } catch (ClassNotFoundException e) {
+        } catch (Exception e) {
             supportsDataComponentAPI = false;
             plugin.getLogger().info("Server does not support DataComponent API, using fallback methods (Paper < 1.21.5)");
         }
