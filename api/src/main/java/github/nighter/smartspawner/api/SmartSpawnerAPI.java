@@ -108,6 +108,7 @@ public interface SmartSpawnerAPI {
 
     /**
      * Gets spawner data by location.
+     * The returned DTO is read-only. To modify spawner properties, use {@link #getSpawnerModifier(String)}.
      *
      * @param location the location of the spawner block
      * @return the spawner data DTO, or null if no spawner exists at that location
@@ -116,6 +117,7 @@ public interface SmartSpawnerAPI {
 
     /**
      * Gets spawner data by unique identifier.
+     * The returned DTO is read-only. To modify spawner properties, use {@link #getSpawnerModifier(String)}.
      *
      * @param spawnerId the unique ID of the spawner
      * @return the spawner data DTO, or null if spawner with that ID doesn't exist
@@ -124,6 +126,7 @@ public interface SmartSpawnerAPI {
 
     /**
      * Gets all registered spawners in the server.
+     * The returned DTOs are read-only. To modify spawner properties, use {@link #getSpawnerModifier(String)}.
      *
      * @return list of all spawner data DTOs
      */

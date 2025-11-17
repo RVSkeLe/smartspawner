@@ -1,34 +1,30 @@
 package github.nighter.smartspawner.api.data;
 
 import lombok.Getter;
-import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 
 /**
- * Data Transfer Object containing spawner information.
- * This class provides access to spawner data through the API.
- * All properties can be modified except stackSize which is read-only.
+ * Data Transfer Object containing read-only spawner information.
+ * This class provides read-only access to spawner data through the API.
+ * To modify spawner properties, use {@link SpawnerDataModifier} obtained from
+ * {@link github.nighter.smartspawner.api.SmartSpawnerAPI#getSpawnerModifier(String)}.
  */
 @Getter
-@Setter
 public class SpawnerDataDTO {
 
-    private String spawnerId;
-    private Location location;
-    private EntityType entityType;
-    private Material spawnedItemMaterial;
-
-    @Setter(lombok.AccessLevel.NONE)
-    private int stackSize;
-
-    private int maxStackSize;
-    private int baseMaxStoragePages;
-    private int baseMinMobs;
-    private int baseMaxMobs;
-    private int baseMaxStoredExp;
-    private long baseSpawnerDelay;
+    private final String spawnerId;
+    private final Location location;
+    private final EntityType entityType;
+    private final Material spawnedItemMaterial;
+    private final int stackSize;
+    private final int maxStackSize;
+    private final int baseMaxStoragePages;
+    private final int baseMinMobs;
+    private final int baseMaxMobs;
+    private final int baseMaxStoredExp;
+    private final long baseSpawnerDelay;
 
     /**
      * Creates a new spawner data DTO.
