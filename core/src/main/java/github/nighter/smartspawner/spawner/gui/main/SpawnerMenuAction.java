@@ -301,7 +301,7 @@ public class SpawnerMenuAction implements Listener {
                 SpawnerExpClaimEvent expClaimEvent = new SpawnerExpClaimEvent(player, spawner.getSpawnerLocation(), exp);
                 Bukkit.getPluginManager().callEvent(expClaimEvent);
                 if(expClaimEvent.isCancelled()) return;
-                if(exp != expClaimEvent.getExpQuantity()) exp = expClaimEvent.getExpQuantity();
+                if(exp != expClaimEvent.getExpAmount()) exp = expClaimEvent.getExpAmount();
             }
             player.giveExp(exp);
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);

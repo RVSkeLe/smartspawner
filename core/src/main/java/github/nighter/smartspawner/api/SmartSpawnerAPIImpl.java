@@ -1,7 +1,12 @@
 package github.nighter.smartspawner.api;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.api.data.SpawnerDataDTO;
+import github.nighter.smartspawner.api.data.SpawnerDataModifier;
+import github.nighter.smartspawner.api.impl.SpawnerDataModifierImpl;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
+import github.nighter.smartspawner.spawner.properties.SpawnerData;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
@@ -10,8 +15,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
- * Implementation of the SmartSpawnerAPI interface
+ * Implementation of the SmartSpawnerAPI interface.
  */
 public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
 
@@ -143,5 +151,64 @@ public class SmartSpawnerAPIImpl implements SmartSpawnerAPI {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    @Override
+    public SpawnerDataDTO getSpawnerByLocation(Location location) {
+        if (location == null) {
+            return null;
+        }
+
+        SpawnerData spawnerData = plugin.getSpawnerManager().getSpawnerByLocation(location);
+        return spawnerData != null ? convertToDTO(spawnerData) : null;
+    }
+
+    @Override
+    public SpawnerDataDTO getSpawnerById(String spawnerId) {
+        if (spawnerId == null) {
+            return null;
+        }
+
+        SpawnerData spawnerData = plugin.getSpawnerManager().getSpawnerById(spawnerId);
+        return spawnerData != null ? convertToDTO(spawnerData) : null;
+    }
+
+    @Override
+    public List<SpawnerDataDTO> getAllSpawners() {
+        return plugin.getSpawnerManager().getAllSpawners().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public SpawnerDataModifier getSpawnerModifier(String spawnerId) {
+        if (spawnerId == null) {
+            return null;
+        }
+
+        SpawnerData spawnerData = plugin.getSpawnerManager().getSpawnerById(spawnerId);
+        return spawnerData != null ? new SpawnerDataModifierImpl(spawnerData) : null;
+    }
+
+    /**
+     * Converts SpawnerData to SpawnerDataDTO.
+     *
+     * @param spawnerData the spawner data to convert
+     * @return the DTO representation
+     */
+    private SpawnerDataDTO convertToDTO(SpawnerData spawnerData) {
+        return new SpawnerDataDTO(
+                spawnerData.getSpawnerId(),
+                spawnerData.getSpawnerLocation(),
+                spawnerData.getEntityType(),
+                spawnerData.getSpawnedItemMaterial(),
+                spawnerData.getStackSize(),
+                spawnerData.getMaxStackSize(),
+                spawnerData.getBaseMaxStoragePages(),
+                spawnerData.getBaseMinMobs(),
+                spawnerData.getBaseMaxMobs(),
+                spawnerData.getBaseMaxStoredExp(),
+                spawnerData.getSpawnDelay()
+        );
     }
 }

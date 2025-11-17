@@ -1,8 +1,7 @@
 package github.nighter.smartspawner.api.events;
 
-import github.nighter.smartspawner.api.SmartSpawnerAPI;
-import github.nighter.smartspawner.api.SmartSpawnerPlugin;
-import github.nighter.smartspawner.api.SmartSpawnerProvider;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -10,72 +9,50 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Called when spawners are stacked together.
+ */
+@Getter
 public class SpawnerStackEvent extends Event implements Cancellable {
-    private final Player player;
-    private final Location location;
-    private final int oldQuantity, newQuantity;
-    private final StackSource source;
-    private boolean cancelled = false;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Player player;
+    private final Location location;
+    private final int oldStackSize;
+    private final int newStackSize;
+    private final StackSource source;
+
+    @Setter
+    private boolean cancelled = false;
+
     /**
-     * The constructor for the event.
+     * Creates a new spawner stack event.
      *
-     * @param player The player who added a spawner at the stack
-     * @param location The location of the spawner.
-     * @param oldQuantity The old quantity of the spawner.
-     * @param newQuantity The new quantity of the spawner
+     * @param player the player who stacked the spawner
+     * @param location the location of the spawner
+     * @param oldStackSize the old stack size
+     * @param newStackSize the new stack size
+     * @param source the source of the stack operation
      */
-    public SpawnerStackEvent(Player player, Location location, int oldQuantity, int newQuantity, StackSource source) {
+    public SpawnerStackEvent(Player player, Location location, int oldStackSize, int newStackSize, StackSource source) {
         this.player = player;
         this.location = location;
-        this.oldQuantity = oldQuantity;
-        this.newQuantity = newQuantity;
+        this.oldStackSize = oldStackSize;
+        this.newStackSize = newStackSize;
         this.source = source;
     }
 
-    public SpawnerStackEvent(Player player, Location location, int oldQuantity, int newQuantity) {
-        this(player, location, oldQuantity, newQuantity, StackSource.PLACE);
-    }
-
-    public Player getPlayer() {
-        return player;
-    }
-
-    public Location getLocation() {
-        return location;
-    }
-
     /**
-     * @return The quantity before stack operation
+     * Creates a new spawner stack event with default PLACE source.
+     *
+     * @param player the player who stacked the spawner
+     * @param location the location of the spawner
+     * @param oldStackSize the old stack size
+     * @param newStackSize the new stack size
      */
-    public int getOldQuantity() {
-        return oldQuantity;
-    }
-
-    /**
-     * @return The quantity post stack operation
-     */
-    public int getNewQuantity() {
-        return newQuantity;
-    }
-
-    /**
-     * @return The source of stack operation (PLACE, GUI)
-     */
-    public StackSource getSource() {
-        return source;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
-    }
-
-    @Override
-    public void setCancelled(boolean cancelled) {
-        this.cancelled = cancelled;
+    public SpawnerStackEvent(Player player, Location location, int oldStackSize, int newStackSize) {
+        this(player, location, oldStackSize, newStackSize, StackSource.PLACE);
     }
 
     @Override
@@ -87,7 +64,18 @@ public class SpawnerStackEvent extends Event implements Cancellable {
         return handlers;
     }
 
+    /**
+     * Represents the source of a stack operation.
+     */
     public enum StackSource {
-        PLACE, GUI;
+        /**
+         * Stacked by placing a spawner on another.
+         */
+        PLACE,
+
+        /**
+         * Stacked through the GUI interface.
+         */
+        GUI
     }
 }

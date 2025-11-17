@@ -1,46 +1,31 @@
 package github.nighter.smartspawner.api.events;
 
+import lombok.Getter;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * SpawnerEvent is called when a spawner being broke by a player or an explosion.
+ * Base event class for all spawner-related events.
  */
+@Getter
 public abstract class SpawnerEvent extends Event {
-    private final Location location;
-    private final int quantity;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Location location;
+    private final int quantity;
+
     /**
-     * The constructor for the event.
+     * Creates a new spawner event.
      *
-     * @param location       The location of the spawner.
-     * @param quantity       The quantity of the spawner.
+     * @param location the location of the spawner
+     * @param quantity the quantity/stack size of the spawner
      */
-    public SpawnerEvent(Location location, int quantity) {
+    protected SpawnerEvent(Location location, int quantity) {
         this.location = location;
         this.quantity = quantity;
-    }
-
-    /**
-     * Get the location of the spawner broken.
-     * @return The location of the spawner broken
-     */
-    public Location getLocation() {
-        return location;
-    }
-
-    /**
-     * Get the quantity of the spawner broken.
-     * @return The quantity of the spawner broken
-     */
-    public int getQuantity() {
-        return quantity;
     }
 
     @Override
@@ -52,3 +37,4 @@ public abstract class SpawnerEvent extends Event {
         return handlers;
     }
 }
+

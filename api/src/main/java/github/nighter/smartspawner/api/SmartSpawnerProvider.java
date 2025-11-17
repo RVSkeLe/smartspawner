@@ -13,7 +13,7 @@ public class SmartSpawnerProvider {
     /**
      * Gets the SmartSpawnerAPI instance.
      *
-     * @return The API instance, or null if SmartSpawner is not loaded
+     * @return the API instance, or null if SmartSpawner is not loaded
      */
     public static SmartSpawnerAPI getAPI() {
         Plugin plugin = Bukkit.getPluginManager().getPlugin(PLUGIN_NAME);

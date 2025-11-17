@@ -63,14 +63,14 @@ public class SpawnerAuditListener implements Listener {
                 SpawnerEventType.SPAWNER_STACK_HAND : 
                 SpawnerEventType.SPAWNER_STACK_GUI;
         
-        int amountAdded = event.getNewQuantity() - event.getOldQuantity();
+        int amountAdded = event.getNewStackSize() - event.getOldStackSize();
         
         logger.log(new SpawnerLogEntry.Builder(eventType)
                 .player(event.getPlayer().getName(), event.getPlayer().getUniqueId())
                 .location(event.getLocation())
                 .metadata("amount_added", amountAdded)
-                .metadata("old_stack_size", event.getOldQuantity())
-                .metadata("new_stack_size", event.getNewQuantity())
+                .metadata("old_stack_size", event.getOldStackSize())
+                .metadata("new_stack_size", event.getNewStackSize())
                 .build());
     }
     
@@ -88,7 +88,7 @@ public class SpawnerAuditListener implements Listener {
         logger.log(new SpawnerLogEntry.Builder(SpawnerEventType.SPAWNER_EXP_CLAIM)
                 .player(event.getPlayer().getName(), event.getPlayer().getUniqueId())
                 .location(event.getLocation())
-                .metadata("exp_amount", event.getExpQuantity())
+                .metadata("exp_amount", event.getExpAmount())
                 .build());
     }
     

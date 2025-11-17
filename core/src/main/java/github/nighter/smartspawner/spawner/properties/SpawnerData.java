@@ -37,9 +37,13 @@ public class SpawnerData {
     private final ReentrantLock dataLock = new ReentrantLock();  // For metadata changes (exp, stack size, etc.)
 
     // Base values from config (immutable after load)
+    @Getter @Setter
     private int baseMaxStoredExp;
+    @Getter @Setter
     private int baseMaxStoragePages;
+    @Getter @Setter
     private int baseMinMobs;
+    @Getter @Setter
     private int baseMaxMobs;
 
     @Getter
@@ -189,6 +193,26 @@ public class SpawnerData {
         updateHologramData();
 
         // Invalidate GUI cache after config reload
+        if (plugin.getSpawnerMenuUI() != null) {
+            plugin.getSpawnerMenuUI().invalidateSpawnerCache(this.spawnerId);
+        }
+        if (plugin.getSpawnerMenuFormUI() != null) {
+            plugin.getSpawnerMenuFormUI().invalidateSpawnerCache(this.spawnerId);
+        }
+    }
+
+    /**
+     * Recalculates spawner values after API modifications.
+     * Similar to {@link #recalculateAfterConfigReload()} but specifically for API changes.
+     */
+    public void recalculateAfterAPIModification() {
+        calculateStackBasedValues();
+        if (virtualInventory != null && virtualInventory.getMaxSlots() != maxSpawnerLootSlots) {
+            recreateVirtualInventory();
+        }
+        updateHologramData();
+
+        // Invalidate GUI cache after API modifications
         if (plugin.getSpawnerMenuUI() != null) {
             plugin.getSpawnerMenuUI().invalidateSpawnerCache(this.spawnerId);
         }

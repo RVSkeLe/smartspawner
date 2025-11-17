@@ -1,36 +1,33 @@
 package github.nighter.smartspawner.api.events;
 
+import lombok.Getter;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * SpawnerBreakEvent is called when a spawner being broken by a player or an explosion.
+ * Called when a spawner is broken by a player or explosion.
  */
+@Getter
 public class SpawnerBreakEvent extends SpawnerEvent {
-    private final Entity entity;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Entity entity;
+
     /**
-     * The constructor for the event.
+     * Creates a new spawner break event.
      *
-     * @param entity         The entity who broke the spawner.
-     * @param location       The location of the spawner broken.
-     * @param quantity       The quantity of the spawner broken.
+     * @param entity the entity that broke the spawner
+     * @param location the location of the broken spawner
+     * @param quantity the quantity of the broken spawner
      */
     public SpawnerBreakEvent(Entity entity, Location location, int quantity) {
         super(location, quantity);
         this.entity = entity;
     }
 
-    /**
-     * @return The entity who broke the spawner.
-     */
-    public Entity getEntity() {
-        return entity;
-    }
 
     @Override
     public @NotNull HandlerList getHandlers() {
