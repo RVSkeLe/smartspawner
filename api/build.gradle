@@ -15,7 +15,7 @@ publishing {
             pom {
                 name = 'SmartSpawner API'
                 description = 'API for SmartSpawner plugin - allows other plugins to create and manage spawners'
-                url = 'https://github.com/ptthanh02/SmartSpawner'
+                url = 'https://github.com/NighterDevelopment/SmartSpawner'
                 licenses {
                     license {
                         name = 'MIT License'

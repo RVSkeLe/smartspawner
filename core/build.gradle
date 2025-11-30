@@ -1,29 +1,29 @@
 dependencies {
     api project(':api')
 
-    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT'
     // Hook plugins
     compileOnly 'org.geysermc.floodgate:api:2.2.5-SNAPSHOT'
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT'
     compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.4.0-SNAPSHOT'
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") { exclude(group: "*") }
-    compileOnly 'com.palmergames.bukkit.towny:towny:0.101.2.6'
-    compileOnly 'com.bgsoftware:SuperiorSkyblockAPI:2025.1'
+    compileOnly 'com.palmergames.bukkit.towny:towny:0.102.0.0'
+    compileOnly 'com.bgsoftware:SuperiorSkyblockAPI:2025.2.1'
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
     compileOnly 'su.nightexpress.coinsengine:CoinsEngine:2.6.0'
     compileOnly 'com.github.Gypopo:EconomyShopGUI-API:1.9.0'
-    compileOnly 'world.bentobox:bentobox:3.8.2-SNAPSHOT'
-    compileOnly 'su.nightexpress.excellentshop:Core:4.21.2'
+    compileOnly 'world.bentobox:bentobox:3.10.0-SNAPSHOT'
+    compileOnly 'su.nightexpress.excellentshop:Core:4.22.0'
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Core:8.1.2") { exclude(group: "*") }
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Spigot:8.1.2") { exclude(group: "*") }
     implementation 'com.github.maiminhdung:zShop-API:9cb1b3e140'
     implementation 'com.github.GriefPrevention:GriefPrevention:18.0.0'
-    implementation 'com.github.IncrediblePlugins:LandsAPI:7.18.5'
+    implementation 'com.github.IncrediblePlugins:LandsAPI:7.19.1'
     implementation 'com.github.Xyness:SimpleClaimSystem:1.12.3.2'
     compileOnly 'dev.aurelium:auraskills-api-bukkit:2.3.8'
     compileOnly 'pl.minecodes.plots:plugin-api:4.6.2'
     compileOnly("io.lumine:Mythic-Dist:5.10.1")
-    compileOnly("com.iridium:IridiumSkyblock:4.1.1")
+    compileOnly("com.iridium:IridiumSkyblock:4.1.2")
     implementation(platform("com.intellectualsites.bom:bom-newest:1.55"))
     compileOnly("com.intellectualsites.plotsquared:plotsquared-core")
     implementation("com.github.Zrips:Residence:6.0.0.1") {
@@ -50,9 +50,6 @@ jar {
     archiveVersion.set("${version}")
 
     from { project(':api').sourceSets.main.output }
-    from { project(':NMS:v1_21').sourceSets.main.output }
-    from { project(':NMS:v1_21_4').sourceSets.main.output }
-    from { project(':NMS:v1_21_6').sourceSets.main.output }
     from sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'

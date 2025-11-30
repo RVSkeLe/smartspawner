@@ -1,10 +1,6 @@
 <div align="center">
   
-<br>
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://github.com/user-attachments/assets/3ea1f61b-d3fe-41b5-977f-d596a13f3ea9" alt="GUI Spawner Plugin for Minecraft Servers" />
-
-<br>
+![banner](https://github.com/user-attachments/assets/c976b6a9-537c-46ec-8efc-0e80cdd0840d)
 
 [![Modrinth](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/available/modrinth_vector.svg)](https://modrinth.com/plugin/smart-spawner-plugin)
 [![Spigot](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/compact/available/spigot_vector.svg)](https://www.spigotmc.org/resources/120743/)
@@ -17,7 +13,7 @@
 
 ## Requirements
 
-- **Minecraft Version:** 1.21 - 1.21.8
+- **Minecraft Version:** 1.21 - 1.21.10
 - **Server Software:** Paper, Folia or compatible forks
 - **Java Version:** 21+
 

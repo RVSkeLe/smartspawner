@@ -1,8 +1,6 @@
 package github.nighter.smartspawner;
 
-import github.nighter.smartspawner.api.SmartSpawnerAPI;
-import github.nighter.smartspawner.api.SmartSpawnerPlugin;
-import github.nighter.smartspawner.api.SmartSpawnerAPIImpl;
+import github.nighter.smartspawner.api.*;
 import github.nighter.smartspawner.bstats.Metrics;
 import github.nighter.smartspawner.commands.BrigadierCommandManager;
 import github.nighter.smartspawner.commands.list.ListSubCommand;
@@ -12,10 +10,11 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
+import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
+import github.nighter.smartspawner.spawner.config.ItemSpawnerSettingsConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
 import github.nighter.smartspawner.logging.SpawnerActionLogger;
 import github.nighter.smartspawner.logging.SpawnerAuditListener;
-import github.nighter.smartspawner.logging.SpawnerEventType;
 import github.nighter.smartspawner.spawner.natural.NaturalSpawnerListener;
 import github.nighter.smartspawner.utils.TimeFormatter;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
@@ -32,7 +31,7 @@ import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerHandler;
 import github.nighter.smartspawner.spawner.gui.storage.filter.FilterConfigUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageAction;
 import github.nighter.smartspawner.spawner.interactions.click.SpawnerClickManager;
 import github.nighter.smartspawner.spawner.interactions.destroy.SpawnerBreakListener;
@@ -41,26 +40,24 @@ import github.nighter.smartspawner.spawner.interactions.place.SpawnerPlaceListen
 import github.nighter.smartspawner.spawner.interactions.stack.SpawnerStackHandler;
 import github.nighter.smartspawner.spawner.interactions.type.SpawnEggHandler;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
-import github.nighter.smartspawner.spawner.utils.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerLootGenerator;
-import github.nighter.smartspawner.spawner.events.WorldEventHandler;
+import github.nighter.smartspawner.spawner.data.WorldEventHandler;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.updates.ConfigUpdater;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.updates.LanguageUpdater;
 import github.nighter.smartspawner.updates.UpdateChecker;
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -83,6 +80,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private LanguageManager languageManager;
     private LanguageUpdater languageUpdater;
     private MessageService messageService;
+    private SpawnerSettingsConfig spawnerSettingsConfig;
+    private ItemSpawnerSettingsConfig itemSpawnerSettingsConfig;
 
     // Factories
     private SpawnerItemFactory spawnerItemFactory;
@@ -110,19 +109,18 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerFileHandler spawnerFileHandler;
     private SpawnerManager spawnerManager;
     private HopperHandler hopperHandler;
+    private SpawnerLocationLockManager spawnerLocationLockManager;
 
     // Event handlers and utilities
     private NaturalSpawnerListener naturalSpawnerListener;
     private SpawnerLootGenerator spawnerLootGenerator;
     private SpawnerRangeChecker rangeChecker;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
     private SpawnerGuiViewManager spawnerGuiViewManager;
     private SpawnerExplosionListener spawnerExplosionListener;
     private SpawnerBreakListener spawnerBreakListener;
     private SpawnerPlaceListener spawnerPlaceListener;
     private WorldEventHandler worldEventHandler;
     private ItemPriceManager itemPriceManager;
-    private EntityLootRegistry entityLootRegistry;
     private UpdateChecker updateChecker;
     private BrigadierCommandManager brigadierCommandManager;
     private ListSubCommand listSubCommand;
@@ -231,6 +229,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.languageUpdater = new LanguageUpdater(this);
         this.messageService = new MessageService(this, languageManager);
         
+        // Initialize new unified spawner settings config (but don't load yet)
+        this.spawnerSettingsConfig = new SpawnerSettingsConfig(this);
+        this.itemSpawnerSettingsConfig = new ItemSpawnerSettingsConfig(this);
+        
         // Initialize logging system
         this.loggingConfig = new LoggingConfig(this);
         this.spawnerActionLogger = new SpawnerActionLogger(this, loggingConfig);
@@ -240,13 +242,29 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void initializeEconomyComponents() {
         this.itemPriceManager = new ItemPriceManager(this);
         this.itemPriceManager.init();
-        this.entityLootRegistry = new EntityLootRegistry(this, itemPriceManager);
+        
+        // Load spawner settings after economy components are ready
+        // This is needed because loot configuration requires price manager
+        if (spawnerSettingsConfig != null) {
+            spawnerSettingsConfig.load();
+        }
+        
+        // Load item spawner settings
+        if (itemSpawnerSettingsConfig != null) {
+            itemSpawnerSettingsConfig.load();
+        }
+        
+        // Pre-warm the head texture cache after settings are loaded
+        // This prevents the brief flash of default player heads when opening GUIs
+        SpawnerMobHeadTexture.prewarmCache();
+
         this.spawnerItemFactory = new SpawnerItemFactory(this);
     }
 
     private void initializeCoreComponents() {
         this.spawnerFileHandler = new SpawnerFileHandler(this);
         this.spawnerManager = new SpawnerManager(this);
+        this.spawnerLocationLockManager = new SpawnerLocationLockManager(this);
         this.spawnerManager.reloadAllHolograms();
         this.guiLayoutConfig = new GuiLayoutConfig(this);
         this.spawnerStorageUI = new SpawnerStorageUI(this);
@@ -287,7 +305,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     private void initializeHandlers() {
-        this.chunkSpawnerLimiter = new ChunkSpawnerLimiter(this);
         this.spawnerStackerUI = new SpawnerStackerUI(this);
         this.spawnEggHandler = new SpawnEggHandler(this);
         this.spawnerStackHandler = new SpawnerStackHandler(this);
@@ -309,7 +326,14 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     public void setUpHopperHandler() {
-        this.hopperHandler = getConfig().getBoolean("hopper.enabled", false) ? new HopperHandler(this) : null;
+        if (this.hopperHandler != null) {
+            this.hopperHandler.cleanup();
+            this.hopperHandler = null;
+        }
+        
+        if (getConfig().getBoolean("hopper.enabled", false)) {
+            this.hopperHandler = new HopperHandler(this);
+        }
     }
 
     private void registerListeners() {
@@ -321,7 +345,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(spawnerPlaceListener, this);
         pm.registerEvents(spawnerStorageAction, this);
         pm.registerEvents(spawnerExplosionListener, this);
-        pm.registerEvents(spawnerGuiViewManager, this);
+        // Note: spawnerGuiViewManager registers its own listeners internally
         pm.registerEvents(spawnerClickManager, this);
         pm.registerEvents(spawnerMenuAction, this);
         pm.registerEvents(spawnerStackerHandler, this);
@@ -382,6 +406,18 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         spawnerMenuAction.reload();
         timeFormatter.clearCache();
         
+        // Reload spawner settings config (includes mob heads and loot)
+        if (spawnerSettingsConfig != null) {
+            spawnerSettingsConfig.reload();
+            // Clear head cache to force regeneration with new textures
+            SpawnerMobHeadTexture.clearCache();
+        }
+        
+        // Reload item spawner settings config
+        if (itemSpawnerSettingsConfig != null) {
+            itemSpawnerSettingsConfig.reload();
+        }
+        
         // Reload logging system
         loggingConfig.loadConfig();
         spawnerActionLogger.shutdown();
@@ -434,6 +470,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         if (spawnerClickManager != null) spawnerClickManager.cleanup();
         if (spawnerStackerHandler != null) spawnerStackerHandler.cleanupAll();
         if (spawnerStorageUI != null) spawnerStorageUI.cleanup();
+        if (spawnerLocationLockManager !=null) spawnerLocationLockManager.shutdown();
     }
 
     // Spawner Provider for ShopGUI+ integration
@@ -446,15 +483,6 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             return false;
         }
         return itemPriceManager.hasSellIntegration();
-    }
-
-    public boolean hasShopIntegration() {
-        if (itemPriceManager == null) {
-            return false;
-        }
-
-        return itemPriceManager.getShopIntegrationManager() != null &&
-                itemPriceManager.getShopIntegrationManager().hasActiveProvider();
     }
 
     public long getTimeFromConfig(String path, String defaultValue) {

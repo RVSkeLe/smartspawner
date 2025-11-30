@@ -9,10 +9,10 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
-
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.CreatureSpawner;
@@ -41,7 +41,7 @@ public class SpawnerStackerHandler implements Listener {
     private final SpawnerMenuUI spawnerMenuUI;
     private final LanguageManager languageManager;
     private final SpawnerItemFactory spawnerItemFactory;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
+    private final SpawnerLocationLockManager locationLockManager;
 
     // Sound constants
     private static final Sound STACK_SOUND = Sound.ENTITY_EXPERIENCE_ORB_PICKUP;
@@ -76,7 +76,7 @@ public class SpawnerStackerHandler implements Listener {
         this.messageService = plugin.getMessageService();
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerMenuUI = plugin.getSpawnerMenuUI();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
+        this.locationLockManager = plugin.getSpawnerLocationLockManager();
 
         // Start cleanup task - increased interval for less overhead
         startCleanupTask();
@@ -103,6 +103,8 @@ public class SpawnerStackerHandler implements Listener {
         // Cancel the event to prevent item movement
         event.setCancelled(true);
 
+        SpawnerData spawner = holder.getSpawnerData();
+
         // Check for cooldown - fast path return
         UUID playerId = player.getUniqueId();
         Long lastClick = lastClickTime.get(playerId);
@@ -111,8 +113,6 @@ public class SpawnerStackerHandler implements Listener {
         // Get the clicked item
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || !clickedItem.hasItemMeta()) return;
-
-        SpawnerData spawner = holder.getSpawnerData();
 
         // Handle navigation back to main menu if spawner is clicked
         if (clickedItem.getType() == Material.SPAWNER) {
@@ -152,9 +152,11 @@ public class SpawnerStackerHandler implements Listener {
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         // Prevent any dragging in the stacker GUI
-        if (event.getInventory().getHolder(false) instanceof SpawnerStackerHolder) {
-            event.setCancelled(true);
+        if (!(event.getInventory().getHolder(false) instanceof SpawnerStackerHolder holder)) {
+            return;
         }
+        
+        event.setCancelled(true);
     }
 
     @EventHandler
@@ -275,52 +277,65 @@ public class SpawnerStackerHandler implements Listener {
     }
 
     private void handleStackDecrease(Player player, SpawnerData spawner, int removeAmount) {
-        int currentSize = spawner.getStackSize();
+        Location location = spawner.getSpawnerLocation();
 
-        // Check if trying to go below 1 - fast path
-        if (currentSize == 1) {
-            messageService.sendMessage(player, "spawner_cannot_remove_last");
+        // Acquire location-based lock to prevent race condition with pickaxe break
+        // This ensures GUI destack and pickaxe break cannot happen simultaneously
+        if (!locationLockManager.tryLock(location)) {
+            // Another operation (likely pickaxe break) is in progress
+            messageService.sendMessage(player, "action_in_progress");
             return;
         }
 
-        int targetSize = Math.max(1, currentSize - removeAmount);
-        int actualChange = currentSize - targetSize;
+        try {
+            // Re-read stack size after acquiring lock
+            int currentSize = spawner.getStackSize();
 
-        // Stop if no change - fast path
-        if (actualChange <= 0) {
-            Map<String, String> placeholders = new HashMap<>(2);
-            placeholders.put("amount", String.valueOf(currentSize));
-            messageService.sendMessage(player, "spawner_stacker_minimum_reached", placeholders);
-            return;
+            // Check if trying to go below 1 - fast path
+            if (currentSize == 1) {
+                messageService.sendMessage(player, "spawner_cannot_remove_last");
+                return;
+            }
+
+            int targetSize = Math.max(1, currentSize - removeAmount);
+            int actualChange = currentSize - targetSize;
+
+            // Stop if no change - fast path
+            if (actualChange <= 0) {
+                Map<String, String> placeholders = new HashMap<>(2);
+                placeholders.put("amount", String.valueOf(currentSize));
+                messageService.sendMessage(player, "spawner_stacker_minimum_reached", placeholders);
+                return;
+            }
+
+            if(SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
+                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), targetSize, actualChange);
+                Bukkit.getPluginManager().callEvent(e);
+                if (e.isCancelled()) return;
+            }
+
+            // Update stack size and give spawners to player
+            // setStackSize internally uses dataLock for thread safety
+            spawner.setStackSize(targetSize);
+            giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+
+            // Log destack operation
+            if (plugin.getSpawnerActionLogger() != null) {
+                plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DESTACK_GUI, builder ->
+                    builder.player(player.getName(), player.getUniqueId())
+                        .location(spawner.getSpawnerLocation())
+                        .entityType(spawner.getEntityType())
+                        .metadata("amount_removed", actualChange)
+                        .metadata("old_stack_size", currentSize)
+                        .metadata("new_stack_size", targetSize)
+                );
+            }
+
+            // Play sound
+            player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
+        } finally {
+            locationLockManager.unlock(location);
         }
-
-        if(SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
-            SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), targetSize, actualChange);
-            Bukkit.getPluginManager().callEvent(e);
-            if (e.isCancelled()) return;
-        }
-
-        // Update chunk limiter - unregister the removed spawners
-        chunkSpawnerLimiter.unregisterSpawner(spawner.getSpawnerLocation(), actualChange);
-
-        // Update stack size and give spawners to player
-        spawner.setStackSize(targetSize);
-        giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
-        
-        // Log destack operation
-        if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DESTACK_GUI, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("amount_removed", actualChange)
-                    .metadata("old_stack_size", currentSize)
-                    .metadata("new_stack_size", targetSize)
-            );
-        }
-
-        // Play sound
-        player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
     }
 
     private void handleStackIncrease(Player player, SpawnerData spawner, int changeAmount) {
@@ -340,15 +355,6 @@ public class SpawnerStackerHandler implements Listener {
 
         // Limit change to available space
         int actualChange = Math.min(changeAmount, spaceLeft);
-
-        // Check chunk limits before proceeding
-        if (!chunkSpawnerLimiter.canStackSpawner(player, spawner.getSpawnerLocation(), actualChange)) {
-            Map<String, String> placeholders = new HashMap<>(2);
-            placeholders.put("limit", String.valueOf(chunkSpawnerLimiter.getMaxSpawnersPerChunk()));
-            messageService.sendMessage(player, "spawner_chunk_limit_reached", placeholders);
-            return;
-        }
-
         EntityType requiredType = spawner.getEntityType();
 
         // Analyze inventory in a single pass to get both counts and check types
@@ -375,9 +381,6 @@ public class SpawnerStackerHandler implements Listener {
             Bukkit.getPluginManager().callEvent(e);
             if (e.isCancelled()) return;
         }
-
-        // Update chunk limiter - register the added spawners
-        chunkSpawnerLimiter.registerSpawnerStack(spawner.getSpawnerLocation(), actualChange);
 
         removeValidSpawnersFromInventory(player, requiredType, actualChange, scanResult.spawnerSlots);
         spawner.setStackSize(currentSize + actualChange);
@@ -624,7 +627,7 @@ public class SpawnerStackerHandler implements Listener {
 
             while (remainingAmount > 0) {
                 int stackSize = Math.min(MAX_STACK_SIZE, remainingAmount);
-                ItemStack spawnerItem = spawnerItemFactory.createSpawnerItem(entityType, stackSize);
+                ItemStack spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, stackSize);
                 newStacks.add(spawnerItem);
                 remainingAmount -= stackSize;
             }

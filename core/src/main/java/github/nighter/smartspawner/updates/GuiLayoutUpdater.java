@@ -10,16 +10,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.logging.Level;
 
 public class GuiLayoutUpdater {
+    private final String currentVersion;
+    private final SmartSpawner plugin;
     private static final String GUI_LAYOUT_VERSION_KEY = "gui_layout_version";
     private static final String GUI_LAYOUTS_DIR = "gui_layouts";
     private static final String[] LAYOUT_FILES = {"storage_gui.yml", "main_gui.yml"};
     private static final String[] LAYOUT_NAMES = {"default", "DonutSMP"};
 
-    private final SmartSpawner plugin;
-    private final String currentVersion;
 
     public GuiLayoutUpdater(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -72,7 +71,11 @@ public class GuiLayoutUpdater {
             return;
         }
 
-        plugin.getLogger().info("Updating GUI layout " + layoutName + "/" + fileName + " from version " + layoutVersionStr + " to " + currentVersion);
+        boolean isNewFile = layoutVersionStr.equals("0.0.0");
+
+        if (!isNewFile) {
+            plugin.getLogger().info("Updating GUI layout " + layoutName + "/" + fileName + " from version " + layoutVersionStr + " to " + currentVersion);
+        }
 
         try {
             Map<String, Object> userValues = flattenConfig(currentLayout);
@@ -84,15 +87,18 @@ public class GuiLayoutUpdater {
             FileConfiguration newLayout = YamlConfiguration.loadConfiguration(tempFile);
             newLayout.set(GUI_LAYOUT_VERSION_KEY, currentVersion);
 
-            // Check if there are actual differences before creating backup
-            boolean layoutDiffers = hasLayoutDifferences(userValues, newLayout);
+            // Only check for differences and create backups if not a new file
+            if (!isNewFile) {
+                // Check if there are actual differences before creating backup
+                boolean layoutDiffers = hasLayoutDifferences(userValues, newLayout);
 
-            if (layoutDiffers) {
-                File backupFile = new File(layoutDir, fileName.replace(".yml", "_backup_" + layoutVersionStr + ".yml"));
-                Files.copy(layoutFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                plugin.getLogger().info("GUI layout backup created at " + layoutName + "/" + backupFile.getName());
-            } else {
-                plugin.debug("No significant GUI layout changes detected for " + layoutName + "/" + fileName + ", skipping backup creation");
+                if (layoutDiffers) {
+                    File backupFile = new File(layoutDir, fileName.replace(".yml", "_backup_" + layoutVersionStr + ".yml"));
+                    Files.copy(layoutFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    plugin.getLogger().info("GUI layout backup created at " + layoutName + "/" + backupFile.getName());
+                } else {
+                    plugin.debug("No significant GUI layout changes detected for " + layoutName + "/" + fileName + ", skipping backup creation");
+                }
             }
 
             // Apply user values and save
@@ -101,7 +107,8 @@ public class GuiLayoutUpdater {
             tempFile.delete();
 
         } catch (Exception e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to update GUI layout " + layoutName + "/" + fileName + ": " + e.getMessage(), e);
+            plugin.getLogger().severe("Failed to update GUI layout " + layoutName + "/" + fileName + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -180,7 +187,8 @@ public class GuiLayoutUpdater {
                 }
             }
         } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to create default GUI layout with header for " + layoutName + "/" + fileName + ": " + e.getMessage(), e);
+            plugin.getLogger().severe("Failed to create default GUI layout with header for " + layoutName + "/" + fileName + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

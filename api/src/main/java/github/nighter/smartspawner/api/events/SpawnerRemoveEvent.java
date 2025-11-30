@@ -1,24 +1,34 @@
 package github.nighter.smartspawner.api.events;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Called when spawners are unstacked/removed from the stacker GUI.
+ */
+@Getter
 public class SpawnerRemoveEvent extends SpawnerEvent implements Cancellable {
-    private final Player player;
-    private final int changeAmount;
-    private boolean cancelled = false;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Player player;
+    private final int changeAmount;
+
+    @Setter
+    private boolean cancelled = false;
+
     /**
-     * The constructor for the event.
+     * Creates a new spawner remove event.
      *
-     * @param location The location of the spawner.
-     * @param newQuantity The quantity of the spawner.
-     * @param changeAmount The difference between the new and old quantity
+     * @param player the player who removed spawners
+     * @param location the location of the spawner
+     * @param newQuantity the new quantity after removal
+     * @param changeAmount the amount of spawners removed
      */
     public SpawnerRemoveEvent(Player player, Location location, int newQuantity, int changeAmount) {
         super(location, newQuantity);
@@ -26,26 +36,6 @@ public class SpawnerRemoveEvent extends SpawnerEvent implements Cancellable {
         this.changeAmount = changeAmount;
     }
 
-    /**
-     * @return The difference between the new and old quantity
-     */
-    public int getChangeAmount() {
-        return changeAmount;
-    }
-
-    public Player getPlayer() {
-        return player;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
-    }
-
-    @Override
-    public void setCancelled(boolean cancelled) {
-        this.cancelled = cancelled;
-    }
 
     @Override
     public @NotNull HandlerList getHandlers() {

@@ -5,11 +5,11 @@ import github.nighter.smartspawner.api.events.SpawnerPlayerBreakEvent;
 import github.nighter.smartspawner.extras.HopperHandler;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.hooks.protections.CheckBreakBlock;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
+import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
 import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -31,14 +31,13 @@ import java.util.Map;
 
 public class SpawnerBreakListener implements Listener {
     private static final int MAX_STACK_SIZE = 64;
-
     private final SmartSpawner plugin;
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
     private final HopperHandler hopperHandler;
     private final SpawnerItemFactory spawnerItemFactory;
     private final SpawnerFileHandler spawnerFileHandler;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
+    private final SpawnerLocationLockManager locationLockManager;
 
     public SpawnerBreakListener(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -47,7 +46,7 @@ public class SpawnerBreakListener implements Listener {
         this.hopperHandler = plugin.getHopperHandler();
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerFileHandler = plugin.getSpawnerFileHandler();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
+        this.locationLockManager = plugin.getSpawnerLocationLockManager();
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -89,7 +88,6 @@ public class SpawnerBreakListener implements Listener {
 
         if (spawner != null) {
             handleSmartSpawnerBreak(block, spawner, player);
-            plugin.getRangeChecker().stopSpawnerTask(spawner);
         } else {
             CreatureSpawner creatureSpawner = (CreatureSpawner) block.getState(false);
             if(callAPIEvent(player, block.getLocation(), 1)) {
@@ -111,17 +109,36 @@ public class SpawnerBreakListener implements Listener {
             return;
         }
 
-        // Track player interaction for last interaction field
-        spawner.updateLastInteractedPlayer(player.getName());
+        // Acquire location-based lock to prevent race conditions
+        // This prevents simultaneous GUI destack + pickaxe break duplication exploits
+        if (!locationLockManager.tryLock(location)) {
+            // Another break operation is already in progress
+            messageService.sendMessage(player, "spawner_break_in_progress");
+            return;
+        }
 
-        plugin.getSpawnerGuiViewManager().closeAllViewersInventory(spawner);
-
-        SpawnerBreakResult result = processDrops(player, location, spawner, player.isSneaking(), block);
-
-        if (result.isSuccess()) {
-            if (player.getGameMode() != GameMode.CREATIVE) {
-                reduceDurability(tool, player, result.getDurabilityLoss());
+        try {
+            // Re-verify spawner still exists after acquiring lock
+            SpawnerData currentSpawner = spawnerManager.getSpawnerByLocation(location);
+            if (currentSpawner == null || !currentSpawner.getSpawnerId().equals(spawner.getSpawnerId())) {
+                // Spawner was removed/changed by another operation
+                return;
             }
+
+            // Track player interaction for last interaction field
+            spawner.updateLastInteractedPlayer(player.getName());
+
+            plugin.getSpawnerGuiViewManager().closeAllViewersInventory(spawner);
+
+            SpawnerBreakResult result = processDrops(player, location, spawner, player.isSneaking(), block);
+
+            if (result.isSuccess()) {
+                if (player.getGameMode() != GameMode.CREATIVE) {
+                    reduceDurability(tool, player, result.getDurabilityLoss());
+                }
+            }
+        } finally {
+            locationLockManager.unlock(location);
         }
     }
 
@@ -133,31 +150,43 @@ public class SpawnerBreakListener implements Listener {
             return;
         }
 
-        EntityType entityType = creatureSpawner.getSpawnedType();
-        ItemStack spawnerItem;
-        if (plugin.getConfig().getBoolean("natural_spawner.convert_to_smart_spawner", false)) {
-            spawnerItem = spawnerItemFactory.createSpawnerItem(entityType);
-        } else {
-            spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType);
+        // Acquire location-based lock for vanilla spawners too
+        if (!locationLockManager.tryLock(location)) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
         }
 
-        boolean directToInventory = plugin.getConfig().getBoolean("spawner_break.direct_to_inventory", false);
-
-        World world = location.getWorld();
-        if (world != null) {
-            block.setType(Material.AIR);
-
-            // Unregister vanilla spawner from chunk limiter (stack size 1)
-            chunkSpawnerLimiter.unregisterSpawner(location, 1);
-
-            if (directToInventory) {
-                giveSpawnersToPlayer(player, 1, spawnerItem);
-                player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
-            } else {
-                world.dropItemNaturally(location.toCenterLocation(), spawnerItem);
+        try {
+            // Re-check block is still a spawner after acquiring lock
+            if (block.getType() != Material.SPAWNER) {
+                return;
             }
 
-            reduceDurability(tool, player, plugin.getConfig().getInt("spawner_break.durability_loss", 1));
+            EntityType entityType = creatureSpawner.getSpawnedType();
+            ItemStack spawnerItem;
+            if (plugin.getConfig().getBoolean("natural_spawner.convert_to_smart_spawner", false)) {
+                spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType);
+            } else {
+                spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType);
+            }
+
+            boolean directToInventory = plugin.getConfig().getBoolean("spawner_break.direct_to_inventory", false);
+
+            World world = location.getWorld();
+            if (world != null) {
+                block.setType(Material.AIR);
+
+                if (directToInventory) {
+                    giveSpawnersToPlayer(player, 1, spawnerItem);
+                    player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.5f, 1.2f);
+                } else {
+                    world.dropItemNaturally(location.toCenterLocation(), spawnerItem);
+                }
+
+                reduceDurability(tool, player, plugin.getConfig().getInt("spawner_break.durability_loss", 1));
+            }
+        } finally {
+            locationLockManager.unlock(location);
         }
     }
 
@@ -196,8 +225,14 @@ public class SpawnerBreakListener implements Listener {
             return new SpawnerBreakResult(false, 0, durabilityLoss);
         }
 
-        EntityType entityType = spawner.getEntityType();
-        ItemStack template = spawnerItemFactory.createSpawnerItem(entityType);
+        // Create the appropriate spawner item based on type
+        ItemStack template;
+        if (spawner.isItemSpawner()) {
+            template = spawnerItemFactory.createItemSpawnerItem(spawner.getSpawnedItemMaterial());
+        } else {
+            EntityType entityType = spawner.getEntityType();
+            template = spawnerItemFactory.createSmartSpawnerItem(entityType);
+        }
 
         int dropAmount;
         boolean shouldDeleteSpawner = false;
@@ -206,20 +241,14 @@ public class SpawnerBreakListener implements Listener {
             if (currentStackSize <= MAX_STACK_SIZE) {
                 dropAmount = currentStackSize;
                 if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-                // Unregister entire spawner stack
-                chunkSpawnerLimiter.unregisterSpawner(location, currentStackSize);
             } else {
                 dropAmount = MAX_STACK_SIZE;
                 if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-                // Unregister only the dropped amount
-                chunkSpawnerLimiter.unregisterSpawner(location, MAX_STACK_SIZE);
                 spawner.setStackSize(currentStackSize - MAX_STACK_SIZE);
             }
         } else {
             dropAmount = 1;
             if(callAPIEvent(player, location, dropAmount)) return new SpawnerBreakResult(false, dropAmount, 0);
-            // Unregister only 1 spawner
-            chunkSpawnerLimiter.unregisterSpawner(location, 1);
             if (currentStackSize <= 1) {
                 shouldDeleteSpawner = true;
             } else {
@@ -281,9 +310,13 @@ public class SpawnerBreakListener implements Listener {
         block.setType(Material.AIR);
 
         String spawnerId = spawner.getSpawnerId();
-
+        plugin.getRangeChecker().deactivateSpawner(spawner);
         spawnerManager.removeSpawner(spawnerId);
         spawnerFileHandler.markSpawnerDeleted(spawnerId);
+
+        // Remove location lock to prevent memory leak
+        Location location = block.getLocation();
+        locationLockManager.removeLock(location);
     }
 
     private void cleanupAssociatedHopper(Block block) {

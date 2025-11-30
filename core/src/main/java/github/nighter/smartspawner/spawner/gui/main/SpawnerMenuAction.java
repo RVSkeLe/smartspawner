@@ -1,19 +1,18 @@
 package github.nighter.smartspawner.spawner.gui.main;
 
-import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerExpClaimEvent;
 import github.nighter.smartspawner.hooks.rpg.AuraSkillsIntegration;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.nms.ParticleWrapper;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
@@ -32,14 +31,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SpawnerMenuAction implements Listener {
-    private static final Set<Material> SPAWNER_INFO_MATERIALS = EnumSet.of(
-            Material.PLAYER_HEAD,
-            Material.SPAWNER,
-            Material.ZOMBIE_HEAD,
-            Material.SKELETON_SKULL,
-            Material.WITHER_SKELETON_SKULL,
-            Material.CREEPER_HEAD,
-            Material.PIGLIN_HEAD
+    private static final Set<Material> SPAWNER_INFO_MATERIALS = Set.of(
+        Material.PLAYER_HEAD,
+        Material.SPAWNER,
+        Material.ZOMBIE_HEAD,
+        Material.SKELETON_SKULL,
+        Material.WITHER_SKELETON_SKULL,
+        Material.CREEPER_HEAD,
+        Material.PIGLIN_HEAD,
+        Material.DRAGON_HEAD
     );
     private final SmartSpawner plugin;
     private final SpawnerMenuUI spawnerMenuUI;
@@ -193,17 +193,14 @@ public class SpawnerMenuAction implements Listener {
     }
 
     public void handleStorageClick(Player player, SpawnerData spawner) {
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
-
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.closeInventory();
         player.openInventory(pageInventory);
     }
 
     public void handleStorageClickBedrock(Player player, SpawnerData spawner) {
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = spawnerStorageUI.createInventory(spawner, title, 1, -1);
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, 1, -1);
         player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }
@@ -304,7 +301,7 @@ public class SpawnerMenuAction implements Listener {
                 SpawnerExpClaimEvent expClaimEvent = new SpawnerExpClaimEvent(player, spawner.getSpawnerLocation(), exp);
                 Bukkit.getPluginManager().callEvent(expClaimEvent);
                 if(expClaimEvent.isCancelled()) return;
-                if(exp != expClaimEvent.getExpQuantity()) exp = expClaimEvent.getExpQuantity();
+                if(exp != expClaimEvent.getExpAmount()) exp = expClaimEvent.getExpAmount();
             }
             player.giveExp(exp);
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -395,7 +392,7 @@ public class SpawnerMenuAction implements Listener {
 
             // Visual and sound effects for mending
             player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 0.5f, 1.0f);
-            player.spawnParticle(ParticleWrapper.VILLAGER_HAPPY, player.getLocation().add(0, 1, 0), 5);
+            player.spawnParticle(Particle.HAPPY_VILLAGER, player.getLocation().add(0, 1, 0), 5);
         }
 
         return expUsed;

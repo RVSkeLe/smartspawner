@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.api.events;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -9,55 +10,35 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Called when a spawner's entity type is changed using a spawn egg.
+ */
+@Getter
 public class SpawnerEggChangeEvent extends Event implements Cancellable {
-    @Getter
-    private final Player player;
-    @Getter
-    private final Location location;
-    private final EntityType oldEggEntityType, newEggEntityType;
-    private boolean cancelled = false;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Player player;
+    private final Location location;
+    private final EntityType oldEntityType;
+    private final EntityType newEntityType;
+
+    @Setter
+    private boolean cancelled = false;
+
     /**
-     * The constructor for the event.
+     * Creates a new spawner egg change event.
      *
-     * @param player The player who added a spawner at the stack
-     * @param location The location of the spawner.
-     * @param oldEggEntityType The previous entity type in the spawner
-     * @param newEggEntityType The new entity type in the spawner
+     * @param player the player who changed the spawner
+     * @param location the location of the spawner
+     * @param oldEntityType the previous entity type
+     * @param newEntityType the new entity type
      */
-    public SpawnerEggChangeEvent(Player player, Location location, EntityType oldEggEntityType, EntityType newEggEntityType) {
+    public SpawnerEggChangeEvent(Player player, Location location, EntityType oldEntityType, EntityType newEntityType) {
         this.player = player;
         this.location = location;
-        this.oldEggEntityType = oldEggEntityType;
-        this.newEggEntityType = newEggEntityType;
-    }
-
-    /**
-     * Get the entity type of the spawner before egg interaction
-     * @return EntityType before interaction
-     */
-    public EntityType getOldEntityType() {
-        return oldEggEntityType;
-    }
-
-    /**
-     * Get the entity type of the spawner post egg interaction
-     * @return EntityType post interaction
-     */
-    public EntityType getNewEntityType() {
-        return newEggEntityType;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancelled;
-    }
-
-    @Override
-    public void setCancelled(boolean cancelled) {
-        this.cancelled = cancelled;
+        this.oldEntityType = oldEntityType;
+        this.newEntityType = newEntityType;
     }
 
     @Override

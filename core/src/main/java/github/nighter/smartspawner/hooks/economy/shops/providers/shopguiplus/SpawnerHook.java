@@ -36,7 +36,7 @@ public class SpawnerHook implements Listener{
     public void onShopsPostLoad(ShopsPostLoadEvent event) {
         Scheduler.runTaskLater(() -> {
             plugin.getItemPriceManager().reloadShopIntegration();
-            plugin.getEntityLootRegistry().loadConfigurations();
+            plugin.getSpawnerSettingsConfig().reload();
             plugin.getSpawnerManager().reloadSpawnerDrops();
         }, 100L); // Run after 5 second to ensure the plugin is fully loaded
     }

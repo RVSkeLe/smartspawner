@@ -4,7 +4,7 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

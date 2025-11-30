@@ -2,9 +2,9 @@ package github.nighter.smartspawner.spawner.item;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.nms.VersionInitializer;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
@@ -19,64 +19,40 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Factory class for creating spawner items with optimized caching
- */
 public class SpawnerItemFactory {
+
+    private static final long CACHE_EXPIRY_TIME_MS = TimeUnit.MINUTES.toMillis(30);
+    private static final int MAX_CACHE_SIZE = 100;
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
-    private EntityLootRegistry entityLootRegistry;
-
     private static NamespacedKey VANILLA_SPAWNER_KEY;
-    // private static NamespacedKey SMART_SPAWNER_KEY;
     private final Map<EntityType, ItemStack> spawnerItemCache = new HashMap<>();
     private final Map<EntityType, Long> cacheTimestamps = new HashMap<>();
-
-    // Cache configuration
-    private static final long CACHE_EXPIRY_TIME_MS = TimeUnit.MINUTES.toMillis(30); // Cache expires after 30 minutes
-    private static final int MAX_CACHE_SIZE = 100; // Maximum number of cached spawner items
-
     private long lastCacheCleanup = System.currentTimeMillis();
 
     public SpawnerItemFactory(SmartSpawner plugin) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
-        this.entityLootRegistry = plugin.getEntityLootRegistry();
         VANILLA_SPAWNER_KEY = new NamespacedKey(plugin, "vanilla_spawner");
-        // SMART_SPAWNER_KEY = new NamespacedKey(plugin, "smart_spawner");
     }
 
     public void reload() {
-        this.entityLootRegistry = plugin.getEntityLootRegistry();
-        // Clear caches on reload
         clearAllCaches();
     }
 
-    /**
-     * Clears all caches in the factory
-     */
     public void clearAllCaches() {
         spawnerItemCache.clear();
         cacheTimestamps.clear();
         lastCacheCleanup = System.currentTimeMillis();
     }
 
-    /**
-     * Clean expired cache entries if needed
-     */
     private void cleanupCacheIfNeeded() {
         long currentTime = System.currentTimeMillis();
-
-        // Only clean up once every minute to avoid performance overhead
         if (currentTime - lastCacheCleanup < TimeUnit.MINUTES.toMillis(1)) {
             return;
         }
-
-        // Mark this cleanup
         lastCacheCleanup = currentTime;
-
-        // Remove expired entries
         Iterator<Map.Entry<EntityType, Long>> iterator = cacheTimestamps.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<EntityType, Long> entry = iterator.next();
@@ -88,152 +64,92 @@ public class SpawnerItemFactory {
         }
     }
 
-    /**
-     * Creates a spawner item for the given entity type
-     */
-    public ItemStack createSpawnerItem(EntityType entityType) {
-        return createSpawnerItem(entityType, 1);
+    public ItemStack createSmartSpawnerItem(EntityType entityType) {
+        return createSmartSpawnerItem(entityType, 1);
     }
 
-    /**
-     * Creates a spawner item for the given entity type and amount
-     */
-    public ItemStack createSpawnerItem(EntityType entityType, int amount) {
-        // Check if we need to clean up the cache
+    public ItemStack createSmartSpawnerItem(EntityType entityType, int amount) {
         cleanupCacheIfNeeded();
-
-        // For single-item spawners, we can use the cache
         if (amount == 1) {
             ItemStack cachedItem = spawnerItemCache.get(entityType);
-
             if (cachedItem != null) {
-                // Return a clone of the cached item to prevent modification of the cached instance
                 return cachedItem.clone();
             }
         }
 
         ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
         ItemMeta meta = spawner.getItemMeta();
-
         if (meta != null && entityType != null && entityType != EntityType.UNKNOWN) {
-            // Apply block state for the spawner
             if (meta instanceof BlockStateMeta blockMeta) {
                 BlockState blockState = blockMeta.getBlockState();
-
                 if (blockState instanceof CreatureSpawner cs) {
                     cs.setSpawnedType(entityType);
                     blockMeta.setBlockState(cs);
                 }
             }
-
-            // Get entity name - now using LanguageManager's cached method
             String entityTypeName = languageManager.getFormattedMobName(entityType);
-            // Use LanguageManager's small caps method
             String entityTypeNameSmallCaps = languageManager.getSmallCaps(entityTypeName);
-
-            EntityLootConfig lootConfig = entityLootRegistry.getLootConfig(entityType);
+            EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
             List<LootItem> lootItems = lootConfig != null ? lootConfig.getAllItems() : Collections.emptyList();
-
-            // Create placeholders map with both regular and small caps entity names
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("entity", entityTypeName);
             placeholders.put("ᴇɴᴛɪᴛʏ", entityTypeNameSmallCaps);
-            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.getExperience() : 0));
-
-            // Sort the loot items for consistent ordering
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.experience() : 0));
             List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
-            // Sort by material name to ensure consistent order
-            sortedLootItems.sort(Comparator.comparing(item -> item.getMaterial().name()));
-            // Sort by material name in reverse order (Z to A)
-
+            sortedLootItems.sort(Comparator.comparing(item -> item.material().name()));
             if (!sortedLootItems.isEmpty()) {
-                // Get the custom loot format from the config
                 String lootFormat = languageManager.getItemName("custom_item.spawner.loot_items", placeholders);
-
                 StringBuilder lootItemsBuilder = new StringBuilder();
                 for (LootItem item : sortedLootItems) {
-                    // Use LanguageManager's cached method
-                    String itemName = languageManager.getVanillaItemName(item.getMaterial());
-                    // Use LanguageManager's small caps method
+                    String itemName = languageManager.getVanillaItemName(item.material());
                     String itemNameSmallCaps = languageManager.getSmallCaps(itemName);
-
-                    String amountRange = item.getMinAmount() == item.getMaxAmount() ?
-                            String.valueOf(item.getMinAmount()) :
-                            item.getMinAmount() + "-" + item.getMaxAmount();
-                    String chance = String.format("%.1f", item.getChance());
-
-                    // Create placeholders specific to this item with both regular and small caps versions
+                    String amountRange = item.minAmount() == item.maxAmount() ?
+                            String.valueOf(item.minAmount()) :
+                            item.minAmount() + "-" + item.maxAmount();
+                    String chance = String.format("%.1f", item.chance());
                     Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
                     itemPlaceholders.put("item_name", itemName);
                     itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", itemNameSmallCaps);
                     itemPlaceholders.put("amount", amountRange);
                     itemPlaceholders.put("chance", chance);
-
-                    // Apply the custom format for each item using the language manager
                     String formattedItem = languageManager.applyPlaceholdersAndColors(lootFormat, itemPlaceholders);
-
                     lootItemsBuilder.append(formattedItem).append("\n");
                 }
-
-                // Remove the last newline character
                 if (!lootItemsBuilder.isEmpty()) {
                     lootItemsBuilder.setLength(lootItemsBuilder.length() - 1);
                 }
                 placeholders.put("loot_items", lootItemsBuilder.toString());
             } else {
-                // If no loot items, set a default message
                 placeholders.put("loot_items", languageManager.getItemName("custom_item.spawner.loot_items_empty", placeholders));
             }
-
-            // Get the localized name and lore using enhanced placeholder system
             String displayName = languageManager.getItemName("custom_item.spawner.name", placeholders);
             meta.setDisplayName(displayName);
-
-            // Use our method to handle multi-line placeholders
             List<String> lore = languageManager.getItemLoreWithMultilinePlaceholders("custom_item.spawner.lore", placeholders);
             if (lore != null && !lore.isEmpty()) {
                 meta.setLore(lore);
             }
-
-            // Hide enchants and attributes
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
-
-            // Add hidden tag to identify as smart spawner
-//            meta.getPersistentDataContainer().set(
-//                    SMART_SPAWNER_KEY,
-//                    PersistentDataType.BOOLEAN,
-//                    true
-//            );
-
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             spawner.setItemMeta(meta);
         }
-
-        // Cache the item for future use (only for single items)
+        VersionInitializer.hideTooltip(spawner);
         if (amount == 1) {
             spawnerItemCache.put(entityType, spawner.clone());
             cacheTimestamps.put(entityType, System.currentTimeMillis());
-
-            // Manage cache size
             if (spawnerItemCache.size() > MAX_CACHE_SIZE) {
-                // Find oldest entry
                 EntityType oldestEntity = null;
                 long oldestTime = Long.MAX_VALUE;
-
                 for (Map.Entry<EntityType, Long> entry : cacheTimestamps.entrySet()) {
                     if (entry.getValue() < oldestTime) {
                         oldestTime = entry.getValue();
                         oldestEntity = entry.getKey();
                     }
                 }
-
-                // Remove oldest entry if found
                 if (oldestEntity != null) {
                     spawnerItemCache.remove(oldestEntity);
                     cacheTimestamps.remove(oldestEntity);
                 }
             }
         }
-
         return spawner;
     }
 
@@ -244,56 +160,120 @@ public class SpawnerItemFactory {
     public ItemStack createVanillaSpawnerItem(EntityType entityType, int amount) {
         ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
         ItemMeta meta = spawner.getItemMeta();
-
         if (meta != null && entityType != null && entityType != EntityType.UNKNOWN) {
-            // Apply block state for the spawner
             if (meta instanceof BlockStateMeta blockMeta) {
                 BlockState blockState = blockMeta.getBlockState();
-
                 if (blockState instanceof CreatureSpawner cs) {
                     cs.setSpawnedType(entityType);
                     blockMeta.setBlockState(cs);
                 }
             }
-
-            // Get entity name
             String entityTypeName = languageManager.getFormattedMobName(entityType);
-
-            // Create placeholders map with entity name
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("entity", entityTypeName);
             placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityTypeName));
-
-            // Get vanilla-specific display name from config
             String displayName = languageManager.getItemName("custom_item.vanilla_spawner.name", placeholders);
-
-            // Only set display name if it's not null or empty
             if (displayName != null && !displayName.isEmpty() && !displayName.equals("custom_item.vanilla_spawner.name")) {
                 meta.setDisplayName(displayName);
             }
-
-            // Get vanilla-specific lore from config
             List<String> lore = languageManager.getItemLoreWithMultilinePlaceholders("custom_item.vanilla_spawner.lore", placeholders);
-
-            // Only set lore if it's not null or empty
             if (lore != null && !lore.isEmpty()) {
                 meta.setLore(lore);
-
-                // If we have custom lore, then also add the item flags to hide attributes
-                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES,
-                        ItemFlag.HIDE_ADDITIONAL_TOOLTIP, ItemFlag.HIDE_UNBREAKABLE);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+                VersionInitializer.hideTooltip(spawner);
             }
-
-            // Add hidden tag to identify as vanilla spawner
             meta.getPersistentDataContainer().set(
                     VANILLA_SPAWNER_KEY,
                     PersistentDataType.BOOLEAN,
                     true
             );
-
             spawner.setItemMeta(meta);
         }
+        return spawner;
+    }
 
+    public ItemStack createItemSpawnerItem(Material itemMaterial) {
+        return createItemSpawnerItem(itemMaterial, 1);
+    }
+
+    public ItemStack createItemSpawnerItem(Material itemMaterial, int amount) {
+        ItemStack spawner = new ItemStack(Material.SPAWNER, amount);
+        ItemMeta meta = spawner.getItemMeta();
+        if (meta != null && itemMaterial != null) {
+            if (meta instanceof BlockStateMeta blockMeta) {
+                BlockState blockState = blockMeta.getBlockState();
+                if (blockState instanceof CreatureSpawner cs) {
+                    // Set to ITEM type for item spawners
+                    cs.setSpawnedType(EntityType.ITEM);
+                    blockMeta.setBlockState(cs);
+                }
+            }
+            
+            String itemName = languageManager.getVanillaItemName(itemMaterial);
+            String itemNameSmallCaps = languageManager.getSmallCaps(itemName);
+            
+            // Get loot config for this item spawner
+            EntityLootConfig lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(itemMaterial);
+            List<LootItem> lootItems = lootConfig != null ? lootConfig.getAllItems() : Collections.emptyList();
+            
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("entity", itemName);
+            placeholders.put("ᴇɴᴛɪᴛʏ", itemNameSmallCaps);
+            placeholders.put("exp", String.valueOf(lootConfig != null ? lootConfig.experience() : 0));
+            
+            // Build loot items list similar to regular spawners
+            List<LootItem> sortedLootItems = new ArrayList<>(lootItems);
+            sortedLootItems.sort(Comparator.comparing(item -> item.material().name()));
+            if (!sortedLootItems.isEmpty()) {
+                String lootFormat = languageManager.getItemName("custom_item.item_spawner.loot_items", placeholders);
+                StringBuilder lootItemsBuilder = new StringBuilder();
+                for (LootItem item : sortedLootItems) {
+                    String lootItemName = languageManager.getVanillaItemName(item.material());
+                    String lootItemNameSmallCaps = languageManager.getSmallCaps(lootItemName);
+                    String amountRange = item.minAmount() == item.maxAmount() ?
+                            String.valueOf(item.minAmount()) :
+                            item.minAmount() + "-" + item.maxAmount();
+                    String chance = String.format("%.1f", item.chance());
+                    Map<String, String> itemPlaceholders = new HashMap<>(placeholders);
+                    itemPlaceholders.put("item_name", lootItemName);
+                    itemPlaceholders.put("ɪᴛᴇᴍ_ɴᴀᴍᴇ", lootItemNameSmallCaps);
+                    itemPlaceholders.put("amount", amountRange);
+                    itemPlaceholders.put("chance", chance);
+                    String formattedItem = languageManager.applyPlaceholdersAndColors(lootFormat, itemPlaceholders);
+                    lootItemsBuilder.append(formattedItem).append("\n");
+                }
+                if (!lootItemsBuilder.isEmpty()) {
+                    lootItemsBuilder.setLength(lootItemsBuilder.length() - 1);
+                }
+                placeholders.put("loot_items", lootItemsBuilder.toString());
+            } else {
+                placeholders.put("loot_items", languageManager.getItemName("custom_item.item_spawner.loot_items_empty", placeholders));
+            }
+            
+            String displayName = languageManager.getItemName("custom_item.item_spawner.name", placeholders);
+            if (displayName == null || displayName.isEmpty() || displayName.equals("custom_item.item_spawner.name")) {
+                // Fallback to a generic name if not configured
+                displayName = "§6" + itemName + " Spawner";
+            }
+            meta.setDisplayName(displayName);
+            
+            List<String> lore = languageManager.getItemLoreWithMultilinePlaceholders("custom_item.item_spawner.lore", placeholders);
+            if (lore != null && !lore.isEmpty()) {
+                meta.setLore(lore);
+            }
+            
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+            
+            // Store the item material in persistent data
+            meta.getPersistentDataContainer().set(
+                    new NamespacedKey(plugin, "item_spawner_material"),
+                    PersistentDataType.STRING,
+                    itemMaterial.name()
+            );
+            
+            spawner.setItemMeta(meta);
+        }
+        VersionInitializer.hideTooltip(spawner);
         return spawner;
     }
 }

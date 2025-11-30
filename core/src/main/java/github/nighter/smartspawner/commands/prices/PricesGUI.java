@@ -5,9 +5,8 @@ import github.nighter.smartspawner.commands.prices.holders.PricesHolder;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -22,13 +21,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class PricesGUI implements Listener {
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
     private final MessageService messageService;
-    private final EntityLootRegistry lootRegistry;
     private final ItemPriceManager priceManager;
     
     private static final int ITEMS_PER_PAGE = 45;
@@ -38,12 +35,11 @@ public class PricesGUI implements Listener {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
         this.messageService = plugin.getMessageService();
-        this.lootRegistry = plugin.getEntityLootRegistry();
         this.priceManager = plugin.getItemPriceManager();
     }
 
     public void openPricesGUI(Player player, int page) {
-        if (!player.hasPermission("smartspawner.prices")) {
+        if (!player.hasPermission("smartspawner.command.prices")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }
@@ -96,13 +92,13 @@ public class PricesGUI implements Listener {
         Map<Material, PriceInfo> allItems = new HashMap<>();
 
         for (EntityType entityType : EntityType.values()) {
-            EntityLootConfig lootConfig = lootRegistry.getLootConfig(entityType);
+            EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
             if (lootConfig == null) continue;
 
             for (LootItem lootItem : lootConfig.getAllItems()) {
                 if (!lootItem.isAvailable()) continue;
 
-                Material material = lootItem.getMaterial();
+                Material material = lootItem.material();
                 double finalPrice = priceManager.getPrice(material);
                 
                 if (finalPrice > 0) {

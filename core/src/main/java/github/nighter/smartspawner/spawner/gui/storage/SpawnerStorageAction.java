@@ -4,19 +4,19 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
 import github.nighter.smartspawner.spawner.gui.storage.filter.FilterConfigUI;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.storage.utils.ItemClickHandler;
 import github.nighter.smartspawner.spawner.gui.storage.utils.ItemMoveHelper;
 import github.nighter.smartspawner.spawner.gui.storage.utils.ItemMoveResult;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
-import github.nighter.smartspawner.spawner.loot.LootItem;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
-import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -50,15 +50,16 @@ public class SpawnerStorageAction implements Listener {
     private final FilterConfigUI filterConfigUI;
     private final SpawnerSellManager spawnerSellManager;
     private final SpawnerManager spawnerManager;
-    private GuiLayoutConfig guiLayoutConfig;
 
     private static final int INVENTORY_SIZE = 54;
     private static final int STORAGE_SLOTS = 45;
 
+    private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
     private final Map<ClickType, ItemClickHandler> clickHandlers;
-    private final Map<UUID, Inventory> openStorageInventories = new HashMap<>();
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
     private final Random random = ThreadLocalRandom.current();
+    private static final long CLICK_DELAY_MS = 300;
+    private final Random random = new Random();
     private GuiLayout layout;
 
     public SpawnerStorageAction(SmartSpawner plugin) {
@@ -75,7 +76,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     public void loadConfig() {
-        this.guiLayoutConfig = plugin.getGuiLayoutConfig();
+        GuiLayoutConfig guiLayoutConfig = plugin.getGuiLayoutConfig();
         layout = guiLayoutConfig.getCurrentLayout();
     }
 
@@ -98,41 +99,57 @@ public class SpawnerStorageAction implements Listener {
         SpawnerData spawner = holder.getSpawnerData();
         int slot = event.getRawSlot();
 
-        if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
-                event.getAction() == InventoryAction.DROP_ALL_SLOT) {
-
-            if (slot >= 0 && slot < STORAGE_SLOTS) {
-                ItemStack clickedItem = event.getCurrentItem();
-                if (clickedItem != null && clickedItem.getType() != Material.AIR) {
-                    event.setCancelled(true);
-
-                    boolean dropStack = event.getAction() == InventoryAction.DROP_ALL_SLOT;
-                    handleItemDrop(player, spawner, event.getInventory(), slot, clickedItem, dropStack);
-                    return;
-                }
-            }
-        }
-
+        // Cancel event immediately to prevent any vanilla behavior
         event.setCancelled(true);
 
-        if (slot < 0 || slot >= INVENTORY_SIZE) {
+        // CRITICAL: Check if inventoryLock is available before ANY operation
+        if (!tryAcquireInventoryLock(spawner, player)) {
             return;
         }
 
-        if (isControlSlot(slot)) {
+        try {
+            // Verify GUI is still valid and synced
+            if (!isGuiSyncValid(player, holder, spawner)) {
+                player.closeInventory();
+                return;
+            }
 
-            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
-            return;
-        }
+            if (event.getAction() == InventoryAction.DROP_ONE_SLOT ||
+                    event.getAction() == InventoryAction.DROP_ALL_SLOT) {
 
-        ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType() == Material.AIR) {
-            return;
-        }
+                if (slot >= 0 && slot < STORAGE_SLOTS) {
+                    ItemStack clickedItem = event.getCurrentItem();
+                    if (clickedItem != null && clickedItem.getType() != Material.AIR) {
+                        boolean dropStack = event.getAction() == InventoryAction.DROP_ALL_SLOT;
+                        handleItemDrop(player, spawner, event.getInventory(), slot, clickedItem, dropStack);
+                        return;
+                    }
+                }
+            }
 
-        ItemClickHandler handler = clickHandlers.get(event.getClick());
-        if (handler != null) {
-            handler.handle(player, event.getInventory(), slot, clickedItem, spawner);
+            if (slot < 0 || slot >= INVENTORY_SIZE) {
+                return;
+            }
+
+            if (isControlSlot(slot)) {
+                handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
+                return;
+            }
+
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem == null || clickedItem.getType() == Material.AIR) {
+                return;
+            }
+
+            ItemClickHandler handler = clickHandlers.get(event.getClick());
+            if (handler != null) {
+                handler.handle(player, event.getInventory(), slot, clickedItem, spawner);
+            }
+        } finally {
+            // CRITICAL: Always release locks in reverse order (LIFO - Last In First Out)
+            // This matches the acquisition order and prevents deadlock
+            spawner.getInventoryLock().unlock();
+            spawner.getLootGenerationLock().unlock();
         }
     }
 
@@ -187,27 +204,117 @@ public class SpawnerStorageAction implements Listener {
         }
     }
 
-    @EventHandler
-    public void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getInventory().getHolder(false) instanceof StoragePageHolder) {
-            event.setCancelled(true);
-        }
-    }
-
     private boolean isControlSlot(int slot) {
         return layout != null && layout.isSlotUsed(slot);
     }
 
+    /**
+     * Try to acquire both lootGenerationLock and inventoryLock with timeout to prevent deadlock.
+     * CRITICAL: Must acquire locks in consistent order to prevent deadlock:
+     * 1. lootGenerationLock (to ensure no loot is being added)
+     * 2. inventoryLock (to ensure VirtualInventory consistency)
+     *
+     * @return true if both locks acquired, false otherwise
+     */
+    private boolean tryAcquireInventoryLock(SpawnerData spawner, Player player) {
+        try {
+            // STEP 1: Try to acquire lootGenerationLock first
+            // This ensures no loot is currently being generated/added to VirtualInventory
+            if (!spawner.getLootGenerationLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                // Loot generation is in progress - must wait for it to complete
+                return false;
+            }
+
+            // STEP 2: Try to acquire inventoryLock
+            try {
+                if (!spawner.getInventoryLock().tryLock(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    // Release lootGenerationLock before returning
+                    spawner.getLootGenerationLock().unlock();
+                    return false;
+                }
+            } catch (InterruptedException e) {
+                // Failed to acquire inventoryLock - release lootGenerationLock
+                spawner.getLootGenerationLock().unlock();
+                Thread.currentThread().interrupt();
+                return false;
+            }
+
+            // Both locks acquired successfully
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    /**
+     * Validate that GUI is properly synced with VirtualInventory (source of truth).
+     * This prevents race conditions where GUI shows stale data.
+     *
+     * CRITICAL: This is called AFTER acquiring lootGenerationLock, which ensures:
+     * 1. No loot is currently being added to VirtualInventory
+     * 2. Any pending loot generation has completed
+     * 3. GUI updates from loot generation have been dispatched
+     */
+    private boolean isGuiSyncValid(Player player, StoragePageHolder holder, SpawnerData spawner) {
+        // Verify holder belongs to this spawner
+        if (!holder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
+            plugin.getLogger().warning("GUI sync error: holder spawner mismatch for player " + player.getName());
+            return false;
+        }
+
+        // Verify current inventory matches holder
+        Inventory currentInv = player.getOpenInventory().getTopInventory();
+        if (!(currentInv.getHolder(false) instanceof StoragePageHolder currentHolder)) {
+            return false;
+        }
+
+        if (!currentHolder.getSpawnerData().getSpawnerId().equals(spawner.getSpawnerId())) {
+            return false;
+        }
+
+        // Verify that holder's cached state matches VirtualInventory
+        // This ensures GUI has been updated with latest loot generation
+        int actualUsedSlots = spawner.getVirtualInventory().getUsedSlots();
+        int cachedUsedSlots = holder.getOldUsedSlots();
+
+        // If there's a significant difference, GUI is out of sync
+        // Allow small differences due to concurrent operations
+        if (Math.abs(actualUsedSlots - cachedUsedSlots) > StoragePageHolder.MAX_ITEMS_PER_PAGE) {
+            if (plugin.isDebugMode()) {
+                plugin.debug("GUI out of sync for player " + player.getName() +
+                           ": actual=" + actualUsedSlots + ", cached=" + cachedUsedSlots);
+            }
+            // Trigger a refresh from VirtualInventory
+            refreshGuiFromVirtualInventory(player, spawner, currentInv);
+            return false;
+        }
+
+        // All validations passed - GUI is synced with VirtualInventory (source of truth)
+        return true;
+    }
+
     private void handleItemDrop(Player player, SpawnerData spawner, Inventory inventory,
                                 int slot, ItemStack item, boolean dropStack) {
+        // Note: Lock is already held by caller (onInventoryClick)
+
+        // CRITICAL: Verify item in slot matches what VirtualInventory expects
+        ItemStack actualItem = inventory.getItem(slot);
+        if (actualItem == null || !actualItem.isSimilar(item) || actualItem.getAmount() != item.getAmount()) {
+            // Desync detected - refresh GUI from VirtualInventory (source of truth)
+            plugin.getLogger().warning("Item desync detected in slot " + slot + " for player " + player.getName());
+            refreshGuiFromVirtualInventory(player, spawner, inventory);
+            return;
+        }
+
         int amountToDrop = dropStack ? item.getAmount() : 1;
 
         ItemStack droppedItem = item.clone();
         droppedItem.setAmount(Math.min(amountToDrop, item.getAmount()));
-
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
         List<ItemStack> itemsToRemove = new ArrayList<>();
         itemsToRemove.add(droppedItem);
+
+        // Remove from VirtualInventory FIRST (source of truth)
         spawner.removeItemsAndUpdateSellValue(itemsToRemove);
 
         int remaining = item.getAmount() - amountToDrop;
@@ -244,16 +351,16 @@ public class SpawnerStorageAction implements Listener {
                 cosYaw * cosPitch * 0.3 + (random.nextDouble() - 0.5) * 0.1
         );
         droppedItemWorld.setVelocity(velocity);
-        
+
         // Log item drop action
         if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_DROP, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("item_type", droppedItem.getType().name())
-                    .metadata("amount_dropped", droppedItem.getAmount())
-                    .metadata("drop_stack", dropStack)
+            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_DROP, builder ->
+                    builder.player(player.getName(), player.getUniqueId())
+                            .location(spawner.getSpawnerLocation())
+                            .entityType(spawner.getEntityType())
+                            .metadata("item_type", droppedItem.getType().name())
+                            .metadata("amount_dropped", droppedItem.getAmount())
+                            .metadata("drop_stack", dropStack)
             );
         }
 
@@ -263,6 +370,29 @@ public class SpawnerStorageAction implements Listener {
 
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
+            // Only recalculate and update title if page count might have changed
+            // This optimization avoids expensive operations on every single item drop
+            int oldTotalPages = holder.getTotalPages();
+            int newTotalPages = calculateTotalPages(spawner);
+
+            if (oldTotalPages != newTotalPages) {
+                // Page count changed - update holder and title
+                int currentPage = holder.getCurrentPage();
+                int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+
+                holder.setTotalPages(newTotalPages);
+                if (adjustedPage != currentPage) {
+                    holder.setCurrentPage(adjustedPage);
+                }
+
+                // Update the inventory title to reflect new page count
+                updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
+            }
+
+            // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+            // This ensures other viewers get the correct page calculation
+            holder.updateOldUsedSlots();
+
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
             if (!spawner.isInteracted()) {
                 spawner.markInteracted();
@@ -274,6 +404,8 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void handleDropPageItems(Player player, SpawnerData spawner, Inventory inventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -286,11 +418,13 @@ public class SpawnerStorageAction implements Listener {
         List<ItemStack> pageItems = new ArrayList<>();
         int itemsFoundCount = 0;
 
+        // CRITICAL: Collect items from GUI display (which should match VirtualInventory)
         for (int i = 0; i < STORAGE_SLOTS; i++) {
             ItemStack item = inventory.getItem(i);
             if (item != null && item.getType() != Material.AIR) {
                 pageItems.add(item.clone());
                 itemsFoundCount += item.getAmount();
+                // Clear GUI slot immediately
                 inventory.setItem(i, null);
             }
         }
@@ -301,8 +435,9 @@ public class SpawnerStorageAction implements Listener {
         }
 
         final int itemsFound = itemsFoundCount;
-        
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
+
+        // CRITICAL: Remove from VirtualInventory FIRST (source of truth)
+        // This operation is atomic and thread-safe
         spawner.removeItemsAndUpdateSellValue(pageItems);
 
         dropItemsInDirection(player, pageItems);
@@ -326,12 +461,12 @@ public class SpawnerStorageAction implements Listener {
 
         // Log drop page items action
         if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DROP_PAGE_ITEMS, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("items_dropped", itemsFound)
-                    .metadata("page_number", holder.getCurrentPage())
+            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DROP_PAGE_ITEMS, builder ->
+                    builder.player(player.getName(), player.getUniqueId())
+                            .location(spawner.getSpawnerLocation())
+                            .entityType(spawner.getEntityType())
+                            .metadata("items_dropped", itemsFound)
+                            .metadata("page_number", holder.getCurrentPage())
             );
         }
 
@@ -385,6 +520,17 @@ public class SpawnerStorageAction implements Listener {
 
     private void takeSingleItem(Player player, Inventory sourceInv, int slot, ItemStack item,
                                 SpawnerData spawner, boolean singleItem) {
+        // Note: Lock is already held by caller (onInventoryClick)
+
+        // CRITICAL: Verify item in slot matches what we expect
+        ItemStack actualItem = sourceInv.getItem(slot);
+        if (actualItem == null || !actualItem.isSimilar(item) || actualItem.getAmount() != item.getAmount()) {
+            // Desync detected - refresh GUI from VirtualInventory
+            plugin.getLogger().warning("Item desync detected in takeSingleItem for player " + player.getName());
+            refreshGuiFromVirtualInventory(player, spawner, sourceInv);
+            return;
+        }
+
         PlayerInventory playerInv = player.getInventory();
         VirtualInventory virtualInv = spawner.getVirtualInventory();
 
@@ -394,15 +540,42 @@ public class SpawnerStorageAction implements Listener {
                 playerInv,
                 virtualInv
         );
-        if (result.getAmountMoved() > 0) {
-            updateInventorySlot(sourceInv, slot, item, result.getAmountMoved());
-            spawner.removeItemsAndUpdateSellValue(result.getMovedItems());
+        if (result.amountMoved() > 0) {
+            // Update GUI slot to match VirtualInventory state
+            updateInventorySlot(sourceInv, slot, item, result.amountMoved());
+
+            // CRITICAL: Remove from VirtualInventory (source of truth) - this updates sell value atomically
+            spawner.removeItemsAndUpdateSellValue(result.movedItems());
+
             player.updateInventory();
 
             spawner.updateHologramData();
 
             StoragePageHolder holder = (StoragePageHolder) sourceInv.getHolder(false);
             if (holder != null) {
+                // Only recalculate and update title if page count might have changed
+                // This optimization avoids expensive operations on every single item take
+                int oldTotalPages = holder.getTotalPages();
+                int newTotalPages = calculateTotalPages(spawner);
+
+                if (oldTotalPages != newTotalPages) {
+                    // Page count changed - update holder and title
+                    int currentPage = holder.getCurrentPage();
+                    int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
+
+                    holder.setTotalPages(newTotalPages);
+                    if (adjustedPage != currentPage) {
+                        holder.setCurrentPage(adjustedPage);
+                    }
+
+                    // Update the inventory title to reflect new page count
+                    updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
+                }
+
+                // CRITICAL: Update oldUsedSlots BEFORE calling updateSpawnerMenuViewers
+                // This ensures other viewers get the correct page calculation
+                holder.updateOldUsedSlots();
+
                 spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
                 if (spawner.getMaxSpawnerLootSlots() > holder.getOldUsedSlots() && spawner.getIsAtCapacity()) {
@@ -426,7 +599,7 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void updatePageContent(Player player, SpawnerData spawner, int newPage, Inventory inventory, boolean uiClickSound) {
-        SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
 
         int totalPages = calculateTotalPages(spawner);
@@ -436,9 +609,9 @@ public class SpawnerStorageAction implements Listener {
         holder.setCurrentPage(newPage);
         holder.updateOldUsedSlots();
 
-        lootManager.updateDisplay(inventory, spawner, newPage, totalPages);
+        spawnerStorageUI.updateDisplay(inventory, spawner, newPage, totalPages);
 
-        updateInventoryTitle(player, inventory, spawner, newPage, totalPages);
+        updateInventoryTitle(player, spawner, newPage, totalPages);
 
         if (uiClickSound) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
@@ -450,17 +623,16 @@ public class SpawnerStorageAction implements Listener {
         return Math.max(1, (int) Math.ceil((double) usedSlots / StoragePageHolder.MAX_ITEMS_PER_PAGE));
     }
 
-    private void updateInventoryTitle(Player player, Inventory inventory, SpawnerData spawner, int page, int totalPages) {
-        // Use placeholder-based title format for consistency
+    private void updateInventoryTitle(Player player, SpawnerData spawner, int page, int totalPages) {
         String newTitle = languageManager.getGuiTitle("gui_title_storage", Map.of(
-            "current_page", String.valueOf(page),
-            "total_pages", String.valueOf(totalPages)
+                "current_page", String.valueOf(page),
+                "total_pages", String.valueOf(totalPages)
         ));
 
         try {
             player.getOpenInventory().setTitle(newTitle);
         } catch (Exception e) {
-            openLootPage(player, spawner, page, false);
+            openLootPage(player, spawner, page);
         }
     }
 
@@ -468,7 +640,7 @@ public class SpawnerStorageAction implements Listener {
         long now = System.currentTimeMillis();
         long last = lastItemClickTime.getOrDefault(player.getUniqueId(), 0L);
         lastItemClickTime.put(player.getUniqueId(), now);
-        return (now - last) < 300;
+        return (now - last) < CLICK_DELAY_MS;
     }
 
     @EventHandler
@@ -483,7 +655,7 @@ public class SpawnerStorageAction implements Listener {
             spawnerManager.markSpawnerModified(spawner.getSpawnerId());
             spawner.clearInteracted();
         }
-        
+
         // Check if player is Bedrock and use appropriate menu
         if (isBedrockPlayer(player)) {
             if (plugin.getSpawnerMenuFormUI() != null) {
@@ -498,14 +670,16 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private boolean isBedrockPlayer(Player player) {
-        if (plugin.getIntegrationManager() == null || 
-            plugin.getIntegrationManager().getFloodgateHook() == null) {
+        if (plugin.getIntegrationManager() == null ||
+                plugin.getIntegrationManager().getFloodgateHook() == null) {
             return false;
         }
         return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);
     }
 
     private void handleSortItemsClick(Player player, SpawnerData spawner, Inventory inventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -525,7 +699,7 @@ public class SpawnerStorageAction implements Listener {
 
         // Build sorted list of available materials
         var sortedLoot = lootItems.stream()
-                .map(LootItem::getMaterial)
+                .map(LootItem::material)
                 .distinct() // Remove duplicates if any
                 .sorted(Comparator.comparing(Material::name))
                 .toList();
@@ -563,10 +737,11 @@ public class SpawnerStorageAction implements Listener {
         }
         spawnerManager.queueSpawnerForSaving(spawner.getSpawnerId());
 
-        // Re-sort the virtual inventory
+        // CRITICAL: Re-sort VirtualInventory (source of truth)
+        // This operation is atomic and thread-safe
         spawner.getVirtualInventory().sortItems(nextSort);
 
-        // Update the display
+        // Update GUI display to reflect VirtualInventory state
         StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
         if (holder != null) {
             updatePageContent(player, spawner, holder.getCurrentPage(), inventory, false);
@@ -574,93 +749,43 @@ public class SpawnerStorageAction implements Listener {
 
         // Play sound and show feedback
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.2f);
-        
+
         // Log items sort action
         if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEMS_SORT, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("sort_item", nextSort.name())
-                    .metadata("previous_sort", currentSort != null ? currentSort.name() : "none")
+            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEMS_SORT, builder ->
+                    builder.player(player.getName(), player.getUniqueId())
+                            .location(spawner.getSpawnerLocation())
+                            .entityType(spawner.getEntityType())
+                            .metadata("sort_item", nextSort.name())
+                            .metadata("previous_sort", currentSort != null ? currentSort.name() : "none")
             );
         }
     }
 
-    private void openLootPage(Player player, SpawnerData spawner, int page, boolean refresh) {
-        SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
-        String title = languageManager.getGuiTitle("gui_title_storage");
-
+    private void openLootPage(Player player, SpawnerData spawner, int page) {
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
         int totalPages = calculateTotalPages(spawner);
-
         final int finalPage = Math.max(1, Math.min(page, totalPages));
+        Inventory pageInventory = spawnerStorageUI.createStorageInventory(spawner, finalPage, totalPages);
 
-        UUID playerId = player.getUniqueId();
-        Inventory existingInventory = openStorageInventories.get(playerId);
-
-        if (existingInventory != null && !refresh && existingInventory.getHolder(false) instanceof StoragePageHolder) {
-            StoragePageHolder holder = (StoragePageHolder) existingInventory.getHolder(false);
-
-            holder.setTotalPages(totalPages);
-            holder.setCurrentPage(finalPage);
-            holder.updateOldUsedSlots();
-
-            updatePageContent(player, spawner, finalPage, existingInventory, false);
-            return;
-        }
-
-        // Initialize sort preference on first open
-        Material currentSort = spawner.getPreferredSortItem();
-        if (currentSort == null && spawner.getLootConfig() != null && spawner.getLootConfig().getAllItems() != null) {
-            var lootItems = spawner.getLootConfig().getAllItems();
-            if (!lootItems.isEmpty()) {
-                var sortedLoot = lootItems.stream()
-                    .map(LootItem::getMaterial)
-                    .distinct()
-                    .sorted(Comparator.comparing(Material::name))
-                    .toList();
-                
-                if (!sortedLoot.isEmpty()) {
-                    Material firstItem = sortedLoot.getFirst();
-                    spawner.setPreferredSortItem(firstItem);
-                    currentSort = firstItem;
-                    
-                    if (!spawner.isInteracted()) {
-                        spawner.markInteracted();
-                    }
-                    spawnerManager.queueSpawnerForSaving(spawner.getSpawnerId());
-                }
-            }
-        }
-        
-        // Apply sort to virtual inventory if a sort preference exists
-        if (currentSort != null) {
-            spawner.getVirtualInventory().sortItems(currentSort);
-        }
-
-        Inventory pageInventory = lootManager.createInventory(spawner, title, finalPage, totalPages);
-
-        openStorageInventories.put(playerId, pageInventory);
-        
         // Log storage GUI opening
         if (plugin.getSpawnerActionLogger() != null) {
-            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_STORAGE_OPEN, builder -> 
-                builder.player(player.getName(), player.getUniqueId())
-                    .location(spawner.getSpawnerLocation())
-                    .entityType(spawner.getEntityType())
-                    .metadata("page", finalPage)
-                    .metadata("total_pages", totalPages)
+            plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_STORAGE_OPEN, builder ->
+                    builder.player(player.getName(), player.getUniqueId())
+                            .location(spawner.getSpawnerLocation())
+                            .entityType(spawner.getEntityType())
+                            .metadata("page", finalPage)
+                            .metadata("total_pages", totalPages)
             );
         }
 
-        Sound sound = refresh ? Sound.ITEM_ARMOR_EQUIP_DIAMOND : Sound.UI_BUTTON_CLICK;
-        float pitch = refresh ? 1.2f : 1.0f;
-        player.playSound(player.getLocation(), sound, 1.0f, pitch);
-
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
         player.openInventory(pageInventory);
     }
 
     public void handleTakeAllItems(Player player, Inventory sourceInventory) {
+        // Note: Lock is already held by caller (onInventoryClick via handleControlSlotClick)
+
         if (isClickTooFrequent(player)) {
             return;
         }
@@ -668,6 +793,7 @@ public class SpawnerStorageAction implements Listener {
         SpawnerData spawner = holder.getSpawnerData();
         VirtualInventory virtualInv = spawner.getVirtualInventory();
 
+        // CRITICAL: Collect items from GUI (which should be synced with VirtualInventory)
         Map<Integer, ItemStack> sourceItems = new HashMap<>();
         for (int i = 0; i < STORAGE_SLOTS; i++) {
             ItemStack item = sourceInventory.getItem(i);
@@ -681,6 +807,7 @@ public class SpawnerStorageAction implements Listener {
             return;
         }
 
+        // Transfer items and update VirtualInventory atomically
         TransferResult result = transferItems(player, sourceInventory, sourceItems, virtualInv);
         sendTransferMessage(player, result);
         player.updateInventory();
@@ -688,21 +815,21 @@ public class SpawnerStorageAction implements Listener {
         if (result.anyItemMoved) {
             int newTotalPages = calculateTotalPages(spawner);
             int currentPage = holder.getCurrentPage();
-            
+
             // Clamp current page to valid range (e.g., if on page 6 but only 5 pages remain)
             int adjustedPage = Math.max(1, Math.min(currentPage, newTotalPages));
-            
+
             // Update holder with new total pages and adjusted current page
             holder.setTotalPages(newTotalPages);
             if (adjustedPage != currentPage) {
                 holder.setCurrentPage(adjustedPage);
                 // Refresh display to show the correct page content
-                SpawnerStorageUI lootManager = plugin.getSpawnerStorageUI();
-                lootManager.updateDisplay(sourceInventory, spawner, adjustedPage, newTotalPages);
+                SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
+                spawnerStorageUI.updateDisplay(sourceInventory, spawner, adjustedPage, newTotalPages);
             }
-            
+
             // Update the inventory title to reflect new page count
-            updateInventoryTitle(player, sourceInventory, spawner, adjustedPage, newTotalPages);
+            updateInventoryTitle(player, spawner, adjustedPage, newTotalPages);
 
             spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
 
@@ -712,16 +839,16 @@ public class SpawnerStorageAction implements Listener {
             if (!spawner.isInteracted()) {
                 spawner.markInteracted();
             }
-            
+
             // Log take all items action
             if (plugin.getSpawnerActionLogger() != null) {
                 int itemsLeft = spawner.getVirtualInventory().getUsedSlots();
-                plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_TAKE_ALL, builder -> 
-                    builder.player(player.getName(), player.getUniqueId())
-                        .location(spawner.getSpawnerLocation())
-                        .entityType(spawner.getEntityType())
-                        .metadata("items_taken", result.totalMoved)
-                        .metadata("items_left", itemsLeft)
+                plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_ITEM_TAKE_ALL, builder ->
+                        builder.player(player.getName(), player.getUniqueId())
+                                .location(spawner.getSpawnerLocation())
+                                .entityType(spawner.getEntityType())
+                                .metadata("items_taken", result.totalMoved)
+                                .metadata("items_left", itemsLeft)
                 );
             }
         }
@@ -787,15 +914,22 @@ public class SpawnerStorageAction implements Listener {
             }
         }
 
+        // CRITICAL: Update VirtualInventory atomically (source of truth)
         if (!itemsToRemove.isEmpty()) {
             StoragePageHolder holder = (StoragePageHolder) sourceInventory.getHolder(false);
-            holder.getSpawnerData().removeItemsAndUpdateSellValue(itemsToRemove);
-            holder.getSpawnerData().updateHologramData();
+            SpawnerData spawnerData = holder.getSpawnerData();
+
+            // This operation is atomic and updates sell value
+            spawnerData.removeItemsAndUpdateSellValue(itemsToRemove);
+            spawnerData.updateHologramData();
+
+            // Update holder's cached state
             holder.updateOldUsedSlots();
         }
 
         return new TransferResult(anyItemMoved, inventoryFull, totalAmountMoved);
     }
+
 
     private void sendTransferMessage(Player player, TransferResult result) {
         if (!result.anyItemMoved) {
@@ -807,23 +941,52 @@ public class SpawnerStorageAction implements Listener {
         }
     }
 
+    private void refreshGuiFromVirtualInventory(Player player, SpawnerData spawner, Inventory inventory) {
+        StoragePageHolder holder = (StoragePageHolder) inventory.getHolder(false);
+        if (holder == null) {
+            return;
+        }
+
+        // Recalculate pages from VirtualInventory
+        int totalPages = calculateTotalPages(spawner);
+        int currentPage = Math.max(1, Math.min(holder.getCurrentPage(), totalPages));
+
+        holder.setTotalPages(totalPages);
+        holder.setCurrentPage(currentPage);
+        holder.updateOldUsedSlots();
+
+        // Refresh display from VirtualInventory
+        SpawnerStorageUI spawnerStorageUI = plugin.getSpawnerStorageUI();
+        spawnerStorageUI.updateDisplay(inventory, spawner, currentPage, totalPages);
+
+        // Notify other viewers to sync as well
+        spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
+
+        if (plugin.isDebugMode()) {
+            plugin.debug("GUI refreshed from VirtualInventory for player " + player.getName() +
+                        " on spawner " + spawner.getSpawnerId());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getInventory().getHolder(false) instanceof StoragePageHolder)) {
+            return;
+        }
+        event.setCancelled(true);
+    }
+
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (!(event.getInventory().getHolder(false) instanceof StoragePageHolder holder)) {
             return;
         }
 
-        if (event.getPlayer() instanceof Player player) {
-            UUID playerId = player.getUniqueId();
-            openStorageInventories.remove(playerId);
-        }
 
         SpawnerData spawner = holder.getSpawnerData();
         if (spawner.isInteracted()){
-            spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+            plugin.getSpawnerManager().markSpawnerModified(spawner.getSpawnerId());
             spawner.clearInteracted();
         }
     }
-
-    private record TransferResult(boolean anyItemMoved, boolean inventoryFull, int totalMoved) {}
 }

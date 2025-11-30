@@ -49,12 +49,12 @@ no_exp:
   sound: block.note_block.pling
 
 exp_collected:
-  message: "&#2ecc71+%exp% ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ"
-  action_bar: "&#2ecc71+%exp% ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ"
+  message: "&#2ecc71+{exp} ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ"
+  action_bar: "&#2ecc71+{exp} ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ"
   sound: entity.experience_orb.pickup
 
 exp_collected_with_mending:
-  action_bar: "&#37eb9a+%exp% ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ &#f8f8ff| &#ff5252-%exp_mending% ᴇxᴘ ꜰᴜ̈ʀ ʀᴇᴘᴀʀᴀᴛᴜʀ ᴠᴇʀᴡᴇɴᴅᴇᴛ"
+  action_bar: "&#37eb9a+{exp} ᴇxᴘ ɢᴇꜱᴀᴍᴍᴇʟᴛ &#f8f8ff| &#ff5252-{exp_mending} ᴇxᴘ ꜰᴜ̈ʀ ʀᴇᴘᴀʀᴀᴛᴜʀ ᴠᴇʀᴡᴇɴᴅᴇᴛ"
   sound: entity.experience_orb.pickup
 
 # ------------------------------------------------------
@@ -69,18 +69,26 @@ no_items_to_take:
   sound: block.note_block.pling
 
 take_all_items:
-  action_bar: "&#37eb9a&#f8f8ff%amount% &#37eb9aɪᴛᴇᴍꜱ ᴀᴜꜱ ᴅᴇᴍ ꜱᴘᴀᴡɴᴇʀ ɢᴇɴᴏᴍᴍᴇɴ"
+  action_bar: "&#37eb9a&#f8f8ff{amount} &#37eb9aɪᴛᴇᴍꜱ ᴀᴜꜱ ᴅᴇᴍ ꜱᴘᴀᴡɴᴇʀ ɢᴇɴᴏᴍᴍᴇɴ"
   sound: entity.item.pickup
 
 no_items_to_drop:
   message: "&#ff5252ᴋᴇɪɴᴇ ɪᴛᴇᴍꜱ ᴢᴜᴍ ꜰᴀʟʟᴇɴʟᴀꜱꜱᴇɴ"
   sound: block.note_block.pling
 
+items_not_available:
+  message: "&#ff5252ɪᴛᴇᴍꜱ ɴɪᴄʜᴛ ᴠᴇʀꜰüɢʙᴀʀ"
+  sound: block.note_block.pling
+
+drop_failed:
+  message: "&#ff5252ᴅʀᴏᴘ-ᴏᴘᴇʀᴀᴛɪᴏɴ ꜰᴇʜʟɢᴇꜱᴄʜʟᴀɢᴇɴ"
+  sound: block.note_block.pling
+
 # ------------------------------------------------------
 #         Spawner - Stacker GUI Interaction
 # ------------------------------------------------------
 spawner_stacker_minimum_reached:
-  message: "&#ff5252ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ ᴇʀʀᴇɪᴄʜᴛ &#f8f8ff+%amount% &#ff5252ᴡᴇʀᴅᴇɴ ɢᴇꜱᴛᴀᴄᴋᴛ."
+  message: "&#ff5252ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ ᴇʀʀᴇɪᴄʜᴛ &#f8f8ff+{amount} &#ff5252ᴡᴇʀᴅᴇɴ ɢᴇꜱᴛᴀᴄᴋᴛ."
   sound: block.note_block.pling
 
 spawner_cannot_remove_last:
@@ -88,7 +96,7 @@ spawner_cannot_remove_last:
   sound: block.note_block.pling
 
 spawner_insufficient_quantity:
-  action_bar: "&#ff5252ɴɪᴄʜᴛ ɢᴇɴᴜɢ ꜱᴘᴀᴡɴᴇʀ: &#f8f8ff%amountAvailable%&#ff5252/&#f8f8ff%amountChange%"
+  action_bar: "&#ff5252ɴɪᴄʜᴛ ɢᴇɴᴜɢ ꜱᴘᴀᴡɴᴇʀ: &#f8f8ff{amountAvailable}&#ff5252/&#f8f8ff{amountChange}"
   sound: block.note_block.pling
 
 inventory_full_items_dropped:
@@ -107,11 +115,11 @@ spawner_different:
   sound: block.note_block.pling
 
 spawner_stack_full:
-  action_bar: "&#ff5252ᴍᴀx ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ: &#f8f8ff%max%"
+  action_bar: "&#ff5252ᴍᴀx ꜱᴛᴀᴄᴋ ʟɪᴍɪᴛ: &#f8f8ff{max}"
   sound: block.note_block.pling
 
 spawner_stack_success:
-  action_bar: "[&#37eb9a&l✓&f] &#37eb9a%amount% &fꜱᴘᴀᴡɴᴇʀ ᴇʀꜰᴏʟɢʀᴇɪᴄʜ ɢᴇꜱᴛᴀᴄᴋᴛ"
+  action_bar: "[&#37eb9a&l✓&f] &#37eb9a{amount} &fꜱᴘᴀᴡɴᴇʀ ᴇʀꜰᴏʟɢʀᴇɪᴄʜ ɢᴇꜱᴛᴀᴄᴋᴛ"
   sound: entity.player.levelup
 
 # ------------------------------------------------------
@@ -133,7 +141,7 @@ invalid_egg:
   sound: entity.enderman.teleport
 
 entity_changed:
-  action_bar: "&#37eb9aᴇʀꜰᴏʟɢʀᴇɪᴄʜ ᴢᴜ &#f8f8ff%ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ ɢᴇᴀ̈ɴᴅᴇʀᴛ"
+  action_bar: "&#37eb9aᴇʀꜰᴏʟɢʀᴇɪᴄʜ ᴢᴜ &#f8f8ff{ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ ɢᴇᴀ̈ɴᴅᴇʀᴛ"
   sound: entity.player.levelup
 
 # ------------------------------------------------------
@@ -162,13 +170,6 @@ natural_spawner_break_blocked:
   sound: block.note_block.pling
 
 # ------------------------------------------------------
-#              Spawner - Limit Interaction
-# ------------------------------------------------------
-spawner_chunk_limit_reached:
-  action_bar: "&#ff5252ᴄʜᴜɴᴋ ꜱᴘᴀᴡɴᴇʀ ʟɪᴍɪᴛ ᴇʀʀᴇɪᴄʜᴛ: &#f8f8ff%limit%"
-  sound: block.note_block.pling
-
-# ------------------------------------------------------
 #              Sell Integration Messages
 # ------------------------------------------------------
 sale_failed:
@@ -184,8 +185,20 @@ no_sellable_items:
   sound: block.note_block.pling
 
 sell_success:
-  message: "&#e6e6fa&#e67e22%amount% ɪᴛᴇᴍꜱ&#e6e6fa ꜰᴜ̈ʀ &a+$%price% ᴠᴇʀᴋᴀᴜꜰᴛ"
+  message: "&#e6e6fa&#e67e22{amount} ɪᴛᴇᴍꜱ&#e6e6fa ꜰᴜ̈ʀ &a+${price} ᴠᴇʀᴋᴀᴜꜰᴛ"
   sound: block.note_block.bell
+
+action_in_progress:
+  message: "&#f0c857ᴇɪɴᴇ ᴀɴᴅᴇʀᴇ ᴀᴋᴛɪᴏɴ ɪꜱᴛ ɪᴍ ɢᴀɴɢᴇ. ʙɪᴛᴛᴇ ᴠᴇʀꜱᴜᴄʜᴇ ᴇꜱ ɪɴ ᴇɪɴᴇᴍ ᴍᴏᴍᴇɴᴛ ᴇʀɴᴇᴜᴛ."
+  sound: block.note_block.pling
+
+action_failed:
+  action_bar: "&#ff5252ᴀᴋᴛɪᴏɴ ꜰᴇʜʟɢᴇꜱᴄʜʟᴀɢᴇɴ. ʙɪᴛᴛᴇ ᴠᴇʀꜱᴜᴄʜᴇ ᴇꜱ ᴇʀɴᴇᴜᴛ."
+  sound: block.note_block.pling
+
+please_wait:
+  action_bar: "&#3498dbᴠᴇʀᴀʀʙᴇɪᴛᴜɴɢ... ʙɪᴛᴛᴇ ᴡᴀʀᴛᴇɴ."
+  sound: block.note_block.harp
 
 # ------------------------------------------------------
 #                Plugin command messages
@@ -223,12 +236,20 @@ command_give_invalid_mob_type:
   message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ᴍᴏʙ ᴛʏᴘ"
   sound: block.note_block.pling
 
+command_give_invalid_item_type:
+  message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ɪᴛᴇᴍ ᴛʏᴘ"
+  sound: block.note_block.pling
+
+command_give_invalid_item_spawner:
+  message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇʀ ɪᴛᴇᴍ ꜱᴘᴀᴡɴᴇʀ ᴛʏᴘ"
+  sound: block.note_block.pling
+
 command_give_invalid_amount:
   message: "&#ff5252ᴜɴɢᴜ̈ʟᴛɪɢᴇ ᴀɴᴢᴀʜʟ"
   sound: block.note_block.pling
 
 command_give_amount_too_large:
-  message: "&#ff5252ᴍᴀx ᴀɴᴢᴀʜʟ: &#f8f8ff%max%"
+  message: "&#ff5252ᴍᴀx ᴀɴᴢᴀʜʟ: &#f8f8ff{max}"
   sound: block.note_block.pling
 
 command_give_inventory_full:
@@ -236,11 +257,11 @@ command_give_inventory_full:
   sound: block.note_block.pling
 
 command_give_spawner_received:
-  message: "&#37eb9aᴅᴜ ʜᴀꜱᴛ &#f8f8ff%amount% %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ ᴇʀʜᴀʟᴛᴇɴ"
+  message: "&#37eb9aᴅᴜ ʜᴀꜱᴛ &#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ ᴇʀʜᴀʟᴛᴇɴ"
   sound: entity.experience_orb.pickup
 
 command_give_spawner_given:
-  message: "&#37eb9a&#f8f8ff%amount% %ᴇɴᴛɪᴛʏ% &#37eb9aꜱᴘᴀᴡɴᴇʀ ᴀɴ &#f8f8ff%player% &#37eb9aɢᴇɢᴇʙᴇɴ"
+  message: "&#37eb9a&#f8f8ff{amount} {ᴇɴᴛɪᴛʏ} &#37eb9aꜱᴘᴀᴡɴᴇʀ ᴀɴ &#f8f8ff{player} &#37eb9aɢᴇɢᴇʙᴇɴ"
   sound: entity.experience_orb.pickup
 
 # Hologram command messages
@@ -269,7 +290,7 @@ command_ghost_spawner_check_start:
   sound: block.note_block.hat
 
 command_ghost_spawner_cleared:
-  message: "&#37eb9aᴇʀꜰᴏʟɢʀᴇɪᴄʜ &#f8f8ff%count% &#f8f8ffɢᴇɪꜱᴛᴇʀ-ꜱᴘᴀᴡɴᴇʀ ᴇɴᴛꜰᴇʀɴᴛ"
+  message: "&#37eb9aᴇʀꜰᴏʟɢʀᴇɪᴄʜ &#f8f8ff{count} &#f8f8ffɢᴇɪꜱᴛᴇʀ-ꜱᴘᴀᴡɴᴇʀ ᴇɴᴛꜰᴇʀɴᴛ"
   sound: entity.experience_orb.pickup
 
 command_ghost_spawner_none_found:

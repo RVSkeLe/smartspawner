@@ -4,11 +4,9 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerStackEvent;
 import github.nighter.smartspawner.hooks.protections.CheckStackBlock;
 import github.nighter.smartspawner.language.MessageService;
-import github.nighter.smartspawner.nms.ParticleWrapper;
-import github.nighter.smartspawner.spawner.limits.ChunkSpawnerLimiter;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.utils.SpawnerTypeChecker;
+import github.nighter.smartspawner.spawner.utils.SpawnerTypeChecker;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
@@ -29,14 +27,12 @@ public class SpawnerStackHandler {
 
     private final SmartSpawner plugin;
     private final MessageService messageService;
-    private ChunkSpawnerLimiter chunkSpawnerLimiter;
     private final Map<UUID, Long> lastStackTime;
     private final Map<Location, UUID> stackLocks;
 
     public SpawnerStackHandler(SmartSpawner plugin) {
         this.plugin = plugin;
         this.messageService = plugin.getMessageService();
-        this.chunkSpawnerLimiter = plugin.getChunkSpawnerLimiter();
         this.lastStackTime = new ConcurrentHashMap<>();
         this.stackLocks = new ConcurrentHashMap<>();
 
@@ -178,13 +174,6 @@ public class SpawnerStackHandler {
 
         // Check chunk limits before proceeding
         Location location = targetSpawner.getSpawnerLocation();
-        if (!chunkSpawnerLimiter.canStackSpawner(player, location, amountToStack)) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("limit", String.valueOf(chunkSpawnerLimiter.getMaxSpawnersPerChunk()));
-            messageService.sendMessage(player, "spawner_chunk_limit_reached", placeholders);
-            return false;
-        }
-
         int newStack = currentStack + amountToStack;
 
         if(SpawnerStackEvent.getHandlerList().getRegisteredListeners().length != 0) {
@@ -201,9 +190,6 @@ public class SpawnerStackHandler {
         
         // Track player interaction for last interaction field
         targetSpawner.updateLastInteractedPlayer(player.getName());
-
-        // Register the stack increase with the chunk limiter
-        chunkSpawnerLimiter.registerSpawnerStack(location, amountToStack);
 
         // Update player's inventory
         updatePlayerInventory(player, itemInHand, amountToStack);
@@ -235,7 +221,7 @@ public class SpawnerStackHandler {
                 // Use location-based scheduling for particle effects
                 Scheduler.runLocationTask(loc, () -> {
                     world.spawnParticle(
-                            ParticleWrapper.VILLAGER_HAPPY,
+                            Particle.HAPPY_VILLAGER,
                             loc.clone().add(0.5, 0.5, 0.5),
                             10, 0.3, 0.3, 0.3, 0
                     );

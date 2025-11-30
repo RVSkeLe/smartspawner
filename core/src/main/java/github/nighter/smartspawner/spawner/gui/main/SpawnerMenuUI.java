@@ -1,11 +1,12 @@
 package github.nighter.smartspawner.spawner.gui.main;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.LootItem;
-import github.nighter.smartspawner.spawner.utils.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
+import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.language.LanguageManager;
@@ -20,10 +21,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class SpawnerMenuUI {
     private static final int INVENTORY_SIZE = 27;
-    // Remove hardcoded slot constants - now using layout config
     private static final int TICKS_PER_SECOND = 20;
     private static final Map<String, String> EMPTY_PLACEHOLDERS = Collections.emptyMap();
 
@@ -39,8 +40,9 @@ public class SpawnerMenuUI {
     private String emptyLootMessage;
 
     // Cache for GUI items - cleared when spawner data changes
-    private final Map<String, ItemStack> itemCache = new HashMap<>();
-    private final Map<String, Long> cacheTimestamps = new HashMap<>();
+    // Using ConcurrentHashMap for thread-safety with Folia's async scheduler
+    private final Map<String, ItemStack> itemCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> cacheTimestamps = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_TIME_MS = 30000; // 30 seconds
 
     public SpawnerMenuUI(SmartSpawner plugin) {
@@ -71,7 +73,6 @@ public class SpawnerMenuUI {
     }
 
     public void openSpawnerMenu(Player player, SpawnerData spawner, boolean refresh) {
-        // Fire SpawnerOpenGUI API event
         if(SpawnerOpenGUIEvent.getHandlerList().getRegisteredListeners().length != 0) {
             SpawnerOpenGUIEvent openEvent = new SpawnerOpenGUIEvent(
                     player,
@@ -125,17 +126,21 @@ public class SpawnerMenuUI {
             player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 1.0f, 1.0f);
         }
 
-        // Force an immediate timer update for the newly opened GUI (only if timer placeholders are enabled)
-        // This ensures the timer displays correctly from the start
-        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled()) {
-            plugin.getSpawnerGuiViewManager().forceTimerUpdate(player, spawner);
+        // Force timer update inactive for GUI if applicable
+        if (plugin.getSpawnerGuiViewManager().isTimerPlaceholdersEnabled() && spawner.getSpawnerStop().get()){
+            plugin.getSpawnerGuiViewManager().forceTimerUpdateInactive(player, spawner);
         }
     }
 
     private Inventory createMenu(SpawnerData spawner) {
-        // Get entity name with caching
-        String entityName = languageManager.getFormattedMobName(spawner.getEntityType());
-        String entityNameSmallCaps = languageManager.getSmallCaps(languageManager.getFormattedMobName(spawner.getEntityType()));
+        // Get entity name with caching - for item spawners, use item name
+        String entityName;
+        if (spawner.isItemSpawner()) {
+            entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+        } else {
+            entityName = languageManager.getFormattedMobName(spawner.getEntityType());
+        }
+        String entityNameSmallCaps = languageManager.getSmallCaps(entityName);
 
         // Use string builder for efficient placeholder creation
         Map<String, String> placeholders = new HashMap<>(4);
@@ -166,26 +171,43 @@ public class SpawnerMenuUI {
             return cachedItem.clone();
         }
 
-        // Get important data upfront
-        int percentStorage = calculatePercentage(currentItems, maxSlots);
-
         // Not in cache, create new item
         ItemStack chestItem = new ItemStack(Material.CHEST);
         ItemMeta chestMeta = chestItem.getItemMeta();
         if (chestMeta == null) return chestItem;
 
-        // Build base placeholders
-        Map<String, String> placeholders = new HashMap<>(4);
-        placeholders.put("max_slots", languageManager.formatNumber(maxSlots));
-        placeholders.put("current_items", String.valueOf(currentItems));
-        placeholders.put("percent_storage", String.valueOf(percentStorage));
-
-        // Get consolidated items and prepare the loot items section
-        Map<VirtualInventory.ItemSignature, Long> storedItems = virtualInventory.getConsolidatedItems();
-
-        // Build the loot items section efficiently
-        String lootItemsText = buildLootItemsText(spawner.getEntityType(), storedItems);
-        placeholders.put("loot_items", lootItemsText);
+        // Smart placeholder detection: First, get the raw name and lore templates
+        String nameTemplate = languageManager.getGuiItemName("spawner_storage_item.name", EMPTY_PLACEHOLDERS);
+        List<String> loreTemplate = languageManager.getGuiItemLoreAsList("spawner_storage_item.lore", EMPTY_PLACEHOLDERS);
+        
+        // Define all available placeholders
+        Set<String> availablePlaceholders = Set.of(
+            "max_slots", "current_items", "percent_storage_rounded", "loot_items"
+        );
+        
+        // Detect which placeholders are actually used
+        Set<String> usedPlaceholders = new HashSet<>();
+        usedPlaceholders.addAll(detectUsedPlaceholders(nameTemplate, availablePlaceholders));
+        usedPlaceholders.addAll(detectUsedPlaceholders(loreTemplate, availablePlaceholders));
+        
+        // Build only the placeholders that are actually used
+        Map<String, String> placeholders = new HashMap<>();
+        
+        if (usedPlaceholders.contains("max_slots")) {
+            placeholders.put("max_slots", languageManager.formatNumber(maxSlots));
+        }
+        if (usedPlaceholders.contains("current_items")) {
+            placeholders.put("current_items", String.valueOf(currentItems));
+        }
+        if (usedPlaceholders.contains("percent_storage_rounded")) {
+            int percentStorage = calculatePercentage(currentItems, maxSlots);
+            placeholders.put("percent_storage_rounded", String.valueOf(percentStorage));
+        }
+        if (usedPlaceholders.contains("loot_items")) {
+            Map<VirtualInventory.ItemSignature, Long> storedItems = virtualInventory.getConsolidatedItems();
+            String lootItemsText = buildLootItemsText(spawner.getEntityType(), storedItems);
+            placeholders.put("loot_items", lootItemsText);
+        }
 
         // Set display name
         chestMeta.setDisplayName(languageManager.getGuiItemName("spawner_storage_item.name", placeholders));
@@ -211,7 +233,7 @@ public class SpawnerMenuUI {
         }
 
         // Get possible loot items
-        EntityLootConfig lootConfig = plugin.getEntityLootRegistry().getLootConfig(entityType);
+        EntityLootConfig lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
         List<LootItem> possibleLootItems = lootConfig != null
                 ? lootConfig.getAllItems()
                 : Collections.emptyList();
@@ -226,24 +248,24 @@ public class SpawnerMenuUI {
 
         if (!possibleLootItems.isEmpty()) {
             // Sort items by name for consistent display
-            possibleLootItems.sort(Comparator.comparing(item -> languageManager.getVanillaItemName(item.getMaterial())));
+            possibleLootItems.sort(Comparator.comparing(item -> languageManager.getVanillaItemName(item.material())));
 
             for (LootItem lootItem : possibleLootItems) {
-                Material material = lootItem.getMaterial();
+                Material material = lootItem.material();
                 long amount = materialAmountMap.getOrDefault(material, 0L);
 
                 String materialName = languageManager.getVanillaItemName(material);
                 String materialNameSmallCaps = languageManager.getSmallCaps(languageManager.getVanillaItemName(material));
                 String formattedAmount = languageManager.formatNumber(amount);
-                String chance = String.format("%.1f", lootItem.getChance()) + "%";
+                String chance = String.format("%.1f", lootItem.chance()) + "%";
 
                 // Format the line with minimal string operations
                 String line = lootItemFormat
-                        .replace("%item_name%", materialName)
-                        .replace("%ɪᴛᴇᴍ_ɴᴀᴍᴇ%", materialNameSmallCaps)
-                        .replace("%amount%", formattedAmount)
-                        .replace("%raw_amount%", String.valueOf(amount))
-                        .replace("%chance%", chance);
+                        .replace("{item_name}", materialName)
+                        .replace("{ɪᴛᴇᴍ_ɴᴀᴍᴇ}", materialNameSmallCaps)
+                        .replace("{amount}", formattedAmount)
+                        .replace("{raw_amount}", String.valueOf(amount))
+                        .replace("{chance}", chance);
 
                 builder.append(line).append('\n');
             }
@@ -264,11 +286,11 @@ public class SpawnerMenuUI {
 
                 // Format with minimal replacements
                 String line = lootItemFormat
-                        .replace("%item_name%", materialName)
-                        .replace("%ɪᴛᴇᴍ_ɴᴀᴍᴇ%", materialNameSmallCaps)
-                        .replace("%amount%", formattedAmount)
-                        .replace("%raw_amount%", String.valueOf(amount))
-                        .replace("%chance%", "");
+                        .replace("{item_name}", materialName)
+                        .replace("{ɪᴛᴇᴍ_ɴᴀᴍᴇ}", materialNameSmallCaps)
+                        .replace("{amount}", formattedAmount)
+                        .replace("{raw_amount}", String.valueOf(amount))
+                        .replace("{chance}", "");
 
                 builder.append(line).append('\n');
             }
@@ -287,105 +309,171 @@ public class SpawnerMenuUI {
         // Get layout configuration first for cache key calculation
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
         GuiButton spawnerInfoButton = layout.getButton("spawner_info");
-        
+
         // Get important data upfront
         EntityType entityType = spawner.getEntityType();
         int stackSize = spawner.getStackSize();
         VirtualInventory virtualInventory = spawner.getVirtualInventory();
         int currentItems = virtualInventory.getUsedSlots();
         int maxSlots = spawner.getMaxSpawnerLootSlots();
-
-        // Calculate percentages with decimal precision - do this once
-        double percentStorageDecimal = maxSlots > 0 ? ((double) currentItems / maxSlots) * 100 : 0;
-        String formattedPercentStorage = String.format("%.1f", percentStorageDecimal);
-
         long currentExp = spawner.getSpawnerExp();
         long maxExp = spawner.getMaxStoredExp();
-        double percentExpDecimal = maxExp > 0 ? ((double) currentExp / maxExp) * 100 : 0;
-        String formattedPercentExp = String.format("%.1f", percentExpDecimal);
 
         // Create cache key including all relevant state
         boolean hasShopPermission = plugin.hasSellIntegration() && player.hasPermission("smartspawner.sellall");
 
-        // Not in cache, create the ItemStack        
+        // Not in cache, create the ItemStack
+
+        // Smart placeholder detection: First, get the raw name and lore templates
+        String nameTemplate = languageManager.getGuiItemName("spawner_info_item.name", EMPTY_PLACEHOLDERS);
+        String loreKey = hasShopPermission ? "spawner_info_item.lore" : "spawner_info_item.lore_no_shop";
+        List<String> loreTemplate = languageManager.getGuiItemLoreAsList(loreKey, EMPTY_PLACEHOLDERS);
+
+        // Define all available placeholders
+        Set<String> availablePlaceholders = Set.of(
+            "entity", "ᴇɴᴛɪᴛʏ", "entity_type", "stack_size", "range", "delay", "min_mobs", "max_mobs",
+            "current_items", "max_items", "percent_storage_decimal", "percent_storage_rounded",
+            "current_exp", "max_exp", "raw_current_exp", "raw_max_exp", "percent_exp_decimal", "percent_exp_rounded",
+            "total_sell_price", "time"
+        );
+
+        // Detect which placeholders are actually used
+        Set<String> usedPlaceholders = new HashSet<>();
+        usedPlaceholders.addAll(detectUsedPlaceholders(nameTemplate, availablePlaceholders));
+        usedPlaceholders.addAll(detectUsedPlaceholders(loreTemplate, availablePlaceholders));
+
+        // Prepare only the placeholders that are actually used
+        Map<String, String> placeholders = new HashMap<>();
+
+        // Entity information
+        if (usedPlaceholders.contains("entity") || usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
+            String entityName;
+            // For item spawners, use the item name instead of "Item Spawner"
+            if (spawner.isItemSpawner()) {
+                entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+            } else {
+                entityName = languageManager.getFormattedMobName(entityType);
+            }
+            if (usedPlaceholders.contains("entity")) {
+                placeholders.put("entity", entityName);
+            }
+            if (usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
+                placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityName));
+            }
+        }
+        if (usedPlaceholders.contains("entity_type")) {
+            placeholders.put("entity_type", entityType.toString());
+        }
+
+        // Stack information
+        if (usedPlaceholders.contains("stack_size")) {
+            placeholders.put("stack_size", String.valueOf(stackSize));
+        }
+
+        // Spawner settings
+        if (usedPlaceholders.contains("range")) {
+            placeholders.put("range", String.valueOf(spawner.getSpawnerRange()));
+        }
+        if (usedPlaceholders.contains("delay")) {
+            long delaySeconds = spawner.getSpawnDelay() / TICKS_PER_SECOND;
+            placeholders.put("delay", String.valueOf(delaySeconds));
+        }
+        if (usedPlaceholders.contains("min_mobs")) {
+            placeholders.put("min_mobs", String.valueOf(spawner.getMinMobs()));
+        }
+        if (usedPlaceholders.contains("max_mobs")) {
+            placeholders.put("max_mobs", String.valueOf(spawner.getMaxMobs()));
+        }
+
+        // Storage information
+        if (usedPlaceholders.contains("current_items")) {
+            placeholders.put("current_items", String.valueOf(currentItems));
+        }
+        if (usedPlaceholders.contains("max_items")) {
+            placeholders.put("max_items", languageManager.formatNumber(maxSlots));
+        }
+        if (usedPlaceholders.contains("percent_storage_decimal") || usedPlaceholders.contains("percent_storage_rounded")) {
+            double percentStorageDecimal = maxSlots > 0 ? ((double) currentItems / maxSlots) * 100 : 0;
+            if (usedPlaceholders.contains("percent_storage_decimal")) {
+                String formattedPercentStorage = String.format("%.1f", percentStorageDecimal);
+                placeholders.put("percent_storage_decimal", formattedPercentStorage);
+            }
+            if (usedPlaceholders.contains("percent_storage_rounded")) {
+                int percentStorageRounded = (int) Math.round(percentStorageDecimal);
+                placeholders.put("percent_storage_rounded", String.valueOf(percentStorageRounded));
+            }
+        }
+
+        // Experience information
+        if (usedPlaceholders.contains("current_exp")) {
+            placeholders.put("current_exp", languageManager.formatNumber(currentExp));
+        }
+        if (usedPlaceholders.contains("max_exp")) {
+            placeholders.put("max_exp", languageManager.formatNumber(maxExp));
+        }
+        if (usedPlaceholders.contains("raw_current_exp")) {
+            placeholders.put("raw_current_exp", String.valueOf(currentExp));
+        }
+        if (usedPlaceholders.contains("raw_max_exp")) {
+            placeholders.put("raw_max_exp", String.valueOf(maxExp));
+        }
+        if (usedPlaceholders.contains("percent_exp_decimal") || usedPlaceholders.contains("percent_exp_rounded")) {
+            double percentExpDecimal = maxExp > 0 ? ((double) currentExp / maxExp) * 100 : 0;
+            if (usedPlaceholders.contains("percent_exp_decimal")) {
+                String formattedPercentExp = String.format("%.1f", percentExpDecimal);
+                placeholders.put("percent_exp_decimal", formattedPercentExp);
+            }
+            if (usedPlaceholders.contains("percent_exp_rounded")) {
+                int percentExpRounded = (int) Math.round(percentExpDecimal);
+                placeholders.put("percent_exp_rounded", String.valueOf(percentExpRounded));
+            }
+        }
+
+        // Total sell price information
+        if (usedPlaceholders.contains("total_sell_price")) {
+            // Always recalculate if dirty to ensure immediate display (0s delay)
+            if (spawner.isSellValueDirty()) {
+                spawner.recalculateSellValue();
+            }
+            double totalSellPrice = spawner.getAccumulatedSellValue();
+            placeholders.put("total_sell_price", languageManager.formatNumber(totalSellPrice));
+        }
+
+        // Calculate and add timer value
+        if (usedPlaceholders.contains("time")) {
+            String timerValue = plugin.getSpawnerGuiViewManager().calculateTimerDisplay(spawner, player);
+            placeholders.put("time", timerValue);
+        }
+
         ItemStack spawnerItem;
-        if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
+
+        // Prepare the meta modifier consumer
+        Consumer<ItemMeta> metaModifier = meta -> {
+            // Set display name with the specified placeholders
+            meta.setDisplayName(languageManager.getGuiItemName("spawner_info_item.name", placeholders));
+
+            // Get and set lore with placeholders
+            List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
+            meta.setLore(lore);
+        };
+
+        // Check if this is an item spawner and use appropriate head
+        if (spawner.isItemSpawner()) {
+            // For item spawners, use the item material as the head
+            spawnerItem = SpawnerMobHeadTexture.getItemSpawnerHead(spawner.getSpawnedItemMaterial(), player, metaModifier);
+        } else if (spawnerInfoButton != null && spawnerInfoButton.getMaterial() == Material.PLAYER_HEAD) {
             // Use custom head texture for MOB_HEAD material
-            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player);
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
         } else if (spawnerInfoButton != null) {
             // Use the configured material
             spawnerItem = new ItemStack(spawnerInfoButton.getMaterial());
+            spawnerItem.editMeta(metaModifier);
         } else {
             // Fallback to default behavior
-            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player);
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, player, metaModifier);
         }
-        
-        ItemMeta spawnerMeta = spawnerItem.getItemMeta();
-        if (spawnerMeta == null) return spawnerItem;
 
-        // Get entity names with proper formatting - using cache
-        String entityName = languageManager.getFormattedMobName(entityType);
-        String entityNameSmallCaps = languageManager.getSmallCaps(languageManager.getFormattedMobName(entityType));
-
-        // Prepare all placeholders - reuse the map rather than creating a new one each time
-        Map<String, String> placeholders = new HashMap<>(16); // Preallocate with expected capacity
-
-        // Entity information
-        placeholders.put("entity", entityName);
-        placeholders.put("ᴇɴᴛɪᴛʏ", entityNameSmallCaps);
-        placeholders.put("entity_type", entityType.toString());
-
-        // Stack information
-        placeholders.put("stack_size", String.valueOf(stackSize));
-
-        // Spawner settings
-        placeholders.put("range", String.valueOf(spawner.getSpawnerRange()));
-        long delaySeconds = spawner.getSpawnDelay() / TICKS_PER_SECOND;
-        placeholders.put("delay", String.valueOf(delaySeconds));
-        placeholders.put("delay_raw", String.valueOf(spawner.getSpawnDelay()));
-        placeholders.put("min_mobs", String.valueOf(spawner.getMinMobs()));
-        placeholders.put("max_mobs", String.valueOf(spawner.getMaxMobs()));
-
-        // Storage information
-        placeholders.put("current_items", String.valueOf(currentItems));
-        placeholders.put("max_items", languageManager.formatNumber(maxSlots));
-        placeholders.put("percentage_storage", formattedPercentStorage);
-
-        // Experience information
-        String formattedCurrentExp = languageManager.formatNumber(currentExp);
-        String formattedMaxExp = languageManager.formatNumber(maxExp);
-
-        placeholders.put("current_exp", formattedCurrentExp);
-        placeholders.put("max_exp", formattedMaxExp);
-        placeholders.put("raw_current_exp", String.valueOf(currentExp));
-        placeholders.put("raw_max_exp", String.valueOf(maxExp));
-        placeholders.put("percentage_exp", formattedPercentExp);
-
-        // Total sell price information
-        // Check if sell value needs recalculation before displaying
-        if (spawner.isSellValueDirty()) {
-            spawner.recalculateSellValue();
-        }
-        double totalSellPrice = spawner.getAccumulatedSellValue();
-        placeholders.put("total_sell_price", languageManager.formatNumber(totalSellPrice));
-
-        // Calculate and add timer value to avoid showing %time% placeholder
-        // This prevents the brief flicker when the item is recreated (e.g., after sell/claim exp)
-        String timerValue = plugin.getSpawnerGuiViewManager().calculateTimerDisplay(spawner);
-        placeholders.put("time", timerValue);
-
-        // Set display name with the specified placeholders
-        spawnerMeta.setDisplayName(languageManager.getGuiItemName("spawner_info_item.name", placeholders));
-
-        // Select appropriate lore based on shop integration availability
-        String loreKey = hasShopPermission
-                ? "spawner_info_item.lore"
-                : "spawner_info_item.lore_no_shop";
-
-        // Get and set lore with placeholders
-        List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders(loreKey, placeholders);
-        spawnerMeta.setLore(lore);
-        spawnerItem.setItemMeta(spawnerMeta);
+        if (spawnerItem.getType() == Material.SPAWNER) VersionInitializer.hideTooltip(spawnerItem);
         return spawnerItem;
     }
 
@@ -418,7 +506,7 @@ public class SpawnerMenuUI {
         placeholders.put("current_exp", formattedExp);
         placeholders.put("raw_current_exp", String.valueOf(currentExp));
         placeholders.put("max_exp", formattedMaxExp);
-        placeholders.put("percent_exp", String.valueOf(percentExp));
+        placeholders.put("percent_exp_rounded", String.valueOf(percentExp));
         placeholders.put("u_max_exp", String.valueOf(maxExp));
 
         // Set name and lore
@@ -437,6 +525,48 @@ public class SpawnerMenuUI {
 
     private int calculatePercentage(long current, long maximum) {
         return maximum > 0 ? (int) ((double) current / maximum * 100) : 0;
+    }
+
+    /**
+     * Detects which placeholders are actually used in the given text
+     * @param text The text to scan for placeholders
+     * @param availablePlaceholders Set of all available placeholder keys
+     * @return Set of placeholder keys that are actually used in the text
+     */
+    private Set<String> detectUsedPlaceholders(String text, Set<String> availablePlaceholders) {
+        Set<String> usedPlaceholders = new HashSet<>();
+        if (text == null || text.isEmpty()) {
+            return usedPlaceholders;
+        }
+        
+        for (String placeholder : availablePlaceholders) {
+            if (text.contains("{" + placeholder + "}")) {
+                usedPlaceholders.add(placeholder);
+            }
+        }
+        return usedPlaceholders;
+    }
+
+    /**
+     * Detects which placeholders are actually used in the given list of strings
+     * @param textList The list of strings to scan for placeholders
+     * @param availablePlaceholders Set of all available placeholder keys
+     * @return Set of placeholder keys that are actually used in any of the texts
+     */
+    private Set<String> detectUsedPlaceholders(List<String> textList, Set<String> availablePlaceholders) {
+        Set<String> usedPlaceholders = new HashSet<>();
+        if (textList == null || textList.isEmpty()) {
+            return usedPlaceholders;
+        }
+        
+        for (String text : textList) {
+            for (String placeholder : availablePlaceholders) {
+                if (text.contains("{" + placeholder + "}")) {
+                    usedPlaceholders.add(placeholder);
+                }
+            }
+        }
+        return usedPlaceholders;
     }
 
     private GuiButton getSpawnerInfoButton(GuiLayout layout, Player player) {

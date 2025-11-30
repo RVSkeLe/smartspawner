@@ -8,7 +8,7 @@ import github.nighter.smartspawner.commands.list.gui.worldselection.WorldSelecti
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -46,7 +46,7 @@ public class SpawnerListGUI implements Listener {
         if (!(event.getInventory().getHolder(false) instanceof WorldSelectionHolder)) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        if (!player.hasPermission("smartspawner.list")) {
+        if (!player.hasPermission("smartspawner.command.list")) {
             messageService.sendMessage(player, "no_permission");
             return;
         }

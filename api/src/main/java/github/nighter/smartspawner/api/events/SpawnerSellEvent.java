@@ -12,27 +12,28 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+/**
+ * Called when items are sold from a spawner's storage.
+ */
+@Getter
+@Setter
 public class SpawnerSellEvent extends Event implements Cancellable {
-    @Getter
-    private final Player player;
-    @Getter
-    private final Location location;
-    @Getter
-    private final List<ItemStack> items;
-    @Getter @Setter
-    private double moneyAmount;
-    @Getter @Setter
-    private boolean cancelled = false;
 
     private static final HandlerList handlers = new HandlerList();
 
+    private final Player player;
+    private final Location location;
+    private final List<ItemStack> items;
+    private double moneyAmount;
+    private boolean cancelled = false;
+
     /**
-     * Constructor for the event.
+     * Creates a new spawner sell event.
      *
-     * @param player The player who should be selling the items.
-     * @param location The location of the spawner.
-     * @param items The items that should be sold.
-     * @param moneyAmount The final amount that should be given to the player.
+     * @param player the player selling the items
+     * @param location the location of the spawner
+     * @param items the items being sold
+     * @param moneyAmount the amount of money to be given
      */
     public SpawnerSellEvent(Player player, Location location, List<ItemStack> items, double moneyAmount) {
         this.player = player;

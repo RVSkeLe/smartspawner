@@ -2,8 +2,8 @@ package github.nighter.smartspawner.spawner.gui.storage.filter;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
-import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -220,11 +220,18 @@ public class FilterConfigUI implements Listener {
             return;
         }
 
+        SpawnerData spawner = holder.getSpawnerData();
+        
+        // Validate spawner still exists - prevent exploits on broken spawners
+        if (!isSpawnerValid(spawner)) {
+            player.closeInventory();
+            return;
+        }
+
         if (isClickTooFrequent(player)) {
             return;
         }
 
-        SpawnerData spawner = holder.getSpawnerData();
         int slot = event.getRawSlot();
 
         // Handle divider clicks (return to storage)
@@ -248,6 +255,23 @@ public class FilterConfigUI implements Listener {
     }
 
     /**
+     * Validates that a spawner still exists in the manager.
+     * Prevents exploits when spawner is broken while GUI is open.
+     *
+     * @param spawner The spawner to validate
+     * @return true if spawner is valid, false otherwise
+     */
+    private boolean isSpawnerValid(SpawnerData spawner) {
+        if (spawner == null) {
+            return false;
+        }
+        
+        var spawnerManager = plugin.getSpawnerManager();
+        SpawnerData current = spawnerManager.getSpawnerById(spawner.getSpawnerId());
+        return current != null && current == spawner;
+    }
+
+    /**
      * Returns to the spawner storage UI
      */
     private void returnToStorage(Player player, SpawnerData spawner) {
@@ -256,8 +280,7 @@ public class FilterConfigUI implements Listener {
         player.closeInventory();
 
         // Open storage UI (page 1 with no specific slot focus)
-        String title = languageManager.getGuiTitle("gui_title_storage");
-        Inventory pageInventory = storageUI.createInventory(spawner, title, 1, -1);
+        Inventory pageInventory = storageUI.createStorageInventory(spawner, 1, -1);
         player.openInventory(pageInventory);
     }
 

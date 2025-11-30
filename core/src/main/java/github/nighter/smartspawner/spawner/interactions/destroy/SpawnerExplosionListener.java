@@ -3,9 +3,9 @@ package github.nighter.smartspawner.spawner.interactions.destroy;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerExplodeEvent;
 import github.nighter.smartspawner.extras.HopperHandler;
-import github.nighter.smartspawner.spawner.properties.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
-import github.nighter.smartspawner.spawner.utils.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -60,13 +60,7 @@ public class SpawnerExplosionListener implements Listener {
                     } else {
                         spawnerData.getSpawnerStop().set(true);
                         String spawnerId = spawnerData.getSpawnerId();
-                        int stackSize = spawnerData.getStackSize();
-
                         cleanupAssociatedHopper(block);
-
-                        // Unregister spawner from chunk limiter
-                        plugin.getChunkSpawnerLimiter().unregisterSpawner(block.getLocation(), stackSize);
-
                         if (SpawnerExplodeEvent.getHandlerList().getRegisteredListeners().length != 0) {
                             e = new SpawnerExplodeEvent(null, spawnerData.getSpawnerLocation(), 1, true);
                         }

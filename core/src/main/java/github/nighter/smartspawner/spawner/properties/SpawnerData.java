@@ -2,9 +2,8 @@ package github.nighter.smartspawner.spawner.properties;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.commands.hologram.SpawnerHologram;
-import github.nighter.smartspawner.spawner.loot.EntityLootConfig;
-import github.nighter.smartspawner.spawner.loot.EntityLootRegistry;
-import github.nighter.smartspawner.spawner.loot.LootItem;
+import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
+import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.sell.SellResult;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,19 +21,30 @@ import java.util.stream.Collectors;
 public class SpawnerData {
     @Getter
     private final SmartSpawner plugin;
-    private final EntityLootRegistry lootRegistry;
 
     @Getter @Setter
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
+
+    // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
+    @Getter
+    private final ReentrantLock lootGenerationLock = new ReentrantLock();  // For loot spawning
+    @Getter
+    private final ReentrantLock sellLock = new ReentrantLock();  // For selling operations
+    @Getter
+    private final ReentrantLock dataLock = new ReentrantLock();  // For metadata changes (exp, stack size, etc.)
 
     // Base values from config (immutable after load)
+    @Getter @Setter
     private int baseMaxStoredExp;
+    @Getter @Setter
     private int baseMaxStoragePages;
+    @Getter @Setter
     private int baseMinMobs;
+    @Getter @Setter
     private int baseMaxMobs;
 
     @Getter
@@ -56,6 +66,10 @@ public class SpawnerData {
     private EntityType entityType;
     @Getter @Setter
     private EntityLootConfig lootConfig;
+
+    // Item spawner support - stores the material being spawned for item spawners
+    @Getter @Setter
+    private Material spawnedItemMaterial;
 
     // Calculated values based on stackSize
     @Getter
@@ -91,16 +105,26 @@ public class SpawnerData {
     // Accumulated sell value for optimization
     @Getter
     private volatile double accumulatedSellValue;
+
+    @Getter
     private volatile boolean sellValueDirty;
 
     private SpawnerHologram hologram;
     @Getter @Setter
-    private long cachedSpawnDelay = 0;
+    private long cachedSpawnDelay;
 
     // Sort preference for spawner storage
     @Getter @Setter
     private Material preferredSortItem;
+
+    // CRITICAL: Pre-generated loot storage for better UX - access must be synchronized via lootGenerationLock
+    private volatile List<ItemStack> preGeneratedItems;
+    private volatile int preGeneratedExperience;
+    private volatile boolean isPreGenerating;
     private final Random random;
+
+    // Cache for no-loot detection to avoid repeated expensive checks
+    private volatile Boolean cachedHasNoLoot = null;
 
     public SpawnerData(String id, Location location, EntityType type, SmartSpawner plugin) {
         super();
@@ -108,8 +132,22 @@ public class SpawnerData {
         this.spawnerId = id;
         this.spawnerLocation = location;
         this.entityType = type;
-        this.lootRegistry = plugin.getEntityLootRegistry();
-        this.random = ThreadLocalRandom.current();
+        this.spawnedItemMaterial = null;
+
+        initializeDefaults();
+        loadConfigurationValues();
+        calculateStackBasedValues();
+        initializeComponents();
+    }
+
+    // Constructor for item spawners
+    public SpawnerData(String id, Location location, Material itemMaterial, SmartSpawner plugin) {
+        super();
+        this.plugin = plugin;
+        this.spawnerId = id;
+        this.spawnerLocation = location;
+        this.entityType = EntityType.ITEM;
+        this.spawnedItemMaterial = itemMaterial;
 
         initializeDefaults();
         loadConfigurationValues();
@@ -136,8 +174,15 @@ public class SpawnerData {
         this.baseMaxMobs = plugin.getConfig().getInt("spawner_properties.default.max_mobs", 4);
         this.maxStackSize = plugin.getConfig().getInt("spawner_properties.default.max_stack_size", 1000);
         this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
+        this.cachedSpawnDelay = (this.spawnDelay + 20L) * 50L; // Add 1 second buffer for GUI display and convert tick to ms
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
-        this.lootConfig = lootRegistry.getLootConfig(entityType);
+
+        // Load loot config based on spawner type
+        if (isItemSpawner() && spawnedItemMaterial != null) {
+            this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
+        } else {
+            this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        }
     }
 
     public void recalculateAfterConfigReload() {
@@ -158,6 +203,26 @@ public class SpawnerData {
         }
     }
 
+    /**
+     * Recalculates spawner values after API modifications.
+     * Similar to {@link #recalculateAfterConfigReload()} but specifically for API changes.
+     */
+    public void recalculateAfterAPIModification() {
+        calculateStackBasedValues();
+        if (virtualInventory != null && virtualInventory.getMaxSlots() != maxSpawnerLootSlots) {
+            recreateVirtualInventory();
+        }
+        updateHologramData();
+
+        // Invalidate GUI cache after API modifications
+        if (plugin.getSpawnerMenuUI() != null) {
+            plugin.getSpawnerMenuUI().invalidateSpawnerCache(this.spawnerId);
+        }
+        if (plugin.getSpawnerMenuFormUI() != null) {
+            plugin.getSpawnerMenuFormUI().invalidateSpawnerCache(this.spawnerId);
+        }
+    }
+
     private void calculateStackBasedValues() {
         this.maxStoredExp = baseMaxStoredExp * stackSize;
         this.maxStoragePages = baseMaxStoragePages * stackSize;
@@ -168,10 +233,18 @@ public class SpawnerData {
     }
 
     public void setSpawnDelay(long baseSpawnerDelay) {
-        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 400;
+        this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500;
         if (baseSpawnerDelay <= 0) {
-            plugin.getLogger().warning("Invalid delay value. Setting to default: 400");
+            plugin.getLogger().warning("Invalid spawner delay value. Setting to default: 500 ticks (25s)");
         }
+    }
+    public void setSpawnDelayFromConfig() {
+        long delay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
+        if (delay <= 0) {
+            plugin.getLogger().warning("Invalid spawner delay value in config. Setting to default: 500 ticks (25s)");
+            delay = 500L;
+        }
+        setSpawnDelay(delay);
     }
 
     private void initializeComponents() {
@@ -179,6 +252,22 @@ public class SpawnerData {
         if (plugin.getConfig().getBoolean("hologram.enabled", false)) {
             createHologram();
         }
+
+        if (this.preferredSortItem == null && this.lootConfig != null && this.lootConfig.getAllItems() != null) {
+            var lootItems = this.lootConfig.getAllItems();
+            if (!lootItems.isEmpty()) {
+                var sortedLoot = lootItems.stream()
+                        .map(LootItem::material)
+                        .distinct()
+                        .sorted(Comparator.comparing(Material::name))
+                        .toList();
+
+                if (!sortedLoot.isEmpty()) {
+                    this.preferredSortItem = sortedLoot.getFirst();
+                }
+            }
+        }
+        this.virtualInventory.sortItems(this.preferredSortItem);
     }
 
     private void createHologram() {
@@ -188,15 +277,28 @@ public class SpawnerData {
     }
 
     public void setStackSize(int stackSize) {
-        lock.lock();
+        setStackSize(stackSize, true);
+    }
+
+    public void setStackSize(int stackSize, boolean restartHopper) {
+        // Acquire locks in consistent order to prevent deadlocks:
+        // 1. dataLock - for metadata changes
+        // 2. inventoryLock - to prevent inventory operations during virtual inventory replacement
+        // Note: We don't acquire lootGenerationLock here to avoid blocking loot generation cycles
+        dataLock.lock();
         try {
-            updateStackSize(stackSize);
+            inventoryLock.lock();
+            try {
+                updateStackSize(stackSize, restartHopper);
+            } finally {
+                inventoryLock.unlock();
+            }
         } finally {
-            lock.unlock();
+            dataLock.unlock();
         }
     }
 
-    private void updateStackSize(int newStackSize) {
+    private void updateStackSize(int newStackSize, boolean restartHopper) {
         if (newStackSize <= 0) {
             this.stackSize = 1;
             plugin.getLogger().warning("Invalid stack size. Setting to 1");
@@ -210,14 +312,12 @@ public class SpawnerData {
         }
 
         this.stackSize = newStackSize;
-        Map<VirtualInventory.ItemSignature, Long> currentItems = virtualInventory.getConsolidatedItems();
-
         calculateStackBasedValues();
 
-        VirtualInventory newInventory = new VirtualInventory(this.maxSpawnerLootSlots);
-        transferItemsToNewInventory(currentItems, newInventory);
-        this.virtualInventory = newInventory;
+        // Resize the existing virtual inventory instead of creating a new one
+        virtualInventory.resize(this.maxSpawnerLootSlots);
 
+        // Reset lastSpawnTime to prevent exploit where players break spawners to trigger immediate loot
         this.lastSpawnTime = System.currentTimeMillis();
         updateHologramData();
 
@@ -228,33 +328,18 @@ public class SpawnerData {
         if (plugin.getSpawnerMenuFormUI() != null) {
             plugin.getSpawnerMenuFormUI().invalidateSpawnerCache(this.spawnerId);
         }
+
+        // Restart hopper task if hopper integration is enabled
+        // This ensures hopper continues to work after stack size changes
+        // Skip during batch loading to avoid performance bottleneck
+        if (restartHopper && plugin.getHopperHandler() != null) {
+            plugin.getHopperHandler().restartHopperForSpawner(this.spawnerLocation);
+        }
     }
 
     private void recreateVirtualInventory() {
         if (virtualInventory == null) return;
-
-        Map<VirtualInventory.ItemSignature, Long> currentItems = virtualInventory.getConsolidatedItems();
-        VirtualInventory newInventory = new VirtualInventory(maxSpawnerLootSlots);
-        transferItemsToNewInventory(currentItems, newInventory);
-        this.virtualInventory = newInventory;
-    }
-
-    private void transferItemsToNewInventory(Map<VirtualInventory.ItemSignature, Long> items,
-                                             VirtualInventory newInventory) {
-        List<ItemStack> itemsToTransfer = new ArrayList<>();
-
-        items.forEach((signature, amount) -> {
-            ItemStack template = signature.getTemplate();
-            while (amount > 0) {
-                int batchSize = (int) Math.min(amount, Integer.MAX_VALUE);
-                ItemStack batch = template.clone();
-                batch.setAmount(batchSize);
-                itemsToTransfer.add(batch);
-                amount -= batchSize;
-            }
-        });
-
-        newInventory.addItems(itemsToTransfer);
+        virtualInventory.resize(maxSpawnerLootSlots);
     }
 
     public void setSpawnerExp(int exp) {
@@ -320,7 +405,7 @@ public class SpawnerData {
 
     public void setEntityType(EntityType newType) {
         this.entityType = newType;
-        this.lootConfig = lootRegistry.getLootConfig(newType);
+        this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(newType);
         // Mark sell value as dirty since entity type and prices changed
         this.sellValueDirty = true;
         updateHologramData();
@@ -351,13 +436,40 @@ public class SpawnerData {
     }
 
     public int getEntityExperienceValue() {
-        return lootConfig != null ? lootConfig.getExperience() : 0;
+        return lootConfig != null ? lootConfig.experience() : 0;
+    }
+
+    /**
+     * Checks if this spawner has any configured loot or experience.
+     * Used to detect spawners that will never generate anything (like Allay).
+     * Result is cached for performance.
+     *
+     * @return true if spawner has no loot items and no experience configured
+     */
+    public boolean hasNoLootOrExperience() {
+        // Return cached value if available
+        if (cachedHasNoLoot != null) {
+            return cachedHasNoLoot;
+        }
+
+        // Calculate and cache the result
+        boolean result = (lootConfig == null ||
+                (lootConfig.experience() == 0 && getValidLootItems().isEmpty()));
+        cachedHasNoLoot = result;
+        return result;
     }
 
     public void setLootConfig() {
-        this.lootConfig = lootRegistry.getLootConfig(entityType);
+        // Load loot config based on spawner type
+        if (isItemSpawner() && spawnedItemMaterial != null) {
+            this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
+        } else {
+            this.lootConfig = plugin.getSpawnerSettingsConfig().getLootConfig(entityType);
+        }
         // Mark sell value as dirty since prices may have changed
         this.sellValueDirty = true;
+        // Invalidate no-loot cache since config changed
+        this.cachedHasNoLoot = null;
     }
 
     public void setLastSellResult(SellResult sellResult) {
@@ -492,11 +604,11 @@ public class SpawnerData {
         java.util.List<LootItem> allLootItems = lootConfig.getAllItems();
 
         for (LootItem lootItem : allLootItems) {
-            if (lootItem.getSellPrice() > 0.0) {
-                ItemStack template = lootItem.createItemStack(new java.util.Random());
+            if (lootItem.sellPrice() > 0.0) {
+                ItemStack template = lootItem.createItemStack(random);
                 if (template != null) {
                     String key = createItemKey(template);
-                    cache.put(key, lootItem.getSellPrice());
+                    cache.put(key, lootItem.sellPrice());
                 }
             }
         }
@@ -549,15 +661,9 @@ public class SpawnerData {
     }
 
     /**
-     * Checks if sell value needs recalculation
-     */
-    public boolean isSellValueDirty() {
-        return sellValueDirty;
-    }
-
-    /**
      * Adds items to virtual inventory and updates accumulated sell value
      * This is the preferred method to add items to maintain accurate sell value cache
+     * THREAD-SAFE: Uses inventoryLock to ensure atomicity
      * @param items Items to add
      */
     public void addItemsAndUpdateSellValue(List<ItemStack> items) {
@@ -565,26 +671,33 @@ public class SpawnerData {
             return;
         }
 
-        // Consolidate items being added for efficient price lookup
-        Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
-        for (ItemStack item : items) {
-            if (item == null || item.getAmount() <= 0) continue;
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
-            itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
-        }
+        // CRITICAL: Acquire inventoryLock to ensure VirtualInventory remains source of truth
+        inventoryLock.lock();
+        try {
+            // Consolidate items being added for efficient price lookup
+            Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
+            for (ItemStack item : items) {
+                if (item == null || item.getAmount() <= 0) continue;
+                VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+                itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
+            }
 
-        // Add to inventory
-        virtualInventory.addItems(items);
+            // Add to VirtualInventory (source of truth) - this operation is atomic within the lock
+            virtualInventory.addItems(items);
 
-        // Update sell value
-        if (!sellValueDirty) {
-            Map<String, Double> priceCache = createPriceCache();
-            incrementSellValue(itemsToAdd, priceCache);
+            // Update sell value atomically
+            if (!sellValueDirty) {
+                Map<String, Double> priceCache = createPriceCache();
+                incrementSellValue(itemsToAdd, priceCache);
+            }
+        } finally {
+            inventoryLock.unlock();
         }
     }
 
     /**
      * Removes items from virtual inventory and updates accumulated sell value
+     * THREAD-SAFE: Uses inventoryLock to ensure atomicity
      * @param items Items to remove
      * @return true if items were removed successfully
      */
@@ -593,15 +706,64 @@ public class SpawnerData {
             return true;
         }
 
-        // Remove from inventory
-        boolean removed = virtualInventory.removeItems(items);
+        // CRITICAL: Acquire inventoryLock to ensure VirtualInventory remains source of truth
+        inventoryLock.lock();
+        try {
+            // Remove from VirtualInventory (source of truth) - atomic operation within lock
+            boolean removed = virtualInventory.removeItems(items);
 
-        // Update sell value if removal was successful
-        if (removed && !sellValueDirty) {
-            Map<String, Double> priceCache = createPriceCache();
-            decrementSellValue(items, priceCache);
+            // Update sell value atomically if removal was successful
+            if (removed && !sellValueDirty) {
+                Map<String, Double> priceCache = createPriceCache();
+                decrementSellValue(items, priceCache);
+            }
+
+            return removed;
+        } finally {
+            inventoryLock.unlock();
         }
+    }
 
-        return removed;
+    public synchronized void storePreGeneratedLoot(List<ItemStack> items, int experience) {
+        this.preGeneratedItems = items;
+        this.preGeneratedExperience = experience;
+    }
+
+    public synchronized List<ItemStack> getAndClearPreGeneratedItems() {
+        List<ItemStack> items = preGeneratedItems;
+        preGeneratedItems = null;
+        return items;
+    }
+
+    public synchronized int getAndClearPreGeneratedExperience() {
+        int exp = preGeneratedExperience;
+        preGeneratedExperience = 0;
+        return exp;
+    }
+
+    public synchronized boolean hasPreGeneratedLoot() {
+        return (preGeneratedItems != null && !preGeneratedItems.isEmpty()) || preGeneratedExperience > 0;
+    }
+
+    public synchronized void setPreGenerating(boolean generating) {
+        this.isPreGenerating = generating;
+    }
+
+    public synchronized boolean isPreGenerating() {
+        return isPreGenerating;
+    }
+
+    public synchronized void clearPreGeneratedLoot() {
+        preGeneratedItems = null;
+        preGeneratedExperience = 0;
+        isPreGenerating = false;
+    }
+
+    /**
+     * Checks if this is an item spawner (spawns items instead of entities)
+     * @return true if this spawner spawns items
+     */
+    public boolean isItemSpawner() {
+        return entityType == EntityType.ITEM && spawnedItemMaterial != null;
     }
 }
