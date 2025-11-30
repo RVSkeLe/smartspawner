@@ -3,9 +3,7 @@ package github.nighter.smartspawner.hooks.drops;
 import github.nighter.smartspawner.SmartSpawner;
 import io.lumine.mythic.bukkit.adapters.item.ItemComponentBukkitItemStack;
 import io.lumine.mythic.bukkit.events.MythicDropLoadEvent;
-import io.lumine.mythic.bukkit.utils.lib.jooq.impl.ThreadLocalTransactionProvider;
 import io.lumine.mythic.core.drops.droppables.VanillaItemDrop;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,7 +17,7 @@ public class MythicMobsHook implements Listener {
     private final Random random;
 
     public MythicMobsHook() {
-        random = ThreadLocalRandom.current();
+        this.random = ThreadLocalRandom.current();
     }
 
     @EventHandler
@@ -46,10 +44,10 @@ public class MythicMobsHook implements Listener {
                 } else amount = Integer.parseInt(s);
             }
         } catch (NumberFormatException ex) {
-            Bukkit.getLogger().log(Level.SEVERE, "Amount is not a valid number or range in a MythicMobs drop (%s)", e.getDropName());
+            SmartSpawner.getInstance().getLogger().log(Level.SEVERE, "Amount is not a valid number or range in a MythicMobs drop (%s)", e.getDropName());
             return;
         } catch (IllegalArgumentException ex) {
-            Bukkit.getLogger().log(Level.SEVERE, "Entity is not valid in a MythicMobs drop (%s)", e.getDropName());
+            SmartSpawner.getInstance().getLogger().log(Level.SEVERE, "Entity is not valid in a MythicMobs drop (%s)", e.getDropName());
             return;
         }
 
