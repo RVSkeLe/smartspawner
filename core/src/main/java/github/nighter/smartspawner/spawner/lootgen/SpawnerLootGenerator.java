@@ -196,7 +196,7 @@ public class SpawnerLootGenerator {
         for (LootItem lootItem : validItems) {
             int totalAmount;
 
-            if (shouldUseExpected(lootItem.getChance(), mobCount)) {
+            if (shouldUseExpected(lootItem.chance(), mobCount)) {
                 // O(1) expected-value approach
                 totalAmount = generateExpectedLoot(lootItem, mobCount);
             } else {
@@ -204,54 +204,12 @@ public class SpawnerLootGenerator {
                 totalAmount = generateExactLoot(lootItem, mobCount);
             }
 
-            if (successfulDrops > 0) {
-                // Create item just once per loot type
+            if (totalAmount > 0) {
                 ItemStack prototype = lootItem.createItemStack(random);
                 if (prototype != null) {
-                    // Total amount across all mobs
-                    int totalAmount = 0;
-                    for (int i = 0; i < successfulDrops; i++) {
-                        totalAmount += lootItem.generateAmount(random);
-                    }
-
-                    if (totalAmount > 0) {
-                        // Add to consolidated map
-                        consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
-                    }
+                    consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
                 }
             }
-        }
-
-        // Determines whether to use expected-value approximation
-        private boolean shouldUseExpected(double chance, int mobCount) {
-            // simple heuristic: use expected if atleast one item can be generated
-            return mobCount > 97.5D / chance;
-        }
-
-        // O(n) simulation: exact per-mob drop calculation
-        private int generateExactLoot(LootItem lootItem, int mobCount) {
-            int successfulDrops = 0;
-            for (int i = 0; i < mobCount; i++) {
-                if (random.nextDouble() * 100D <= lootItem.getChance()) {
-                    successfulDrops++;
-                }
-            }
-            int totalAmount = 0;
-            for (int i = 0; i < successfulDrops; i++) {
-                totalAmount += lootItem.generateAmount(random);
-            }
-            return totalAmount;
-        }
-
-        // O(1) expected-value calculation with small jitter
-        private int generateExpectedLoot(LootItem lootItem, int mobCount) {
-            double p = lootItem.getChance() / 100.0;
-            double expectedDrops = mobCount * p;
-            double avgAmount = lootItem.getAverageAmount();
-            double jitter = p != 1.0
-                    ? 0.95 + random.nextDouble() * 0.10
-                    : 1.0;
-            return (int) Math.round(expectedDrops * avgAmount * jitter);
         }
 
         // Convert consolidated map to item stacks
@@ -272,6 +230,38 @@ public class SpawnerLootGenerator {
         }
 
         return new LootResult(finalLoot, totalExperience);
+    }
+
+    // Determines whether to use expected-value approximation
+    private boolean shouldUseExpected(double chance, int mobCount) {
+        // simple heuristic: use expected if atleast one item can be generated
+        return mobCount > 97.5D / chance;
+    }
+
+    // O(n) simulation: exact per-mob drop calculation
+    private int generateExactLoot(LootItem lootItem, int mobCount) {
+        int successfulDrops = 0;
+        for (int i = 0; i < mobCount; i++) {
+            if (random.nextDouble() * 100D <= lootItem.chance()) {
+                successfulDrops++;
+            }
+        }
+        int totalAmount = 0;
+        for (int i = 0; i < successfulDrops; i++) {
+            totalAmount += lootItem.generateAmount(random);
+        }
+        return totalAmount;
+    }
+
+    // O(1) expected-value calculation with small jitter
+    private int generateExpectedLoot(LootItem lootItem, int mobCount) {
+        double p = lootItem.chance() / 100.0;
+        double expectedDrops = mobCount * p;
+        double avgAmount = lootItem.getAverageAmount();
+        double jitter = p != 1.0
+                ? 0.95 + random.nextDouble() * 0.10
+                : 1.0;
+        return (int) Math.round(expectedDrops * avgAmount * jitter);
     }
 
     private List<ItemStack> limitItemsToAvailableSlots(List<ItemStack> items, SpawnerData spawner) {
@@ -369,12 +359,12 @@ public class SpawnerLootGenerator {
 
     /**
      * Handle GUI updates after loot has been added to VirtualInventory.
-     *
+     * <p>
      * CRITICAL: This method is called while lootGenerationLock is held, which ensures:
      * 1. VirtualInventory is in a consistent state (loot has been added)
      * 2. No storage operations can interfere during GUI update dispatch
      * 3. All viewers will receive the updated state before any storage operations are allowed
-     *
+     * <p>
      * This guarantees that VirtualInventory remains the single source of truth.
      */
     private void handleGuiUpdates(SpawnerData spawner) {

@@ -59,7 +59,6 @@ public class SpawnerStorageAction implements Listener {
     private final Map<UUID, Long> lastItemClickTime = new ConcurrentHashMap<>();
     private final Random random = ThreadLocalRandom.current();
     private static final long CLICK_DELAY_MS = 300;
-    private final Random random = new Random();
     private GuiLayout layout;
 
     public SpawnerStorageAction(SmartSpawner plugin) {

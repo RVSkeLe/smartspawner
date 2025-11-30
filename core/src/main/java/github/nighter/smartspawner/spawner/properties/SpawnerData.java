@@ -133,6 +133,7 @@ public class SpawnerData {
         this.spawnerLocation = location;
         this.entityType = type;
         this.spawnedItemMaterial = null;
+        this.random = ThreadLocalRandom.current();
 
         initializeDefaults();
         loadConfigurationValues();
@@ -148,6 +149,7 @@ public class SpawnerData {
         this.spawnerLocation = location;
         this.entityType = EntityType.ITEM;
         this.spawnedItemMaterial = itemMaterial;
+        this.random = ThreadLocalRandom.current();
 
         initializeDefaults();
         loadConfigurationValues();
