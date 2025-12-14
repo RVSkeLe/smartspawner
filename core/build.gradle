@@ -4,8 +4,8 @@ dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT'
     // Hook plugins
     compileOnly 'org.geysermc.floodgate:api:2.2.5-SNAPSHOT'
-    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT'
-    compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.4.0-SNAPSHOT'
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.14-SNAPSHOT'
+    compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.3.17-SNAPSHOT'
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") { exclude(group: "*") }
     compileOnly 'com.palmergames.bukkit.towny:towny:0.102.0.0'
     compileOnly 'com.bgsoftware:SuperiorSkyblockAPI:2025.2.1'
@@ -16,7 +16,10 @@ dependencies {
     compileOnly 'su.nightexpress.excellentshop:Core:4.22.0'
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Core:8.1.2") { exclude(group: "*") }
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Spigot:8.1.2") { exclude(group: "*") }
-    implementation 'com.github.maiminhdung:zShop-API:9cb1b3e140'
+    // Temporary fix until they accept my PR
+    implementation 'com.github.RVSkeLe:zShop:develop-SNAPSHOT'
+
+    compileOnly("fr.maxlego08.menu:zmenu-api:1.1.0.6")
     implementation 'com.github.GriefPrevention:GriefPrevention:18.0.0'
     implementation 'com.github.IncrediblePlugins:LandsAPI:7.19.1'
     implementation 'com.github.Xyness:SimpleClaimSystem:1.12.3.2'

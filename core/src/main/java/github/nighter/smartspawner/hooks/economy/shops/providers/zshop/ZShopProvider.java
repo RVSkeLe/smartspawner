@@ -1,7 +1,7 @@
 package github.nighter.smartspawner.hooks.economy.shops.providers.zshop;
 
-import fr.maxlego08.zshop.api.ShopManager;
-import fr.maxlego08.zshop.api.buttons.ItemButton;
+import fr.maxlego08.shop.api.ShopManager;
+import fr.maxlego08.shop.api.buttons.ItemButton;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.hooks.economy.shops.providers.ShopProvider;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +28,8 @@ public class ZShopProvider implements ShopProvider {
             Plugin zShopPlugin = Bukkit.getPluginManager().getPlugin("zShop");
             if (zShopPlugin != null && zShopPlugin.isEnabled()) {
                 // Check if the zShop API classes are available
-                Class.forName("fr.maxlego08.zshop.api.ShopManager");
-                Class.forName("fr.maxlego08.zshop.api.buttons.ItemButton");
+                Class.forName("fr.maxlego08.shop.api.ShopManager");
+                Class.forName("fr.maxlego08.shop.api.buttons.ItemButton");
 
                 // Try to get the ShopManager service
                 ShopManager manager = getShopManager();
