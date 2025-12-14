@@ -16,9 +16,7 @@ dependencies {
     compileOnly 'su.nightexpress.excellentshop:Core:4.22.0'
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Core:8.1.2") { exclude(group: "*") }
     compileOnly("io.github.fabiozumbi12.RedProtect:RedProtect-Spigot:8.1.2") { exclude(group: "*") }
-    // Temporary fix until they accept my PR
-    implementation 'com.github.RVSkeLe:zShop:develop-SNAPSHOT'
-
+    compileOnly("fr.maxlego08.shop:zshop-api:3.3.1")
     compileOnly("fr.maxlego08.menu:zmenu-api:1.1.0.6")
     implementation 'com.github.GriefPrevention:GriefPrevention:18.0.0'
     implementation 'com.github.IncrediblePlugins:LandsAPI:7.19.1'
