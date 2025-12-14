@@ -52,7 +52,7 @@ dependencies:
       join-classpath: true
 
     # Economy Plugins
-    CoinEngine:
+    CoinsEngine:
       load: BEFORE
       required: false
       join-classpath: true
