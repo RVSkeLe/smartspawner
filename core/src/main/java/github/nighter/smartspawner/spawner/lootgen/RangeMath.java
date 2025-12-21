@@ -25,7 +25,12 @@ class RangeMath {
             final Location spawnerLoc = s.getSpawnerLocation();
             if (spawnerLoc == null) continue;
 
-            final World locWorld = spawnerLoc.getWorld();
+            World locWorld;
+            try {
+                locWorld = spawnerLoc.getWorld();
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
             if (locWorld == null) continue;
 
             final UUID worldUID = locWorld.getUID();
