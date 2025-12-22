@@ -2,8 +2,8 @@ package github.nighter.smartspawner.hooks;
 
 import com.plotsquared.core.PlotAPI;
 import github.nighter.smartspawner.SmartSpawner;
-import github.nighter.smartspawner.hooks.drops.MythicMobsHook;
-import github.nighter.smartspawner.hooks.protections.api.IridiumSkyblock;
+//import github.nighter.smartspawner.hooks.drops.MythicMobsHook;
+//import github.nighter.smartspawner.hooks.protections.api.IridiumSkyblock;
 import github.nighter.smartspawner.hooks.protections.api.Lands;
 import github.nighter.smartspawner.hooks.protections.api.PlotSquared;
 import github.nighter.smartspawner.hooks.protections.api.SuperiorSkyblock2;
@@ -113,23 +113,23 @@ public class IntegrationManager {
             return mP != null && mP.isEnabled();
         }, true);
 
-        hasMythicMobs = checkPlugin("MythicMobs", () -> {
-            Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
-            if(mm != null && mm.isEnabled()) {
-                Bukkit.getPluginManager().registerEvents(new MythicMobsHook(), SmartSpawner.getInstance());
-                return true;
-            }
-            return false;
-        }, true);
+//        hasMythicMobs = checkPlugin("MythicMobs", () -> {
+//            Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
+//            if(mm != null && mm.isEnabled()) {
+//                Bukkit.getPluginManager().registerEvents(new MythicMobsHook(), SmartSpawner.getInstance());
+//                return true;
+//            }
+//            return false;
+//        }, true);
 
-        hasIridiumSkyblock = checkPlugin("IridiumSkyblock", () -> {
-            Plugin is = Bukkit.getPluginManager().getPlugin("IridiumSkyblock");
-            if(is != null && is.isEnabled()) {
-                IridiumSkyblock.init();
-                return true;
-            }
-            return false;
-        }, true);
+//        hasIridiumSkyblock = checkPlugin("IridiumSkyblock", () -> {
+//            Plugin is = Bukkit.getPluginManager().getPlugin("IridiumSkyblock");
+//            if(is != null && is.isEnabled()) {
+//                IridiumSkyblock.init();
+//                return true;
+//            }
+//            return false;
+//        }, true);
 
         hasPlotSquared = checkPlugin("PlotSquared", () -> {
             Plugin is = Bukkit.getPluginManager().getPlugin("PlotSquared");

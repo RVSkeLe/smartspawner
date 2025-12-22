@@ -7,7 +7,7 @@ import github.nighter.smartspawner.hooks.economy.shops.providers.economyshopgui.
 import github.nighter.smartspawner.hooks.economy.shops.providers.excellentshop.ExcellentShopProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.ShopGuiPlusProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.SpawnerHook;
-import github.nighter.smartspawner.hooks.economy.shops.providers.zshop.ZShopProvider;
+//import github.nighter.smartspawner.hooks.economy.shops.providers.zshop.ZShopProvider;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Material;
 import org.bukkit.plugin.Plugin;
@@ -81,7 +81,7 @@ public class ShopIntegrationManager {
             });
         }
 
-        registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
+        // registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
         registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
     }
 
@@ -121,12 +121,12 @@ public class ShopIntegrationManager {
                         return !availableProviders.isEmpty();
                     }
                     break;
-                case "zshop":
-                    if (isPluginAvailable("ZShop")) {
-                        registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
-                        return !availableProviders.isEmpty();
-                    }
-                    break;
+//                case "zshop":
+//                    if (isPluginAvailable("ZShop")) {
+//                        registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
+//                        return !availableProviders.isEmpty();
+//                    }
+//                    break;
                 case "excellentshop":
                     if (isPluginAvailable("ExcellentShop")) {
                         registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
