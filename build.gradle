@@ -9,7 +9,7 @@ allprojects {
     apply plugin: 'maven-publish'
 
     group = 'github.nighter'
-    version = '1.5.7.1'
+    version = '1.5.8'
 
     repositories {
         mavenCentral()
