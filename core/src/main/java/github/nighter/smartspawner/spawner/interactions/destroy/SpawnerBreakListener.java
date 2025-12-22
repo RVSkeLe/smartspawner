@@ -290,6 +290,9 @@ public class SpawnerBreakListener implements Listener {
         }
 
         ItemMeta meta = tool.getItemMeta();
+        if (meta.isUnbreakable()) {
+            return;
+        }
         if (meta instanceof Damageable) {
             Damageable damageable = (Damageable) meta;
             int currentDurability = damageable.getDamage();

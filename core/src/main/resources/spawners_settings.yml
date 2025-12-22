@@ -12,7 +12,7 @@ ALLAY:
     material: "PLAYER_HEAD"
     custom_texture: "df5de940bfe499c59ee8dac9f9c3919e7535eff3a9acb16f4842bf290f4c679f"
 
-# Reference: https://minecraft.wiki/w/ARMADILLO#Drops
+# Reference: https://minecraft.wiki/w/Armadillo#Drops
 ARMADILLO:
   experience: 3
   head_texture:
@@ -84,12 +84,23 @@ BREEZE:
     material: "PLAYER_HEAD"
     custom_texture: "a275728af7e6a29c88125b675a39d88ae9919bb61fdc200337fed6ab0c49d65c"
 
-# Reference: https://minecraft.wiki/w/CAMEL#Drops
+# Reference: https://minecraft.wiki/w/Camel#Drops
 CAMEL:
   experience: 3
   head_texture:
     material: "PLAYER_HEAD"
     custom_texture: "7eb6ad908b8d5155bc4d249271ef6084d455dd0e70a4002eb148f9e20b9deb2c"
+
+# Reference: https://minecraft.wiki/w/Camel_Husk#Drops
+CAMEL_HUSK:
+  experience: 3
+  loot:
+    ROTTEN_FLESH:
+      amount: 2-3
+      chance: 100.0
+  head_texture:
+    material: "PLAYER_HEAD"
+    custom_texture: "750bfc9b2cc40f4d8d0224ccbabac26b338aa947d99dcde769f859b59b8d0b0e"
 
 # Reference: https://minecraft.wiki/w/CAT#Drops
 CAT:
@@ -443,6 +454,17 @@ LLAMA:
   head_texture:
     material: "PLAYER_HEAD"
     custom_texture: "9f7d90b305aa64313c8d4404d8d652a96eba8a754b67f4347dcccdd5a6a63398"
+
+# Reference: https://minecraft.wiki/w/Nautilus#Drops
+NAUTILUS:
+  experience: 3
+  loot:
+    NAUTILUS_SHELL:
+      amount: 0-1
+      chance: 5.0
+  head_texture:
+    material: "PLAYER_HEAD"
+    custom_texture: "b53d63eb175b00fb35285f4330d0be68a0713db94e00e6fdd85832d41e3a08b"
 
 # Reference: https://minecraft.wiki/w/MAGMA_CUBE#Drops
 MAGMA_CUBE:
@@ -980,6 +1002,17 @@ ZOMBIE_HORSE:
   head_texture:
     material: "PLAYER_HEAD"
     custom_texture: "171ce469cba4426c811f69be5d958a09bfb9b1b2bb649d3577a0c2161ad2f524"
+
+# Reference: https://minecraft.wiki/w/Zombie_Nautilus#Drops
+ZOMBIE_NAUTILUS:
+  experience: 3
+  loot:
+    ROTTEN_FLESH:
+      amount: 0-3
+      chance: 75.0
+  head_texture:
+    material: "PLAYER_HEAD"
+    custom_texture: "fd9a933376da44c3391307cb9f4cf03f16f3a54f495fd5a11bad8a373f9d5720"
 
 # Reference: https://minecraft.wiki/w/ZOMBIE_VILLAGER#Drops
 ZOMBIE_VILLAGER:

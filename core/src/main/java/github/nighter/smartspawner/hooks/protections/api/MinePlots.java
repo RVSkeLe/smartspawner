@@ -27,7 +27,7 @@ public class MinePlots {
         if(serviceProvider == null) return true;
         PlotApi plot = serviceProvider.getProvider().getPlot(location);
         if (plot != null) {
-            return plot.hasAccess(player);
+            plot.hasAccess(player);
         }
         // Player is not in plot
         return true;
