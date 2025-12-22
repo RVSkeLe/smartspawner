@@ -520,6 +520,24 @@ PANDA:
     material: "PLAYER_HEAD"
     custom_texture: "d5c3d618a70cc062e2edfaed15173e2a32ab6d773cf6050452e1b97fc66fb388"
 
+# Reference: https://minecraft.wiki/w/Parched#Drops
+PARCHED:
+  experience: 5
+  loot:
+    BONE:
+      amount: 0-2
+      chance: 66.67
+    ARROW:
+      amount: 0-2
+      chance: 66.67
+    TIPPED_ARROW:
+      amount: 0-1
+      chance: 50.0
+      potion_type: WEAKNESS
+  head_texture:
+    material: "PLAYER_HEAD"
+    custom_texture: "24aeceff5f26dd8413c5c03547c234ac03108d187af0b9cd834a8ce12598591c"
+
 # Reference: https://minecraft.wiki/w/Parrot#Drops
 PARROT:
   experience: 1
