@@ -81,7 +81,7 @@ public class ShopIntegrationManager {
             });
         }
 
-        registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
+        // registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
         registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
     }
 

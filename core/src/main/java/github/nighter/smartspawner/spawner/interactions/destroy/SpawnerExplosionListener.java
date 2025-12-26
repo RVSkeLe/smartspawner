@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.entity.EntityType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,15 +34,15 @@ public class SpawnerExplosionListener implements Listener {
 
     @EventHandler
     public void onEntityExplosion(EntityExplodeEvent event) {
-        handleExplosion(event.blockList());
+        handleExplosion(event, event.blockList());
     }
 
     @EventHandler
     public void onBlockExplosion(BlockExplodeEvent event) {
-        handleExplosion(event.blockList());
+        handleExplosion(null, event.blockList());
     }
 
-    private void handleExplosion(List<Block> blockList) {
+    private void handleExplosion(EntityExplodeEvent event, List<Block> blockList) {
         List<Block> blocksToRemove = new ArrayList<>();
 
         for (Block block : blockList) {
@@ -49,8 +50,10 @@ public class SpawnerExplosionListener implements Listener {
                 SpawnerData spawnerData = this.spawnerManager.getSpawnerByLocation(block.getLocation());
 
                 if (spawnerData != null) {
+                    boolean isWindCharge = event != null && (event.getEntity().getType() == EntityType.BREEZE_WIND_CHARGE || event.getEntity().getType() == EntityType.WIND_CHARGE);
+                    boolean protect = plugin.getConfig().getBoolean("spawner_properties.default.protect_from_explosions", true) || isWindCharge;
                     SpawnerExplodeEvent e = null;
-                    if (plugin.getConfig().getBoolean("spawner_properties.default.protect_from_explosions", true)) {
+                    if (protect) {
                         blocksToRemove.add(block);
                         plugin.getSpawnerGuiViewManager().closeAllViewersInventory(spawnerData);
                         cleanupAssociatedHopper(block);

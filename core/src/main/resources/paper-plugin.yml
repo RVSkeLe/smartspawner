@@ -2,10 +2,9 @@ name: SmartSpawner
 version: '${version}'
 main: github.nighter.smartspawner.SmartSpawner
 api-version: '1.21'
-description: "Advanced spawner management plugin with stacking, upgrades, and storage"
-authors:
-  - "SmartSpawner Contributors"
-website: "https://github.com/ptthanh02/Smart-Spawner"
+description: "A GUI-based spawner plugin that generates items and experience without spawning mobs"
+authors: [ https://github.com/NighterDevelopment/SmartSpawner ]
+website: "https://nighterdevelopment.github.io/smartspawner-docs/"
 folia-supported: true
 
 # Load order - POSTWORLD means after all worlds are loaded

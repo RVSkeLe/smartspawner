@@ -2,7 +2,7 @@ name: SmartSpawner
 version: '${version}'
 main: github.nighter.smartspawner.SmartSpawner
 api-version: '1.21'
-authors: [ https://github.com/ptthanh02/Smart-Spawner/graphs/contributors ]
+authors: [ https://github.com/NighterDevelopment/SmartSpawner ]
 folia-supported: true
 softdepend:
   # Bedrock Support Plugins

@@ -103,20 +103,42 @@ public class SpawnerStackHandler {
             return false;
         }
 
-        // Always check the entity type directly without caching
-        Optional<EntityType> handEntityTypeOpt = getEntityTypeFromItem(itemInHand);
-        if (!handEntityTypeOpt.isPresent()) {
-            messageService.sendMessage(player, "spawner_invalid");
+        // Check if the item is an item spawner
+        boolean isItemSpawnerItem = SpawnerTypeChecker.isItemSpawner(itemInHand);
+        boolean isTargetItemSpawner = targetSpawner.isItemSpawner();
+
+        // Both must be item spawners or both must be regular spawners
+        if (isItemSpawnerItem != isTargetItemSpawner) {
+            messageService.sendMessage(player, "spawner_different");
             return false;
         }
 
-        EntityType handEntityType = handEntityTypeOpt.get();
-        EntityType targetEntityType = targetSpawner.getEntityType();
+        // If both are item spawners, check if they spawn the same item
+        if (isItemSpawnerItem && isTargetItemSpawner) {
+            Material handItemMaterial = SpawnerTypeChecker.getItemSpawnerMaterial(itemInHand);
+            Material targetItemMaterial = targetSpawner.getSpawnedItemMaterial();
 
-        // Verify types match
-        if (handEntityType != targetEntityType) {
-            messageService.sendMessage(player, "spawner_different");
-            return false;
+            if (handItemMaterial == null || targetItemMaterial == null || handItemMaterial != targetItemMaterial) {
+                messageService.sendMessage(player, "spawner_different");
+                return false;
+            }
+        } else {
+            // For regular spawners, check entity type
+            // Always check the entity type directly without caching
+            Optional<EntityType> handEntityTypeOpt = getEntityTypeFromItem(itemInHand);
+            if (!handEntityTypeOpt.isPresent()) {
+                messageService.sendMessage(player, "spawner_invalid");
+                return false;
+            }
+
+            EntityType handEntityType = handEntityTypeOpt.get();
+            EntityType targetEntityType = targetSpawner.getEntityType();
+
+            // Verify types match
+            if (handEntityType != targetEntityType) {
+                messageService.sendMessage(player, "spawner_different");
+                return false;
+            }
         }
 
         // Verify stack limits

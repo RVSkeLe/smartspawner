@@ -317,7 +317,11 @@ public class SpawnerStackerHandler implements Listener {
             // Update stack size and give spawners to player
             // setStackSize internally uses dataLock for thread safety
             spawner.setStackSize(targetSize);
-            giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+            if (spawner.isItemSpawner()) {
+                giveItemSpawnersToPlayer(player, actualChange, spawner.getSpawnedItemMaterial());
+            } else {
+                giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+            }
 
             // Log destack operation
             if (plugin.getSpawnerActionLogger() != null) {
@@ -355,10 +359,16 @@ public class SpawnerStackerHandler implements Listener {
 
         // Limit change to available space
         int actualChange = Math.min(changeAmount, spaceLeft);
-        EntityType requiredType = spawner.getEntityType();
 
-        // Analyze inventory in a single pass to get both counts and check types
-        InventoryScanResult scanResult = scanPlayerInventory(player, requiredType);
+        // Analyze inventory based on spawner type
+        InventoryScanResult scanResult;
+        if (spawner.isItemSpawner()) {
+            Material requiredItemMaterial = spawner.getSpawnedItemMaterial();
+            scanResult = scanPlayerInventoryForItemSpawner(player, requiredItemMaterial);
+        } else {
+            EntityType requiredType = spawner.getEntityType();
+            scanResult = scanPlayerInventory(player, requiredType);
+        }
 
         // Check if player has different spawner types
         if (scanResult.availableSpawners == 0 && scanResult.hasDifferentType) {
@@ -382,7 +392,11 @@ public class SpawnerStackerHandler implements Listener {
             if (e.isCancelled()) return;
         }
 
-        removeValidSpawnersFromInventory(player, requiredType, actualChange, scanResult.spawnerSlots);
+        if (spawner.isItemSpawner()) {
+            removeValidItemSpawnersFromInventory(player, spawner.getSpawnedItemMaterial(), actualChange, scanResult.spawnerSlots);
+        } else {
+            removeValidSpawnersFromInventory(player, spawner.getEntityType(), actualChange, scanResult.spawnerSlots);
+        }
         spawner.setStackSize(currentSize + actualChange);
 
         // Notify if max stack reached
@@ -531,6 +545,39 @@ public class SpawnerStackerHandler implements Listener {
         return new InventoryScanResult(count, hasDifferentType, spawnerSlots);
     }
 
+    // Combined inventory scan for item spawners that checks item material
+    private InventoryScanResult scanPlayerInventoryForItemSpawner(Player player, Material requiredItemMaterial) {
+        int count = 0;
+        boolean hasDifferentType = false;
+        List<SpawnerSlot> spawnerSlots = new ArrayList<>();
+
+        ItemStack[] contents = player.getInventory().getContents();
+
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (item == null || item.getType() != Material.SPAWNER) continue;
+
+            // Skip vanilla spawners
+            if (SpawnerTypeChecker.isVanillaSpawner(item)) continue;
+
+            // Check if it's an item spawner
+            if (SpawnerTypeChecker.isItemSpawner(item)) {
+                Material itemMaterial = SpawnerTypeChecker.getItemSpawnerMaterial(item);
+                if (itemMaterial == requiredItemMaterial) {
+                    count += item.getAmount();
+                    spawnerSlots.add(new SpawnerSlot(i, item.getAmount()));
+                } else {
+                    hasDifferentType = true;
+                }
+            } else {
+                // Regular spawner when we need item spawner
+                hasDifferentType = true;
+            }
+        }
+
+        return new InventoryScanResult(count, hasDifferentType, spawnerSlots);
+    }
+
     private Optional<EntityType> getSpawnerEntityTypeCached(ItemStack item) {
         if (item == null || item.getType() != Material.SPAWNER) {
             return Optional.empty();
@@ -596,6 +643,35 @@ public class SpawnerStackerHandler implements Listener {
         player.updateInventory();
     }
 
+    private void removeValidItemSpawnersFromInventory(Player player, Material requiredItemMaterial, int amountToRemove, List<SpawnerSlot> spawnerSlots) {
+        int remainingToRemove = amountToRemove;
+
+        // Use the pre-scanned slots for faster removal
+        for (SpawnerSlot slot : spawnerSlots) {
+            if (remainingToRemove <= 0) break;
+
+            ItemStack item = player.getInventory().getItem(slot.slotIndex);
+            // Verify item is still valid
+            if (item == null || item.getType() != Material.SPAWNER) continue;
+
+            if (SpawnerTypeChecker.isItemSpawner(item)) {
+                Material itemMaterial = SpawnerTypeChecker.getItemSpawnerMaterial(item);
+                if (itemMaterial == requiredItemMaterial) {
+                    int itemAmount = item.getAmount();
+                    if (itemAmount <= remainingToRemove) {
+                        player.getInventory().setItem(slot.slotIndex, null);
+                        remainingToRemove -= itemAmount;
+                    } else {
+                        item.setAmount(itemAmount - remainingToRemove);
+                        remainingToRemove = 0;
+                    }
+                }
+            }
+        }
+
+        player.updateInventory();
+    }
+
     public void giveSpawnersToPlayer(Player player, int amount, EntityType entityType) {
         final int MAX_STACK_SIZE = 64;
         int remainingAmount = amount;
@@ -628,6 +704,64 @@ public class SpawnerStackerHandler implements Listener {
             while (remainingAmount > 0) {
                 int stackSize = Math.min(MAX_STACK_SIZE, remainingAmount);
                 ItemStack spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, stackSize);
+                newStacks.add(spawnerItem);
+                remainingAmount -= stackSize;
+            }
+
+            // Try to add all at once
+            boolean allFit = true;
+            for (ItemStack stack : newStacks) {
+                boolean addedSuccessfully = addItemAvoidingVanillaSpawners(player, stack);
+                if (!addedSuccessfully) {
+                    // Drop any items that couldn't fit
+                    player.getWorld().dropItemNaturally(player.getLocation(), stack);
+                    allFit = false;
+                }
+            }
+
+            if (!allFit) {
+                messageService.sendMessage(player, "inventory_full_items_dropped");
+            }
+        }
+
+        // Update inventory
+        player.updateInventory();
+    }
+
+    public void giveItemSpawnersToPlayer(Player player, int amount, Material itemMaterial) {
+        final int MAX_STACK_SIZE = 64;
+        int remainingAmount = amount;
+
+        // First pass: Try to merge with existing item spawner stacks
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length && remainingAmount > 0; i++) {
+            ItemStack item = contents[i];
+            // Skip null items, non-spawners, vanilla spawners, or regular spawners
+            if (item == null || item.getType() != Material.SPAWNER ||
+                SpawnerTypeChecker.isVanillaSpawner(item) ||
+                !SpawnerTypeChecker.isItemSpawner(item)) {
+                continue;
+            }
+
+            Material itemSpawnerMaterial = SpawnerTypeChecker.getItemSpawnerMaterial(item);
+            if (itemSpawnerMaterial != itemMaterial) continue;
+
+            int currentAmount = item.getAmount();
+            if (currentAmount < MAX_STACK_SIZE) {
+                int canAdd = Math.min(MAX_STACK_SIZE - currentAmount, remainingAmount);
+                item.setAmount(currentAmount + canAdd);
+                remainingAmount -= canAdd;
+            }
+        }
+
+        // Second pass: Create new stacks for remaining items
+        if (remainingAmount > 0) {
+            // Create all stacks at once to avoid multiple inventory operations
+            List<ItemStack> newStacks = new ArrayList<>();
+
+            while (remainingAmount > 0) {
+                int stackSize = Math.min(MAX_STACK_SIZE, remainingAmount);
+                ItemStack spawnerItem = spawnerItemFactory.createItemSpawnerItem(itemMaterial, stackSize);
                 newStacks.add(spawnerItem);
                 remainingAmount -= stackSize;
             }
