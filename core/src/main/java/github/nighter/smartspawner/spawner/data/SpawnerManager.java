@@ -2,6 +2,7 @@ package github.nighter.smartspawner.spawner.data;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.Scheduler;
+import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.*;
 import java.util.*;
@@ -12,13 +13,13 @@ public class SpawnerManager {
     private final Map<String, SpawnerData> spawners = new ConcurrentHashMap<>();
     private final Map<LocationKey, SpawnerData> locationIndex = new HashMap<>();
     private final Map<String, Set<SpawnerData>> worldIndex = new HashMap<>();
-    private final SpawnerFileHandler spawnerFileHandler;
+    private final SpawnerStorage spawnerStorage;
     // Set to keep track of confirmed ghost spawners to avoid repeated checks
     private final Set<String> confirmedGhostSpawners = ConcurrentHashMap.newKeySet();
 
     public SpawnerManager(SmartSpawner plugin) {
         this.plugin = plugin;
-        this.spawnerFileHandler = plugin.getSpawnerFileHandler();
+        this.spawnerStorage = plugin.getSpawnerStorage();
         // Initialize without loading spawners - let WorldEventHandler manage loading
         initializeWithoutLoading();
     }
@@ -85,7 +86,7 @@ public class SpawnerManager {
         worldIndex.computeIfAbsent(worldName, k -> new HashSet<>()).add(spawner);
 
         // Queue for saving
-        spawnerFileHandler.queueSpawnerForSaving(id);
+        spawnerStorage.queueSpawnerForSaving(id);
     }
 
     public void removeSpawner(String id) {
@@ -196,7 +197,7 @@ public class SpawnerManager {
 
                 Scheduler.runTask(() -> {
                     removeSpawner(spawnerId);
-                    spawnerFileHandler.markSpawnerDeleted(spawnerId);
+                    spawnerStorage.markSpawnerDeleted(spawnerId);
                     plugin.debug("Removed ghost spawner " + spawnerId);
                 });
             });
@@ -209,11 +210,11 @@ public class SpawnerManager {
      * @param spawnerId The ID of the modified spawner
      */
     public void markSpawnerModified(String spawnerId) {
-        spawnerFileHandler.markSpawnerModified(spawnerId);
+        spawnerStorage.markSpawnerModified(spawnerId);
     }
 
     public void markSpawnerDeleted(String spawnerId) {
-        spawnerFileHandler.markSpawnerDeleted(spawnerId);
+        spawnerStorage.markSpawnerDeleted(spawnerId);
     }
 
     /**
@@ -222,7 +223,7 @@ public class SpawnerManager {
      * @param spawnerId The ID of the spawner to save
      */
     public void queueSpawnerForSaving(String spawnerId) {
-        spawnerFileHandler.queueSpawnerForSaving(spawnerId);
+        spawnerStorage.queueSpawnerForSaving(spawnerId);
     }
 
     // ===============================================================

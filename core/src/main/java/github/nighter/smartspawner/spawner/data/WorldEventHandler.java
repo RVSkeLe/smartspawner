@@ -81,7 +81,7 @@ public class WorldEventHandler implements Listener {
         plugin.debug("World saving: " + world.getName());
 
         // Flush any pending spawner changes for this world
-        plugin.getSpawnerFileHandler().flushChanges();
+        plugin.getSpawnerStorage().flushChanges();
     }
 
     /**
@@ -101,7 +101,7 @@ public class WorldEventHandler implements Listener {
         unloadSpawnersFromWorld(worldName);
 
         // Save any pending changes before unloading
-        plugin.getSpawnerFileHandler().flushChanges();
+        plugin.getSpawnerStorage().flushChanges();
     }
 
     /**
@@ -116,7 +116,7 @@ public class WorldEventHandler implements Listener {
         plugin.debug("Attempting initial spawner load...");
 
         // Load spawner data from file
-        Map<String, SpawnerData> allSpawnerData = plugin.getSpawnerFileHandler().loadAllSpawnersRaw();
+        Map<String, SpawnerData> allSpawnerData = plugin.getSpawnerStorage().loadAllSpawnersRaw();
 
         int loadedCount = 0;
         int pendingCount = 0;
@@ -166,7 +166,7 @@ public class WorldEventHandler implements Listener {
 
             if (pending != null && worldName.equals(pending.worldName)) {
                 // Try to load this spawner now that its world is available
-                SpawnerData spawner = plugin.getSpawnerFileHandler().loadSpecificSpawner(spawnerId);
+                SpawnerData spawner = plugin.getSpawnerStorage().loadSpecificSpawner(spawnerId);
 
                 if (spawner != null) {
                     plugin.getSpawnerManager().addSpawnerToIndexes(spawnerId, spawner);
@@ -211,7 +211,7 @@ public class WorldEventHandler implements Listener {
      */
     private PendingSpawnerData loadPendingSpawnerFromFile(String spawnerId) {
         try {
-            String locationString = plugin.getSpawnerFileHandler().getRawLocationString(spawnerId);
+            String locationString = plugin.getSpawnerStorage().getRawLocationString(spawnerId);
             if (locationString != null) {
                 String[] locParts = locationString.split(",");
                 if (locParts.length >= 1) {

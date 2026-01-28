@@ -1,0 +1,343 @@
+package github.nighter.smartspawner.spawner.data.database;
+
+import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.spawner.properties.SpawnerData;
+import github.nighter.smartspawner.spawner.properties.VirtualInventory;
+import github.nighter.smartspawner.spawner.utils.ItemStackSerializer;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.inventory.ItemStack;
+
+import java.io.File;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+/**
+ * Handles one-time migration from spawners_data.yml to MariaDB database.
+ * After successful migration, the YAML file is renamed to spawners_data.yml.migrated
+ * to prevent re-migration.
+ */
+public class YamlToDatabaseMigration {
+    private final SmartSpawner plugin;
+    private final Logger logger;
+    private final DatabaseManager databaseManager;
+    private final String serverName;
+
+    private static final String YAML_FILE_NAME = "spawners_data.yml";
+    private static final String MIGRATED_FILE_SUFFIX = ".migrated";
+
+    private static final String INSERT_SQL = """
+            INSERT INTO smart_spawners (
+                spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
+                entity_type, item_spawner_material, spawner_exp, spawner_active,
+                spawner_range, spawner_stop, spawn_delay, max_spawner_loot_slots,
+                max_stored_exp, min_mobs, max_mobs, stack_size, max_stack_size,
+                last_spawn_time, is_at_capacity, last_interacted_player,
+                preferred_sort_item, filtered_items, inventory_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                world_name = VALUES(world_name),
+                loc_x = VALUES(loc_x),
+                loc_y = VALUES(loc_y),
+                loc_z = VALUES(loc_z),
+                entity_type = VALUES(entity_type),
+                item_spawner_material = VALUES(item_spawner_material),
+                spawner_exp = VALUES(spawner_exp),
+                spawner_active = VALUES(spawner_active),
+                spawner_range = VALUES(spawner_range),
+                spawner_stop = VALUES(spawner_stop),
+                spawn_delay = VALUES(spawn_delay),
+                max_spawner_loot_slots = VALUES(max_spawner_loot_slots),
+                max_stored_exp = VALUES(max_stored_exp),
+                min_mobs = VALUES(min_mobs),
+                max_mobs = VALUES(max_mobs),
+                stack_size = VALUES(stack_size),
+                max_stack_size = VALUES(max_stack_size),
+                last_spawn_time = VALUES(last_spawn_time),
+                is_at_capacity = VALUES(is_at_capacity),
+                last_interacted_player = VALUES(last_interacted_player),
+                preferred_sort_item = VALUES(preferred_sort_item),
+                filtered_items = VALUES(filtered_items),
+                inventory_data = VALUES(inventory_data)
+            """;
+
+    public YamlToDatabaseMigration(SmartSpawner plugin, DatabaseManager databaseManager) {
+        this.plugin = plugin;
+        this.logger = plugin.getLogger();
+        this.databaseManager = databaseManager;
+        this.serverName = databaseManager.getServerName();
+    }
+
+    /**
+     * Check if migration is needed.
+     * Migration is needed if spawners_data.yml exists and has spawner data.
+     * @return true if migration is needed
+     */
+    public boolean needsMigration() {
+        File yamlFile = new File(plugin.getDataFolder(), YAML_FILE_NAME);
+        if (!yamlFile.exists()) {
+            return false;
+        }
+
+        // Check if already migrated
+        File migratedFile = new File(plugin.getDataFolder(), YAML_FILE_NAME + MIGRATED_FILE_SUFFIX);
+        if (migratedFile.exists()) {
+            return false;
+        }
+
+        // Check if YAML has any spawner data
+        FileConfiguration yamlData = YamlConfiguration.loadConfiguration(yamlFile);
+        ConfigurationSection spawnersSection = yamlData.getConfigurationSection("spawners");
+        return spawnersSection != null && !spawnersSection.getKeys(false).isEmpty();
+    }
+
+    /**
+     * Perform the migration from YAML to database.
+     * @return true if migration was successful
+     */
+    public boolean migrate() {
+        logger.info("Starting YAML to database migration...");
+
+        File yamlFile = new File(plugin.getDataFolder(), YAML_FILE_NAME);
+        if (!yamlFile.exists()) {
+            logger.info("No YAML file found, skipping migration.");
+            return true;
+        }
+
+        FileConfiguration yamlData = YamlConfiguration.loadConfiguration(yamlFile);
+        ConfigurationSection spawnersSection = yamlData.getConfigurationSection("spawners");
+
+        if (spawnersSection == null || spawnersSection.getKeys(false).isEmpty()) {
+            logger.info("No spawners found in YAML file, skipping migration.");
+            return true;
+        }
+
+        int totalSpawners = spawnersSection.getKeys(false).size();
+        int migratedCount = 0;
+        int failedCount = 0;
+
+        logger.info("Found " + totalSpawners + " spawners to migrate.");
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(INSERT_SQL)) {
+
+            conn.setAutoCommit(false);
+            int batchCount = 0;
+            final int BATCH_SIZE = 100;
+
+            for (String spawnerId : spawnersSection.getKeys(false)) {
+                try {
+                    if (migrateSpawner(stmt, yamlData, spawnerId)) {
+                        stmt.addBatch();
+                        batchCount++;
+                        migratedCount++;
+
+                        // Execute batch every BATCH_SIZE records
+                        if (batchCount >= BATCH_SIZE) {
+                            stmt.executeBatch();
+                            conn.commit();
+                            batchCount = 0;
+                            logger.info("Migrated " + migratedCount + "/" + totalSpawners + " spawners...");
+                        }
+                    } else {
+                        failedCount++;
+                    }
+                } catch (Exception e) {
+                    logger.log(Level.WARNING, "Failed to migrate spawner " + spawnerId, e);
+                    failedCount++;
+                }
+            }
+
+            // Execute remaining batch
+            if (batchCount > 0) {
+                stmt.executeBatch();
+                conn.commit();
+            }
+
+            logger.info("Migration completed. Migrated: " + migratedCount + ", Failed: " + failedCount);
+
+            // Rename the YAML file to prevent re-migration
+            if (failedCount == 0 || migratedCount > 0) {
+                File migratedFile = new File(plugin.getDataFolder(), YAML_FILE_NAME + MIGRATED_FILE_SUFFIX);
+                if (yamlFile.renameTo(migratedFile)) {
+                    logger.info("YAML file renamed to " + YAML_FILE_NAME + MIGRATED_FILE_SUFFIX);
+                } else {
+                    logger.warning("Failed to rename YAML file. Manual cleanup may be required.");
+                }
+            }
+
+            return failedCount == 0;
+
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Database error during migration", e);
+            return false;
+        }
+    }
+
+    private boolean migrateSpawner(PreparedStatement stmt, FileConfiguration yamlData, String spawnerId) throws SQLException {
+        String path = "spawners." + spawnerId;
+
+        // Parse location
+        String locationString = yamlData.getString(path + ".location");
+        if (locationString == null) {
+            logger.warning("No location for spawner " + spawnerId + ", skipping.");
+            return false;
+        }
+
+        String[] locParts = locationString.split(",");
+        if (locParts.length != 4) {
+            logger.warning("Invalid location format for spawner " + spawnerId + ", skipping.");
+            return false;
+        }
+
+        String worldName = locParts[0];
+        int locX, locY, locZ;
+        try {
+            locX = Integer.parseInt(locParts[1]);
+            locY = Integer.parseInt(locParts[2]);
+            locZ = Integer.parseInt(locParts[3]);
+        } catch (NumberFormatException e) {
+            logger.warning("Invalid location coordinates for spawner " + spawnerId + ", skipping.");
+            return false;
+        }
+
+        // Parse entity type
+        String entityTypeString = yamlData.getString(path + ".entityType");
+        if (entityTypeString == null) {
+            logger.warning("No entity type for spawner " + spawnerId + ", skipping.");
+            return false;
+        }
+
+        EntityType entityType;
+        try {
+            entityType = EntityType.valueOf(entityTypeString);
+        } catch (IllegalArgumentException e) {
+            logger.warning("Invalid entity type for spawner " + spawnerId + ": " + entityTypeString + ", skipping.");
+            return false;
+        }
+
+        // Parse item spawner material (if applicable)
+        String itemSpawnerMaterial = yamlData.getString(path + ".itemSpawnerMaterial");
+
+        // Parse settings string
+        String settingsString = yamlData.getString(path + ".settings");
+        int spawnerExp = 0;
+        boolean spawnerActive = true;
+        int spawnerRange = 16;
+        boolean spawnerStop = true;
+        long spawnDelay = 500;
+        int maxSpawnerLootSlots = 45;
+        int maxStoredExp = 1000;
+        int minMobs = 1;
+        int maxMobs = 4;
+        int stackSize = 1;
+        int maxStackSize = 1000;
+        long lastSpawnTime = 0;
+        boolean isAtCapacity = false;
+
+        if (settingsString != null) {
+            String[] settings = settingsString.split(",");
+            int version = yamlData.getInt("data_version", 1);
+
+            try {
+                if (version >= 3 && settings.length >= 13) {
+                    spawnerExp = Integer.parseInt(settings[0]);
+                    spawnerActive = Boolean.parseBoolean(settings[1]);
+                    spawnerRange = Integer.parseInt(settings[2]);
+                    spawnerStop = Boolean.parseBoolean(settings[3]);
+                    spawnDelay = Long.parseLong(settings[4]);
+                    maxSpawnerLootSlots = Integer.parseInt(settings[5]);
+                    maxStoredExp = Integer.parseInt(settings[6]);
+                    minMobs = Integer.parseInt(settings[7]);
+                    maxMobs = Integer.parseInt(settings[8]);
+                    stackSize = Integer.parseInt(settings[9]);
+                    maxStackSize = Integer.parseInt(settings[10]);
+                    lastSpawnTime = Long.parseLong(settings[11]);
+                    isAtCapacity = Boolean.parseBoolean(settings[12]);
+                } else if (settings.length >= 11) {
+                    spawnerExp = Integer.parseInt(settings[0]);
+                    spawnerActive = Boolean.parseBoolean(settings[1]);
+                    spawnerRange = Integer.parseInt(settings[2]);
+                    spawnerStop = Boolean.parseBoolean(settings[3]);
+                    spawnDelay = Long.parseLong(settings[4]);
+                    maxSpawnerLootSlots = Integer.parseInt(settings[5]);
+                    maxStoredExp = Integer.parseInt(settings[6]);
+                    minMobs = Integer.parseInt(settings[7]);
+                    maxMobs = Integer.parseInt(settings[8]);
+                    stackSize = Integer.parseInt(settings[9]);
+                    lastSpawnTime = Long.parseLong(settings[10]);
+                }
+            } catch (NumberFormatException e) {
+                logger.warning("Invalid settings format for spawner " + spawnerId + ", using defaults.");
+            }
+        }
+
+        // Parse filtered items
+        String filteredItemsStr = yamlData.getString(path + ".filteredItems");
+
+        // Parse preferred sort item
+        String preferredSortItemStr = yamlData.getString(path + ".preferredSortItem");
+
+        // Parse last interacted player
+        String lastInteractedPlayer = yamlData.getString(path + ".lastInteractedPlayer");
+
+        // Parse inventory and convert to JSON format
+        List<String> inventoryData = yamlData.getStringList(path + ".inventory");
+        String inventoryJson = serializeInventoryToJson(inventoryData);
+
+        // Set statement parameters
+        stmt.setString(1, spawnerId);
+        stmt.setString(2, serverName);
+        stmt.setString(3, worldName);
+        stmt.setInt(4, locX);
+        stmt.setInt(5, locY);
+        stmt.setInt(6, locZ);
+        stmt.setString(7, entityType.name());
+        stmt.setString(8, itemSpawnerMaterial);
+        stmt.setInt(9, spawnerExp);
+        stmt.setBoolean(10, spawnerActive);
+        stmt.setInt(11, spawnerRange);
+        stmt.setBoolean(12, spawnerStop);
+        stmt.setLong(13, spawnDelay);
+        stmt.setInt(14, maxSpawnerLootSlots);
+        stmt.setInt(15, maxStoredExp);
+        stmt.setInt(16, minMobs);
+        stmt.setInt(17, maxMobs);
+        stmt.setInt(18, stackSize);
+        stmt.setInt(19, maxStackSize);
+        stmt.setLong(20, lastSpawnTime);
+        stmt.setBoolean(21, isAtCapacity);
+        stmt.setString(22, lastInteractedPlayer);
+        stmt.setString(23, preferredSortItemStr);
+        stmt.setString(24, filteredItemsStr);
+        stmt.setString(25, inventoryJson);
+
+        return true;
+    }
+
+    private String serializeInventoryToJson(List<String> inventoryData) {
+        if (inventoryData == null || inventoryData.isEmpty()) {
+            return null;
+        }
+
+        // Convert YAML list format to JSON array format
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < inventoryData.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(inventoryData.get(i).replace("\"", "\\\"")).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+}
