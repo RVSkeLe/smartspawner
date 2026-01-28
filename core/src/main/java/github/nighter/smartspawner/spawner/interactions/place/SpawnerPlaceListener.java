@@ -277,6 +277,25 @@ public class SpawnerPlaceListener implements Listener {
     }
 
     private void createSmartSpawner(Block block, Player player, EntityType entityType, int stackSize) {
+        // Check if a spawner already exists at this location (prevent duplicates/ghost spawners)
+        SpawnerData existingSpawner = spawnerManager.getSpawnerByLocation(block.getLocation());
+        if (existingSpawner != null) {
+            plugin.debug("Spawner already exists at " + block.getLocation() + " with ID " + existingSpawner.getSpawnerId());
+            // Update the existing spawner instead of creating a duplicate
+            existingSpawner.updateLastInteractedPlayer(player.getName());
+            if (existingSpawner.getEntityType() == entityType) {
+                // Same type - add to stack
+                int newStackSize = existingSpawner.getStackSize() + stackSize;
+                existingSpawner.setStackSize(Math.min(newStackSize, existingSpawner.getMaxStackSize()));
+                spawnerManager.queueSpawnerForSaving(existingSpawner.getSpawnerId());
+                messageService.sendMessage(player, "spawner_stacked");
+            } else {
+                // Different type - just activate it
+                messageService.sendMessage(player, "spawner_activated");
+            }
+            return;
+        }
+
         String spawnerId = UUID.randomUUID().toString().substring(0, 8);
 
         BlockState state = block.getState(false);
@@ -288,7 +307,7 @@ public class SpawnerPlaceListener implements Listener {
         SpawnerData spawner = new SpawnerData(spawnerId, block.getLocation(), entityType, plugin);
         spawner.setSpawnerActive(true);
         spawner.setStackSize(stackSize);
-        
+
         // Track player interaction for last interaction field
         spawner.updateLastInteractedPlayer(player.getName());
         spawnerManager.addSpawner(spawnerId, spawner);
@@ -302,6 +321,25 @@ public class SpawnerPlaceListener implements Listener {
     }
 
     private void createSmartItemSpawner(Block block, Player player, Material itemMaterial, int stackSize) {
+        // Check if a spawner already exists at this location (prevent duplicates/ghost spawners)
+        SpawnerData existingSpawner = spawnerManager.getSpawnerByLocation(block.getLocation());
+        if (existingSpawner != null) {
+            plugin.debug("Item spawner already exists at " + block.getLocation() + " with ID " + existingSpawner.getSpawnerId());
+            // Update the existing spawner instead of creating a duplicate
+            existingSpawner.updateLastInteractedPlayer(player.getName());
+            if (existingSpawner.isItemSpawner() && existingSpawner.getSpawnedItemMaterial() == itemMaterial) {
+                // Same item type - add to stack
+                int newStackSize = existingSpawner.getStackSize() + stackSize;
+                existingSpawner.setStackSize(Math.min(newStackSize, existingSpawner.getMaxStackSize()));
+                spawnerManager.queueSpawnerForSaving(existingSpawner.getSpawnerId());
+                messageService.sendMessage(player, "spawner_stacked");
+            } else {
+                // Different type - just activate it
+                messageService.sendMessage(player, "spawner_activated");
+            }
+            return;
+        }
+
         String spawnerId = UUID.randomUUID().toString().substring(0, 8);
 
         BlockState state = block.getState(false);
@@ -316,7 +354,7 @@ public class SpawnerPlaceListener implements Listener {
         SpawnerData spawner = new SpawnerData(spawnerId, block.getLocation(), itemMaterial, plugin);
         spawner.setSpawnerActive(true);
         spawner.setStackSize(stackSize);
-        
+
         // Track player interaction for last interaction field
         spawner.updateLastInteractedPlayer(player.getName());
 
