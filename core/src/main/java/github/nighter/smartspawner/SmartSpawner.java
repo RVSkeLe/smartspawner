@@ -9,6 +9,7 @@ import github.nighter.smartspawner.commands.list.gui.list.SpawnerListGUI;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementHandler;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
+import github.nighter.smartspawner.commands.list.gui.serverselection.ServerSelectionHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
 import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
 import github.nighter.smartspawner.spawner.config.ItemSpawnerSettingsConfig;
@@ -44,6 +45,11 @@ import github.nighter.smartspawner.spawner.lootgen.SpawnerRangeChecker;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
 import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
+import github.nighter.smartspawner.spawner.data.storage.StorageMode;
+import github.nighter.smartspawner.spawner.data.database.DatabaseManager;
+import github.nighter.smartspawner.spawner.data.database.SpawnerDatabaseHandler;
+import github.nighter.smartspawner.spawner.data.database.YamlToDatabaseMigration;
 import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.lootgen.SpawnerLootGenerator;
 import github.nighter.smartspawner.spawner.data.WorldEventHandler;
@@ -107,6 +113,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
 
     // Core managers
     private SpawnerFileHandler spawnerFileHandler;
+    private SpawnerStorage spawnerStorage;
+    private DatabaseManager databaseManager;
     private SpawnerManager spawnerManager;
     private HopperHandler hopperHandler;
     private SpawnerLocationLockManager spawnerLocationLockManager;
@@ -128,6 +136,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerListGUI spawnerListGUI;
     private SpawnerManagementHandler spawnerManagementHandler;
     private AdminStackerHandler adminStackerHandler;
+    private ServerSelectionHandler serverSelectionHandler;
     private PricesGUI pricesGUI;
     
     // Logging system
@@ -262,7 +271,9 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     private void initializeCoreComponents() {
-        this.spawnerFileHandler = new SpawnerFileHandler(this);
+        // Initialize storage based on configured mode
+        initializeStorage();
+
         this.spawnerManager = new SpawnerManager(this);
         this.spawnerLocationLockManager = new SpawnerLocationLockManager(this);
         this.spawnerManager.reloadAllHolograms();
@@ -274,9 +285,62 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerLootGenerator = new SpawnerLootGenerator(this);
         this.spawnerSellManager = new SpawnerSellManager(this);
         this.rangeChecker = new SpawnerRangeChecker(this);
-        
+
         // Initialize FormUI components only if Floodgate is available
         initializeFormUIComponents();
+    }
+
+    private void initializeStorage() {
+        String modeStr = getConfig().getString("database.mode", "YAML").toUpperCase();
+        StorageMode mode;
+        try {
+            mode = StorageMode.valueOf(modeStr);
+        } catch (IllegalArgumentException e) {
+            getLogger().warning("Invalid storage mode '" + modeStr + "', defaulting to YAML");
+            mode = StorageMode.YAML;
+        }
+
+        if (mode == StorageMode.DATABASE) {
+            getLogger().info("Initializing database storage mode...");
+            this.databaseManager = new DatabaseManager(this);
+
+            if (databaseManager.initialize()) {
+                SpawnerDatabaseHandler dbHandler = new SpawnerDatabaseHandler(this, databaseManager);
+                if (dbHandler.initialize()) {
+                    this.spawnerStorage = dbHandler;
+
+                    // Check for YAML migration
+                    YamlToDatabaseMigration migration = new YamlToDatabaseMigration(this, databaseManager);
+                    if (migration.needsMigration()) {
+                        getLogger().info("YAML data detected, starting migration to database...");
+                        if (migration.migrate()) {
+                            getLogger().info("Migration completed successfully!");
+                        } else {
+                            getLogger().warning("Migration completed with some errors. Check logs for details.");
+                        }
+                    }
+
+                    getLogger().info("Database storage initialized successfully.");
+                } else {
+                    getLogger().severe("Failed to initialize database handler, falling back to YAML");
+                    databaseManager.shutdown();
+                    databaseManager = null;
+                    initializeYamlStorage();
+                }
+            } else {
+                getLogger().severe("Failed to initialize database connection, falling back to YAML");
+                databaseManager = null;
+                initializeYamlStorage();
+            }
+        } else {
+            initializeYamlStorage();
+        }
+    }
+
+    private void initializeYamlStorage() {
+        this.spawnerFileHandler = new SpawnerFileHandler(this);
+        this.spawnerStorage = spawnerFileHandler;
+        getLogger().info("Using YAML file storage mode.");
     }
 
     private void initializeFormUIComponents() {
@@ -353,6 +417,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(spawnerListGUI, this);
         pm.registerEvents(spawnerManagementHandler, this);
         pm.registerEvents(adminStackerHandler, this);
+        pm.registerEvents(serverSelectionHandler, this);
         pm.registerEvents(pricesGUI, this);
         
         // Register logging listener
@@ -369,6 +434,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerListGUI = new SpawnerListGUI(this);
         this.spawnerManagementHandler = new SpawnerManagementHandler(this, listSubCommand);
         this.adminStackerHandler = new AdminStackerHandler(this, new SpawnerManagementGUI(this));
+        this.serverSelectionHandler = new ServerSelectionHandler(this, listSubCommand);
         this.pricesGUI = new PricesGUI(this);
     }
 
@@ -439,8 +505,14 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void saveAndCleanup() {
         if (spawnerManager != null) {
             try {
-                if (spawnerFileHandler != null) {
-                    spawnerFileHandler.shutdown();
+                // Use the storage interface for shutdown
+                if (spawnerStorage != null) {
+                    spawnerStorage.shutdown();
+                }
+
+                // Shutdown database manager if active
+                if (databaseManager != null) {
+                    databaseManager.shutdown();
                 }
 
                 // Clean up the spawner manager
@@ -453,7 +525,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         if (itemPriceManager != null) {
             itemPriceManager.cleanup();
         }
-        
+
         // Shutdown logging system
         if (spawnerActionLogger != null) {
             spawnerActionLogger.shutdown();
