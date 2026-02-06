@@ -375,6 +375,12 @@ database:
   # Used to distinguish spawners from different servers
   server_name: "server1"
 
+  # Enable cross-server spawner viewing in /smartspawner list
+  # When true, shows a server selection page before world selection
+  # Allows viewing spawners from all servers in the shared database
+  # Only works when mode is DATABASE
+  sync_across_servers: false
+
   # Database name to use (only for DATABASE mode)
   database: "smartspawner"
 
@@ -395,3 +401,12 @@ database:
       connection-timeout: 10000
       # Maximum lifetime (ms) of a connection in the pool
       max-lifetime: 1800000
+      # Maximum time (ms) a connection can sit idle before being removed
+      # Must be less than max-lifetime (0 = same as max-lifetime)
+      idle-timeout: 600000
+      # Interval (ms) for keepalive queries to prevent connection timeouts
+      # Must be less than max-lifetime (0 = disabled)
+      keepalive-time: 30000
+      # Time (ms) before logging a potential connection leak warning
+      # Useful for debugging connection issues (0 = disabled)
+      leak-detection-threshold: 0

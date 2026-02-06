@@ -9,6 +9,7 @@ import github.nighter.smartspawner.commands.list.gui.list.SpawnerListGUI;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementHandler;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
+import github.nighter.smartspawner.commands.list.gui.serverselection.ServerSelectionHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
 import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
 import github.nighter.smartspawner.spawner.config.ItemSpawnerSettingsConfig;
@@ -135,6 +136,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerListGUI spawnerListGUI;
     private SpawnerManagementHandler spawnerManagementHandler;
     private AdminStackerHandler adminStackerHandler;
+    private ServerSelectionHandler serverSelectionHandler;
     private PricesGUI pricesGUI;
     
     // Logging system
@@ -415,6 +417,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(spawnerListGUI, this);
         pm.registerEvents(spawnerManagementHandler, this);
         pm.registerEvents(adminStackerHandler, this);
+        pm.registerEvents(serverSelectionHandler, this);
         pm.registerEvents(pricesGUI, this);
         
         // Register logging listener
@@ -431,6 +434,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerListGUI = new SpawnerListGUI(this);
         this.spawnerManagementHandler = new SpawnerManagementHandler(this, listSubCommand);
         this.adminStackerHandler = new AdminStackerHandler(this, new SpawnerManagementGUI(this));
+        this.serverSelectionHandler = new ServerSelectionHandler(this, listSubCommand);
         this.pricesGUI = new PricesGUI(this);
     }
 

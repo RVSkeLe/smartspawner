@@ -32,6 +32,9 @@ public class DatabaseManager {
     private final int minIdle;
     private final long connectionTimeout;
     private final long maxLifetime;
+    private final long idleTimeout;
+    private final long keepaliveTime;
+    private final long leakDetectionThreshold;
 
     private static final String CREATE_TABLE_SQL = """
             CREATE TABLE IF NOT EXISTS smart_spawners (
@@ -101,6 +104,9 @@ public class DatabaseManager {
         this.minIdle = plugin.getConfig().getInt("database.standalone.pool.minimum-idle", 2);
         this.connectionTimeout = plugin.getConfig().getLong("database.standalone.pool.connection-timeout", 10000);
         this.maxLifetime = plugin.getConfig().getLong("database.standalone.pool.max-lifetime", 1800000);
+        this.idleTimeout = plugin.getConfig().getLong("database.standalone.pool.idle-timeout", 600000);
+        this.keepaliveTime = plugin.getConfig().getLong("database.standalone.pool.keepalive-time", 30000);
+        this.leakDetectionThreshold = plugin.getConfig().getLong("database.standalone.pool.leak-detection-threshold", 0);
     }
 
     /**
@@ -127,6 +133,7 @@ public class DatabaseManager {
                 host, port, database);
 
         config.setJdbcUrl(jdbcUrl);
+        config.setDriverClassName("github.nighter.smartspawner.libs.mariadb.Driver");
         config.setUsername(username);
         config.setPassword(password);
 
@@ -135,6 +142,9 @@ public class DatabaseManager {
         config.setMinimumIdle(minIdle);
         config.setConnectionTimeout(connectionTimeout);
         config.setMaxLifetime(maxLifetime);
+        config.setIdleTimeout(idleTimeout);
+        config.setKeepaliveTime(keepaliveTime);
+        config.setLeakDetectionThreshold(leakDetectionThreshold);
 
         // Performance settings
         config.setPoolName("SmartSpawner-HikariCP");

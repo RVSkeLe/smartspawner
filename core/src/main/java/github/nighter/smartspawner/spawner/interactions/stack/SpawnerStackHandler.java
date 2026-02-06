@@ -27,12 +27,14 @@ public class SpawnerStackHandler {
 
     private final SmartSpawner plugin;
     private final MessageService messageService;
+    private final github.nighter.smartspawner.spawner.data.SpawnerManager spawnerManager;
     private final Map<UUID, Long> lastStackTime;
     private final Map<Location, UUID> stackLocks;
 
     public SpawnerStackHandler(SmartSpawner plugin) {
         this.plugin = plugin;
         this.messageService = plugin.getMessageService();
+        this.spawnerManager = plugin.getSpawnerManager();
         this.lastStackTime = new ConcurrentHashMap<>();
         this.stackLocks = new ConcurrentHashMap<>();
 
@@ -206,6 +208,10 @@ public class SpawnerStackHandler {
 
         // Update spawner data
         targetSpawner.setStackSize(newStack);
+
+        // Mark spawner as modified for database save
+        spawnerManager.markSpawnerModified(targetSpawner.getSpawnerId());
+
         if (targetSpawner.getIsAtCapacity()) {
             targetSpawner.setIsAtCapacity(false);
         }
