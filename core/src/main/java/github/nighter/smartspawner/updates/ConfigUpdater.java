@@ -163,6 +163,9 @@ public class ConfigUpdater {
      * Applies the user values to the new config
      */
     private void applyUserValues(FileConfiguration newConfig, Map<String, Object> userValues) {
+        // Apply renamed path migrations first
+        migrateRenamedPaths(userValues);
+
         for (Map.Entry<String, Object> entry : userValues.entrySet()) {
             String path = entry.getKey();
             Object value = entry.getValue();
@@ -173,7 +176,47 @@ public class ConfigUpdater {
             if (newConfig.contains(path)) {
                 newConfig.set(path, value);
             } else {
-                plugin.getLogger().warning("Config path '" + path + "' from old config no longer exists in new config");
+                plugin.debug("Config path '" + path + "' from old config no longer exists in new config");
+            }
+        }
+    }
+
+    /**
+     * Migrates values from old renamed paths to new paths
+     */
+    private void migrateRenamedPaths(Map<String, Object> userValues) {
+        // Map of old path -> new path for renamed config keys
+        Map<String, String> renamedPaths = Map.ofEntries(
+            Map.entry("database.standalone.host", "database.sql.host"),
+            Map.entry("database.standalone.port", "database.sql.port"),
+            Map.entry("database.standalone.username", "database.sql.username"),
+            Map.entry("database.standalone.password", "database.sql.password"),
+            Map.entry("database.standalone.pool.maximum-size", "database.sql.pool.maximum-size"),
+            Map.entry("database.standalone.pool.minimum-idle", "database.sql.pool.minimum-idle"),
+            Map.entry("database.standalone.pool.connection-timeout", "database.sql.pool.connection-timeout"),
+            Map.entry("database.standalone.pool.max-lifetime", "database.sql.pool.max-lifetime"),
+            Map.entry("database.standalone.pool.idle-timeout", "database.sql.pool.idle-timeout"),
+            Map.entry("database.standalone.pool.keepalive-time", "database.sql.pool.keepalive-time"),
+            Map.entry("database.standalone.pool.leak-detection-threshold", "database.sql.pool.leak-detection-threshold")
+        );
+
+        for (Map.Entry<String, String> rename : renamedPaths.entrySet()) {
+            String oldPath = rename.getKey();
+            String newPath = rename.getValue();
+
+            if (userValues.containsKey(oldPath) && !userValues.containsKey(newPath)) {
+                Object value = userValues.remove(oldPath);
+                userValues.put(newPath, value);
+                plugin.debug("Migrated config: " + oldPath + " -> " + newPath);
+            }
+        }
+
+        // Handle storage mode migration: DATABASE -> MYSQL
+        if (userValues.containsKey("database.mode")) {
+            Object mode = userValues.get("database.mode");
+            if ("DATABASE".equals(mode)) {
+                userValues.put("database.mode", "MYSQL");
+                plugin.getLogger().info("Migrated database.mode: DATABASE -> MYSQL");
             }
         }
     }
