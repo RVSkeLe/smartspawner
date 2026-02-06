@@ -4,6 +4,7 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.commands.list.gui.CrossServerSpawnerData;
 import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
+import github.nighter.smartspawner.spawner.data.storage.StorageMode;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.utils.ItemStackSerializer;
@@ -66,7 +67,8 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
             WHERE server_name = ? AND spawner_id = ?
             """;
 
-    private static final String UPSERT_SQL = """
+    // MySQL/MariaDB upsert syntax
+    private static final String UPSERT_SQL_MYSQL = """
             INSERT INTO smart_spawners (
                 spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
                 entity_type, item_spawner_material, spawner_exp, spawner_active,
@@ -99,6 +101,42 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
                 preferred_sort_item = VALUES(preferred_sort_item),
                 filtered_items = VALUES(filtered_items),
                 inventory_data = VALUES(inventory_data)
+            """;
+
+    // SQLite upsert syntax (ON CONFLICT)
+    private static final String UPSERT_SQL_SQLITE = """
+            INSERT INTO smart_spawners (
+                spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
+                entity_type, item_spawner_material, spawner_exp, spawner_active,
+                spawner_range, spawner_stop, spawn_delay, max_spawner_loot_slots,
+                max_stored_exp, min_mobs, max_mobs, stack_size, max_stack_size,
+                last_spawn_time, is_at_capacity, last_interacted_player,
+                preferred_sort_item, filtered_items, inventory_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(server_name, spawner_id) DO UPDATE SET
+                world_name = excluded.world_name,
+                loc_x = excluded.loc_x,
+                loc_y = excluded.loc_y,
+                loc_z = excluded.loc_z,
+                entity_type = excluded.entity_type,
+                item_spawner_material = excluded.item_spawner_material,
+                spawner_exp = excluded.spawner_exp,
+                spawner_active = excluded.spawner_active,
+                spawner_range = excluded.spawner_range,
+                spawner_stop = excluded.spawner_stop,
+                spawn_delay = excluded.spawn_delay,
+                max_spawner_loot_slots = excluded.max_spawner_loot_slots,
+                max_stored_exp = excluded.max_stored_exp,
+                min_mobs = excluded.min_mobs,
+                max_mobs = excluded.max_mobs,
+                stack_size = excluded.stack_size,
+                max_stack_size = excluded.max_stack_size,
+                last_spawn_time = excluded.last_spawn_time,
+                is_at_capacity = excluded.is_at_capacity,
+                last_interacted_player = excluded.last_interacted_player,
+                preferred_sort_item = excluded.preferred_sort_item,
+                filtered_items = excluded.filtered_items,
+                inventory_data = excluded.inventory_data
             """;
 
     private static final String DELETE_SQL = """
@@ -206,8 +244,13 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
     private void saveSpawnerBatch(Set<String> spawnerIds) {
         if (spawnerIds.isEmpty()) return;
 
+        // Select appropriate SQL based on storage mode
+        String upsertSql = databaseManager.getStorageMode() == StorageMode.SQLITE
+                ? UPSERT_SQL_SQLITE
+                : UPSERT_SQL_MYSQL;
+
         try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(UPSERT_SQL)) {
+             PreparedStatement stmt = conn.prepareStatement(upsertSql)) {
 
             conn.setAutoCommit(false);
 
