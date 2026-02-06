@@ -107,7 +107,10 @@ public class AdminStackerHandler implements Listener {
 
         // Update the spawner stack size
         spawner.setStackSize(newStackSize);
-        
+
+        // Mark spawner as modified for database save
+        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+
         // Track interaction
         spawner.updateLastInteractedPlayer(player.getName());
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
