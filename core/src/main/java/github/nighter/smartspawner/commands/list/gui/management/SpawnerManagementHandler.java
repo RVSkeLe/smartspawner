@@ -9,7 +9,7 @@ import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
-import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
+import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -26,7 +26,7 @@ public class SpawnerManagementHandler implements Listener {
     private final SmartSpawner plugin;
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
-    private final SpawnerFileHandler spawnerFileHandler;
+    private final SpawnerStorage spawnerStorage;
     private final ListSubCommand listSubCommand;
     private final SpawnerMenuUI spawnerMenuUI;
     private final AdminStackerUI adminStackerUI;
@@ -35,7 +35,7 @@ public class SpawnerManagementHandler implements Listener {
         this.plugin = plugin;
         this.messageService = plugin.getMessageService();
         this.spawnerManager = plugin.getSpawnerManager();
-        this.spawnerFileHandler = plugin.getSpawnerFileHandler();
+        this.spawnerStorage = plugin.getSpawnerStorage();
         this.listSubCommand = listSubCommand;
         this.spawnerMenuUI = plugin.getSpawnerMenuUI();
         this.adminStackerUI = new AdminStackerUI(plugin);
@@ -52,22 +52,35 @@ public class SpawnerManagementHandler implements Listener {
         String spawnerId = holder.getSpawnerId();
         String worldName = holder.getWorldName();
         int listPage = holder.getListPage();
+        String targetServer = holder.getTargetServer();
+        boolean isRemote = holder.isRemoteServer();
 
+        int slot = event.getSlot();
+
+        // Handle back button - works for both local and remote
+        if (slot == 26) {
+            handleBack(player, worldName, listPage, targetServer);
+            return;
+        }
+
+        // For remote servers, all other actions are disabled
+        if (isRemote) {
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+            return;
+        }
+
+        // Local spawner actions
         SpawnerData spawner = spawnerManager.getSpawnerById(spawnerId);
         if (spawner == null) {
             messageService.sendMessage(player, "spawner_not_found");
             return;
         }
 
-        int slot = event.getSlot();
-        ItemStack clickedItem = event.getCurrentItem();
-
         switch (slot) {
             case 10 -> handleTeleport(player, spawner);
             case 12 -> handleOpenSpawner(player, spawner);
             case 14 -> handleStackManagement(player, spawner, worldName, listPage);
             case 16 -> handleRemoveSpawner(player, spawner, worldName, listPage);
-            case 26 -> handleBack(player, worldName, listPage);
         }
     }
 
@@ -116,21 +129,21 @@ public class SpawnerManagementHandler implements Listener {
 
         // Remove from manager and save
         spawnerManager.removeSpawner(spawnerId);
-        spawnerFileHandler.markSpawnerDeleted(spawnerId);
+        spawnerStorage.markSpawnerDeleted(spawnerId);
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("id", spawner.getSpawnerId());
         messageService.sendMessage(player, "spawner_management.removed", placeholders);
         player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
 
         // Return to spawner list
-        handleBack(player, worldName, listPage);
+        handleBack(player, worldName, listPage, null);
     }
 
-    private void handleBack(Player player, String worldName, int listPage) {
+    private void handleBack(Player player, String worldName, int listPage, String targetServer) {
         // Get the user's current preferences for filter and sort
         FilterOption filter = FilterOption.ALL; // Default
         SortOption sort = SortOption.DEFAULT; // Default
-        
+
         // Try to get saved preferences
         try {
             filter = listSubCommand.getUserFilter(player, worldName);
@@ -139,7 +152,12 @@ public class SpawnerManagementHandler implements Listener {
             // Use defaults if loading fails
         }
 
-        listSubCommand.openSpawnerListGUI(player, worldName, listPage, filter, sort);
+        // Check if going back to a remote server's spawner list
+        if (targetServer != null && !targetServer.equals(listSubCommand.getCurrentServerName())) {
+            listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, listPage);
+        } else {
+            listSubCommand.openSpawnerListGUI(player, worldName, listPage, filter, sort);
+        }
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
     }
 
