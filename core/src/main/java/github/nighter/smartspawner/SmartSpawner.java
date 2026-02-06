@@ -311,28 +311,35 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
                 if (dbHandler.initialize()) {
                     this.spawnerStorage = dbHandler;
 
-                    // Check for YAML migration (YAML -> MySQL or YAML -> SQLite)
-                    YamlToDatabaseMigration yamlMigration = new YamlToDatabaseMigration(this, databaseManager);
-                    if (yamlMigration.needsMigration()) {
-                        getLogger().info("YAML data detected, starting migration to " + dbType + "...");
-                        if (yamlMigration.migrate()) {
-                            getLogger().info("YAML migration completed successfully!");
-                        } else {
-                            getLogger().warning("YAML migration completed with some errors. Check logs for details.");
-                        }
-                    }
+                    // Check if migration is enabled in config
+                    boolean migrateFromLocal = getConfig().getBoolean("database.migrate_from_local", true);
 
-                    // Check for SQLite to MySQL migration (only when mode is MYSQL)
-                    if (mode == StorageMode.MYSQL) {
-                        SqliteToMySqlMigration sqliteMigration = new SqliteToMySqlMigration(this, databaseManager);
-                        if (sqliteMigration.needsMigration()) {
-                            getLogger().info("SQLite data detected, starting migration to MySQL...");
-                            if (sqliteMigration.migrate()) {
-                                getLogger().info("SQLite to MySQL migration completed successfully!");
+                    if (migrateFromLocal) {
+                        // Check for YAML migration (YAML -> MySQL or YAML -> SQLite)
+                        YamlToDatabaseMigration yamlMigration = new YamlToDatabaseMigration(this, databaseManager);
+                        if (yamlMigration.needsMigration()) {
+                            getLogger().info("YAML data detected, starting migration to " + dbType + "...");
+                            if (yamlMigration.migrate()) {
+                                getLogger().info("YAML migration completed successfully!");
                             } else {
-                                getLogger().warning("SQLite migration completed with some errors. Check logs for details.");
+                                getLogger().warning("YAML migration completed with some errors. Check logs for details.");
                             }
                         }
+
+                        // Check for SQLite to MySQL migration (only when mode is MYSQL)
+                        if (mode == StorageMode.MYSQL) {
+                            SqliteToMySqlMigration sqliteMigration = new SqliteToMySqlMigration(this, databaseManager);
+                            if (sqliteMigration.needsMigration()) {
+                                getLogger().info("SQLite data detected, starting migration to MySQL...");
+                                if (sqliteMigration.migrate()) {
+                                    getLogger().info("SQLite to MySQL migration completed successfully!");
+                                } else {
+                                    getLogger().warning("SQLite migration completed with some errors. Check logs for details.");
+                                }
+                            }
+                        }
+                    } else {
+                        debug("Local data migration is disabled in config.");
                     }
 
                     getLogger().info(dbType + " database storage initialized successfully.");

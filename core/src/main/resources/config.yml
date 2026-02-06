@@ -382,6 +382,21 @@ database:
   # Only works when mode is MYSQL (SQLite is local only)
   sync_across_servers: false
 
+  # Automatic migration from local storage formats
+  # When enabled, the plugin will automatically migrate data on startup:
+  #
+  # 1. If mode is MYSQL or SQLITE:
+  #    - Checks for spawners_data.yml and migrates to target database
+  #    - File is renamed to spawners_data.yml.migrated after success
+  #
+  # 2. If mode is MYSQL (additional step):
+  #    - Checks for spawners.db (SQLite) and migrates to MySQL
+  #    - File is renamed to spawners.db.migrated after success
+  #
+  # The .migrated suffix prevents re-migration on subsequent restarts.
+  # Set to false if you want to manually manage your data migration.
+  migrate_from_local: true
+
   # Database name to use (only for MYSQL mode)
   database: "smartspawner"
 
