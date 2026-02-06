@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.data.database;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.spawner.data.storage.StorageMode;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.utils.ItemStackSerializer;
@@ -23,7 +24,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Handles one-time migration from spawners_data.yml to MariaDB database.
+ * Handles one-time migration from spawners_data.yml to database (MySQL or SQLite).
  * After successful migration, the YAML file is renamed to spawners_data.yml.migrated
  * to prevent re-migration.
  */
@@ -36,7 +37,8 @@ public class YamlToDatabaseMigration {
     private static final String YAML_FILE_NAME = "spawners_data.yml";
     private static final String MIGRATED_FILE_SUFFIX = ".migrated";
 
-    private static final String INSERT_SQL = """
+    // MySQL/MariaDB insert syntax
+    private static final String INSERT_SQL_MYSQL = """
             INSERT INTO smart_spawners (
                 spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
                 entity_type, item_spawner_material, spawner_exp, spawner_active,
@@ -69,6 +71,42 @@ public class YamlToDatabaseMigration {
                 preferred_sort_item = VALUES(preferred_sort_item),
                 filtered_items = VALUES(filtered_items),
                 inventory_data = VALUES(inventory_data)
+            """;
+
+    // SQLite insert syntax
+    private static final String INSERT_SQL_SQLITE = """
+            INSERT INTO smart_spawners (
+                spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
+                entity_type, item_spawner_material, spawner_exp, spawner_active,
+                spawner_range, spawner_stop, spawn_delay, max_spawner_loot_slots,
+                max_stored_exp, min_mobs, max_mobs, stack_size, max_stack_size,
+                last_spawn_time, is_at_capacity, last_interacted_player,
+                preferred_sort_item, filtered_items, inventory_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(server_name, spawner_id) DO UPDATE SET
+                world_name = excluded.world_name,
+                loc_x = excluded.loc_x,
+                loc_y = excluded.loc_y,
+                loc_z = excluded.loc_z,
+                entity_type = excluded.entity_type,
+                item_spawner_material = excluded.item_spawner_material,
+                spawner_exp = excluded.spawner_exp,
+                spawner_active = excluded.spawner_active,
+                spawner_range = excluded.spawner_range,
+                spawner_stop = excluded.spawner_stop,
+                spawn_delay = excluded.spawn_delay,
+                max_spawner_loot_slots = excluded.max_spawner_loot_slots,
+                max_stored_exp = excluded.max_stored_exp,
+                min_mobs = excluded.min_mobs,
+                max_mobs = excluded.max_mobs,
+                stack_size = excluded.stack_size,
+                max_stack_size = excluded.max_stack_size,
+                last_spawn_time = excluded.last_spawn_time,
+                is_at_capacity = excluded.is_at_capacity,
+                last_interacted_player = excluded.last_interacted_player,
+                preferred_sort_item = excluded.preferred_sort_item,
+                filtered_items = excluded.filtered_items,
+                inventory_data = excluded.inventory_data
             """;
 
     public YamlToDatabaseMigration(SmartSpawner plugin, DatabaseManager databaseManager) {
@@ -128,8 +166,13 @@ public class YamlToDatabaseMigration {
 
         logger.info("Found " + totalSpawners + " spawners to migrate.");
 
+        // Select appropriate SQL based on storage mode
+        String insertSql = databaseManager.getStorageMode() == StorageMode.SQLITE
+                ? INSERT_SQL_SQLITE
+                : INSERT_SQL_MYSQL;
+
         try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(INSERT_SQL)) {
+             PreparedStatement stmt = conn.prepareStatement(insertSql)) {
 
             conn.setAutoCommit(false);
             int batchCount = 0;
