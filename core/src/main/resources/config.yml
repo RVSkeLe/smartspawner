@@ -357,3 +357,56 @@ logging:
       #  - name: "Action Time"
       #    value: "{time}"
       #    inline: false
+
+#---------------------------------------------------
+#               Database Settings
+#---------------------------------------------------
+# Configure database storage for spawner data.
+# Database mode provides better performance for large servers
+# and enables cross-server spawner management.
+database:
+  # Storage mode: YAML or DATABASE
+  # YAML: Default file-based storage (spawners_data.yml)
+  # DATABASE: MariaDB database storage with HikariCP connection pool
+  mode: YAML
+
+  # Server identifier for cross-server setups
+  # Must be unique per server when using shared database
+  # Used to distinguish spawners from different servers
+  server_name: "server1"
+
+  # Enable cross-server spawner viewing in /smartspawner list
+  # When true, shows a server selection page before world selection
+  # Allows viewing spawners from all servers in the shared database
+  # Only works when mode is DATABASE
+  sync_across_servers: false
+
+  # Database name to use (only for DATABASE mode)
+  database: "smartspawner"
+
+  # Connection settings for DATABASE mode
+  standalone:
+    host: "localhost"
+    port: 3306
+    username: "root"
+    password: ""
+
+    # Connection pool settings
+    pool:
+      # Maximum number of connections in the pool
+      maximum-size: 10
+      # Minimum number of idle connections to maintain
+      minimum-idle: 2
+      # Maximum time (ms) to wait for a connection from the pool
+      connection-timeout: 10000
+      # Maximum lifetime (ms) of a connection in the pool
+      max-lifetime: 1800000
+      # Maximum time (ms) a connection can sit idle before being removed
+      # Must be less than max-lifetime (0 = same as max-lifetime)
+      idle-timeout: 600000
+      # Interval (ms) for keepalive queries to prevent connection timeouts
+      # Must be less than max-lifetime (0 = disabled)
+      keepalive-time: 30000
+      # Time (ms) before logging a potential connection leak warning
+      # Useful for debugging connection issues (0 = disabled)
+      leak-detection-threshold: 0
