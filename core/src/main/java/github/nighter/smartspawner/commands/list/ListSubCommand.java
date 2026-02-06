@@ -4,14 +4,18 @@ import com.mojang.brigadier.context.CommandContext;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.commands.BaseSubCommand;
+import github.nighter.smartspawner.commands.list.gui.CrossServerSpawnerData;
 import github.nighter.smartspawner.commands.list.gui.list.enums.FilterOption;
 import github.nighter.smartspawner.commands.list.gui.list.enums.SortOption;
 import github.nighter.smartspawner.commands.list.gui.list.SpawnerListHolder;
 import github.nighter.smartspawner.commands.list.gui.list.UserPreferenceCache;
 import github.nighter.smartspawner.commands.list.gui.worldselection.WorldSelectionHolder;
+import github.nighter.smartspawner.commands.list.gui.serverselection.ServerSelectionHolder;
 import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagementGUI;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
+import github.nighter.smartspawner.spawner.data.database.SpawnerDatabaseHandler;
+import github.nighter.smartspawner.spawner.data.storage.StorageMode;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
@@ -67,8 +71,222 @@ public class ListSubCommand extends BaseSubCommand {
 
         Player player = getPlayer(context.getSource().getSender());
 
-        openWorldSelectionGUI(player);
+        // Check if cross-server mode is enabled
+        if (isCrossServerEnabled()) {
+            openServerSelectionGUI(player);
+        } else {
+            openWorldSelectionGUI(player);
+        }
         return 1;
+    }
+
+    /**
+     * Check if cross-server sync is enabled.
+     * Requires DATABASE mode AND sync_across_servers = true
+     */
+    public boolean isCrossServerEnabled() {
+        String modeStr = plugin.getConfig().getString("database.mode", "YAML").toUpperCase();
+        try {
+            StorageMode mode = StorageMode.valueOf(modeStr);
+            if (mode != StorageMode.DATABASE) {
+                return false;
+            }
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+        return plugin.getConfig().getBoolean("database.sync_across_servers", false);
+    }
+
+    /**
+     * Get the current server name from config.
+     */
+    public String getCurrentServerName() {
+        return plugin.getConfig().getString("database.server_name", "server1");
+    }
+
+    /**
+     * Open the server selection GUI (async database query).
+     */
+    public void openServerSelectionGUI(Player player) {
+        if (!player.hasPermission("smartspawner.command.list")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        SpawnerDatabaseHandler dbHandler = getDbHandler();
+        if (dbHandler == null) {
+            // Fallback to local world selection
+            openWorldSelectionGUI(player);
+            return;
+        }
+
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+
+        // Async query for server names
+        dbHandler.getDistinctServerNamesAsync(servers -> {
+            if (servers.isEmpty()) {
+                messageService.sendMessage(player, "no_spawners_found");
+                return;
+            }
+
+            // Calculate inventory size
+            int size = Math.max(9, (int) Math.ceil(servers.size() / 7.0) * 9);
+            size = Math.min(54, size); // Max 54 slots
+
+            String title = languageManager.getGuiTitle("gui_title_server_selection");
+            if (title == null || title.isEmpty()) {
+                title = ChatColor.DARK_GRAY + "Select Server";
+            }
+
+            Inventory inv = Bukkit.createInventory(new ServerSelectionHolder(), size, title);
+
+            String currentServer = getCurrentServerName();
+            int slot = 0;
+
+            for (String serverName : servers) {
+                if (slot >= size) break;
+
+                // Skip border slots for nicer layout
+                while (slot < size && (slot % 9 == 0 || slot % 9 == 8)) {
+                    slot++;
+                }
+                if (slot >= size) break;
+
+                Material material = serverName.equals(currentServer) ? Material.EMERALD_BLOCK : Material.IRON_BLOCK;
+                ItemStack serverItem = createServerButton(serverName, material, serverName.equals(currentServer));
+                inv.setItem(slot, serverItem);
+                slot++;
+            }
+
+            player.openInventory(inv);
+        });
+    }
+
+    private ItemStack createServerButton(String serverName, Material material, boolean isCurrentServer) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            String displayName = (isCurrentServer ? ChatColor.GREEN : ChatColor.GOLD) + serverName;
+            meta.setDisplayName(displayName);
+
+            List<String> lore = new ArrayList<>();
+            if (isCurrentServer) {
+                lore.add(ChatColor.GRAY + "Current Server");
+            }
+            lore.add(ChatColor.YELLOW + "Click to view spawners");
+            meta.setLore(lore);
+
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    /**
+     * Open world selection for a specific server (async for remote servers).
+     */
+    public void openWorldSelectionGUIForServer(Player player, String targetServer) {
+        if (!player.hasPermission("smartspawner.command.list")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        String currentServer = getCurrentServerName();
+
+        // If it's the current server, use local data
+        if (targetServer.equals(currentServer)) {
+            openWorldSelectionGUI(player);
+            return;
+        }
+
+        // For remote servers, query async
+        SpawnerDatabaseHandler dbHandler = getDbHandler();
+        if (dbHandler == null) {
+            messageService.sendMessage(player, "database_error");
+            return;
+        }
+
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+
+        dbHandler.getWorldsForServerAsync(targetServer, worldCounts -> {
+            if (worldCounts.isEmpty()) {
+                messageService.sendMessage(player, "no_spawners_found");
+                return;
+            }
+
+            int size = Math.max(27, (int) Math.ceil((worldCounts.size() + 2) / 7.0) * 9);
+            size = Math.min(54, size);
+
+            Map<String, String> titlePlaceholders = new HashMap<>();
+            titlePlaceholders.put("server", targetServer);
+            String title = languageManager.getGuiTitle("gui_title_world_selection_server", titlePlaceholders);
+            if (title == null || title.isEmpty()) {
+                title = ChatColor.DARK_GRAY + "Worlds - " + targetServer;
+            }
+
+            Inventory inv = Bukkit.createInventory(
+                    new WorldSelectionHolder(targetServer),
+                    size, title
+            );
+
+            int slot = 10;
+            for (Map.Entry<String, Integer> entry : worldCounts.entrySet()) {
+                if (slot >= size - 9) break;
+
+                // Skip border slots
+                if (slot % 9 == 0 || slot % 9 == 8) {
+                    slot++;
+                    continue;
+                }
+
+                String worldName = entry.getKey();
+                int count = entry.getValue();
+
+                Material material = getMaterialForWorldName(worldName);
+                ItemStack worldItem = createRemoteWorldButton(worldName, material, count, targetServer);
+                inv.setItem(slot, worldItem);
+                slot++;
+            }
+
+            // Back button
+            ItemStack backButton = createNavigationButton(Material.RED_STAINED_GLASS_PANE, "navigation.back");
+            inv.setItem(size - 5, backButton);
+
+            player.openInventory(inv);
+        });
+    }
+
+    private ItemStack createRemoteWorldButton(String worldName, Material material, int spawnerCount, String serverName) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GREEN + formatWorldName(worldName));
+
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "Server: " + ChatColor.WHITE + serverName);
+            lore.add(ChatColor.GRAY + "Spawners: " + ChatColor.WHITE + spawnerCount);
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "Click to view spawners");
+            meta.setLore(lore);
+
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private Material getMaterialForWorldName(String worldName) {
+        if (worldName.contains("nether")) {
+            return Material.NETHERRACK;
+        } else if (worldName.contains("end")) {
+            return Material.END_STONE;
+        }
+        return Material.GRASS_BLOCK;
+    }
+
+    private SpawnerDatabaseHandler getDbHandler() {
+        if (plugin.getSpawnerStorage() instanceof SpawnerDatabaseHandler dbHandler) {
+            return dbHandler;
+        }
+        return null;
     }
 
     // World selection GUI logic (unchanged)
@@ -152,6 +370,12 @@ public class ListSubCommand extends BaseSubCommand {
                 Material material = getMaterialForWorldType(world.getEnvironment());
                 addWorldButton(inv, world.getName(), material, formatWorldName(world.getName()), slot++);
             }
+        }
+
+        // Add back button if cross-server mode is enabled
+        if (isCrossServerEnabled()) {
+            ItemStack backButton = createNavigationButton(Material.RED_STAINED_GLASS_PANE, "navigation.back");
+            inv.setItem(size - 5, backButton); // Bottom center
         }
 
         player.openInventory(inv);
@@ -496,6 +720,134 @@ public class ListSubCommand extends BaseSubCommand {
 
     public void openSpawnerManagementGUI(Player player, String spawnerId, String worldName, int listPage) {
         spawnerManagementGUI.openManagementMenu(player, spawnerId, worldName, listPage);
+    }
+
+    public void openSpawnerManagementGUI(Player player, String spawnerId, String worldName, int listPage, String targetServer) {
+        spawnerManagementGUI.openManagementMenu(player, spawnerId, worldName, listPage, targetServer);
+    }
+
+    /**
+     * Open spawner list GUI for a remote server (async database query).
+     */
+    public void openSpawnerListGUIForServer(Player player, String targetServer, String worldName, int page) {
+        if (!player.hasPermission("smartspawner.command.list")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        String currentServer = getCurrentServerName();
+
+        // If it's the current server, use local data
+        if (targetServer.equals(currentServer)) {
+            openSpawnerListGUI(player, worldName, page);
+            return;
+        }
+
+        // For remote servers, query async
+        SpawnerDatabaseHandler dbHandler = getDbHandler();
+        if (dbHandler == null) {
+            messageService.sendMessage(player, "database_error");
+            return;
+        }
+
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+
+        final int requestedPage = page;
+        dbHandler.getCrossServerSpawnersAsync(targetServer, worldName, spawners -> {
+            if (spawners.isEmpty()) {
+                messageService.sendMessage(player, "no_spawners_found");
+                return;
+            }
+
+            int totalPages = (int) Math.ceil((double) spawners.size() / SPAWNERS_PER_PAGE);
+            int currentPage = Math.max(1, Math.min(requestedPage, totalPages));
+
+            String worldTitle = formatWorldName(worldName);
+
+            Map<String, String> titlePlaceholders = new HashMap<>();
+            titlePlaceholders.put("world", worldTitle);
+            titlePlaceholders.put("current", String.valueOf(currentPage));
+            titlePlaceholders.put("total", String.valueOf(totalPages));
+
+            String title = languageManager.getGuiTitle("gui_title_spawner_list", titlePlaceholders);
+
+            Inventory inv = Bukkit.createInventory(
+                new SpawnerListHolder(currentPage, totalPages, worldName, FilterOption.ALL, SortOption.DEFAULT, targetServer),
+                54, title
+            );
+
+            // Calculate start and end indices for current page
+            int startIndex = (currentPage - 1) * SPAWNERS_PER_PAGE;
+            int endIndex = Math.min(startIndex + SPAWNERS_PER_PAGE, spawners.size());
+
+            // Populate inventory with spawners
+            for (int i = startIndex; i < endIndex; i++) {
+                CrossServerSpawnerData spawner = spawners.get(i);
+                inv.addItem(createCrossServerSpawnerItem(spawner, targetServer));
+            }
+
+            // Add navigation buttons (filter/sort disabled for remote)
+            // Previous page
+            if (currentPage > 1) {
+                inv.setItem(45, createNavigationButton(Material.SPECTRAL_ARROW, "navigation.previous_page"));
+            }
+
+            // Back button
+            inv.setItem(49, createNavigationButton(Material.RED_STAINED_GLASS_PANE, "navigation.back"));
+
+            // Next page
+            if (currentPage < totalPages) {
+                inv.setItem(53, createNavigationButton(Material.SPECTRAL_ARROW, "navigation.next_page"));
+            }
+
+            player.openInventory(inv);
+        });
+    }
+
+    private ItemStack createCrossServerSpawnerItem(CrossServerSpawnerData spawner, String serverName) {
+        EntityType entityType = spawner.getEntityType();
+
+        // Prepare all placeholders
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("id", spawner.getSpawnerId());
+        placeholders.put("entity", languageManager.getFormattedMobName(entityType));
+        placeholders.put("size", String.valueOf(spawner.getStackSize()));
+        if (!spawner.isActive()) {
+            placeholders.put("status_color", "&#ff6b6b");
+            placeholders.put("status_text", "Inactive");
+        } else {
+            placeholders.put("status_color", "&#00E689");
+            placeholders.put("status_text", "Active");
+        }
+        placeholders.put("x", String.valueOf(spawner.getLocX()));
+        placeholders.put("y", String.valueOf(spawner.getLocY()));
+        placeholders.put("z", String.valueOf(spawner.getLocZ()));
+        placeholders.put("last_player", "N/A");
+
+        ItemStack spawnerItem;
+
+        if (entityType == null) {
+            spawnerItem = new ItemStack(Material.SPAWNER);
+            spawnerItem.editMeta(meta -> {
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+                meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
+                List<String> lore = new ArrayList<>(Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders)));
+                lore.add("");
+                lore.add(ChatColor.DARK_GRAY + "Server: " + ChatColor.WHITE + serverName);
+                meta.setLore(lore);
+            });
+        } else {
+            spawnerItem = SpawnerMobHeadTexture.getCustomHead(entityType, meta -> {
+                meta.setDisplayName(languageManager.getGuiItemName("spawner_item_list.name", placeholders));
+                List<String> lore = new ArrayList<>(Arrays.asList(languageManager.getGuiItemLore("spawner_item_list.lore", placeholders)));
+                lore.add("");
+                lore.add(ChatColor.DARK_GRAY + "Server: " + ChatColor.WHITE + serverName);
+                meta.setLore(lore);
+            });
+        }
+
+        VersionInitializer.hideTooltip(spawnerItem);
+        return spawnerItem;
     }
     public FilterOption getUserFilter(Player player, String worldName) {
         return userPreferenceCache.getUserFilter(player, worldName);
