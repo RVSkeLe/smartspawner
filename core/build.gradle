@@ -85,7 +85,7 @@ shadowJar {
     // Relocate shaded dependencies to avoid conflicts with other plugins
     relocate 'com.zaxxer.hikari', 'github.nighter.smartspawner.libs.hikari'
     relocate 'org.mariadb.jdbc', 'github.nighter.smartspawner.libs.mariadb'
-    relocate 'org.sqlite', 'github.nighter.smartspawner.libs.sqlite'
+    // NOTE: SQLite JDBC cannot be relocated - it uses JNI native libraries
 
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     // Exclude unnecessary files from dependencies

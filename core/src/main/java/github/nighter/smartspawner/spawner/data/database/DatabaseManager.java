@@ -245,7 +245,7 @@ public class DatabaseManager {
         String jdbcUrl = "jdbc:sqlite:" + dbFile.getAbsolutePath();
 
         config.setJdbcUrl(jdbcUrl);
-        config.setDriverClassName("github.nighter.smartspawner.libs.sqlite.JDBC");
+        config.setDriverClassName("org.sqlite.JDBC");
 
         // SQLite-specific pool settings (SQLite doesn't handle multiple connections well)
         config.setMaximumPoolSize(1);  // SQLite works best with single connection
