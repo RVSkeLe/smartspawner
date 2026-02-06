@@ -315,7 +315,7 @@ public class SpawnerBreakListener implements Listener {
         String spawnerId = spawner.getSpawnerId();
         plugin.getRangeChecker().deactivateSpawner(spawner);
         spawnerManager.removeSpawner(spawnerId);
-        spawnerFileHandler.markSpawnerDeleted(spawnerId);
+        spawnerManager.markSpawnerDeleted(spawnerId);
 
         // Remove location lock to prevent memory leak
         Location location = block.getLocation();
