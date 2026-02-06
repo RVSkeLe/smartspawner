@@ -889,6 +889,222 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
     }
 
     /**
+     * Asynchronously get spawner data for a specific server and world with filter and sort.
+     * @param targetServer The server name to query
+     * @param worldName The world name to query
+     * @param filter Filter option (ALL, ACTIVE, INACTIVE)
+     * @param sort Sort option (DEFAULT, STACK_SIZE_DESC, STACK_SIZE_ASC)
+     * @param callback Consumer to receive list of spawner data
+     */
+    public void getCrossServerSpawnersAsync(String targetServer, String worldName,
+                                            String filter, String sort,
+                                            Consumer<List<CrossServerSpawnerData>> callback) {
+        Scheduler.runTaskAsync(() -> {
+            List<CrossServerSpawnerData> spawners = new ArrayList<>();
+
+            // Build dynamic SQL based on filter and sort
+            StringBuilder sql = new StringBuilder("""
+                SELECT spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
+                       entity_type, stack_size, spawner_stop, last_interacted_player,
+                       spawner_exp, inventory_data
+                FROM smart_spawners
+                WHERE server_name = ? AND world_name = ?
+                """);
+
+            // Add filter condition
+            if ("ACTIVE".equalsIgnoreCase(filter)) {
+                sql.append(" AND spawner_stop = FALSE");
+            } else if ("INACTIVE".equalsIgnoreCase(filter)) {
+                sql.append(" AND spawner_stop = TRUE");
+            }
+
+            // Add sort order
+            if ("STACK_SIZE_ASC".equalsIgnoreCase(sort)) {
+                sql.append(" ORDER BY stack_size ASC");
+            } else if ("STACK_SIZE_DESC".equalsIgnoreCase(sort)) {
+                sql.append(" ORDER BY stack_size DESC");
+            } else {
+                sql.append(" ORDER BY spawner_id ASC"); // DEFAULT sort
+            }
+
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+                stmt.setString(1, targetServer);
+                stmt.setString(2, worldName);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String spawnerId = rs.getString("spawner_id");
+                        String server = rs.getString("server_name");
+                        String world = rs.getString("world_name");
+                        int x = rs.getInt("loc_x");
+                        int y = rs.getInt("loc_y");
+                        int z = rs.getInt("loc_z");
+
+                        EntityType entityType;
+                        try {
+                            entityType = EntityType.valueOf(rs.getString("entity_type"));
+                        } catch (IllegalArgumentException e) {
+                            entityType = EntityType.PIG; // Fallback
+                        }
+
+                        int stackSize = rs.getInt("stack_size");
+                        boolean active = !rs.getBoolean("spawner_stop");
+                        String lastPlayer = rs.getString("last_interacted_player");
+                        int storedExp = rs.getInt("spawner_exp");
+                        long totalItems = estimateItemCount(rs.getString("inventory_data"));
+
+                        spawners.add(new CrossServerSpawnerData(
+                                spawnerId, server, world, x, y, z,
+                                entityType, stackSize, active, lastPlayer,
+                                storedExp, totalItems
+                        ));
+                    }
+                }
+
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Error fetching spawners for " + targetServer + "/" + worldName, e);
+            }
+
+            Scheduler.runTask(() -> callback.accept(spawners));
+        });
+    }
+
+    /**
+     * Asynchronously get a single spawner's data from a remote server.
+     * @param targetServer The server name
+     * @param spawnerId The spawner ID
+     * @param callback Consumer to receive the spawner data (null if not found)
+     */
+    public void getRemoteSpawnerByIdAsync(String targetServer, String spawnerId,
+                                          Consumer<CrossServerSpawnerData> callback) {
+        Scheduler.runTaskAsync(() -> {
+            CrossServerSpawnerData spawnerData = null;
+            String sql = """
+                SELECT spawner_id, server_name, world_name, loc_x, loc_y, loc_z,
+                       entity_type, stack_size, spawner_stop, last_interacted_player,
+                       spawner_exp, inventory_data
+                FROM smart_spawners
+                WHERE server_name = ? AND spawner_id = ?
+                """;
+
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, targetServer);
+                stmt.setString(2, spawnerId);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String world = rs.getString("world_name");
+                        int x = rs.getInt("loc_x");
+                        int y = rs.getInt("loc_y");
+                        int z = rs.getInt("loc_z");
+
+                        EntityType entityType;
+                        try {
+                            entityType = EntityType.valueOf(rs.getString("entity_type"));
+                        } catch (IllegalArgumentException e) {
+                            entityType = EntityType.PIG;
+                        }
+
+                        int stackSize = rs.getInt("stack_size");
+                        boolean active = !rs.getBoolean("spawner_stop");
+                        String lastPlayer = rs.getString("last_interacted_player");
+                        int storedExp = rs.getInt("spawner_exp");
+                        long totalItems = estimateItemCount(rs.getString("inventory_data"));
+
+                        spawnerData = new CrossServerSpawnerData(
+                                spawnerId, targetServer, world, x, y, z,
+                                entityType, stackSize, active, lastPlayer,
+                                storedExp, totalItems
+                        );
+                    }
+                }
+
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Error fetching remote spawner " + spawnerId + " from " + targetServer, e);
+            }
+
+            final CrossServerSpawnerData result = spawnerData;
+            Scheduler.runTask(() -> callback.accept(result));
+        });
+    }
+
+    /**
+     * Asynchronously update stack size for a remote spawner.
+     * @param targetServer The server name
+     * @param spawnerId The spawner ID
+     * @param newStackSize The new stack size
+     * @param callback Consumer to receive success status
+     */
+    public void updateRemoteSpawnerStackSizeAsync(String targetServer, String spawnerId,
+                                                   int newStackSize, Consumer<Boolean> callback) {
+        Scheduler.runTaskAsync(() -> {
+            boolean success = false;
+            String sql = "UPDATE smart_spawners SET stack_size = ?, updated_at = CURRENT_TIMESTAMP WHERE server_name = ? AND spawner_id = ?";
+
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setInt(1, newStackSize);
+                stmt.setString(2, targetServer);
+                stmt.setString(3, spawnerId);
+
+                int affected = stmt.executeUpdate();
+                success = affected > 0;
+
+                if (success) {
+                    plugin.debug("Updated remote spawner " + spawnerId + " on " + targetServer + " to stack size " + newStackSize);
+                }
+
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Error updating remote spawner stack size", e);
+            }
+
+            final boolean result = success;
+            Scheduler.runTask(() -> callback.accept(result));
+        });
+    }
+
+    /**
+     * Asynchronously delete a remote spawner from the database.
+     * Note: This only removes the database record. The physical block on the target server
+     * will remain until that server refreshes its cache.
+     * @param targetServer The server name
+     * @param spawnerId The spawner ID
+     * @param callback Consumer to receive success status
+     */
+    public void deleteRemoteSpawnerAsync(String targetServer, String spawnerId,
+                                          Consumer<Boolean> callback) {
+        Scheduler.runTaskAsync(() -> {
+            boolean success = false;
+            String sql = "DELETE FROM smart_spawners WHERE server_name = ? AND spawner_id = ?";
+
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, targetServer);
+                stmt.setString(2, spawnerId);
+
+                int affected = stmt.executeUpdate();
+                success = affected > 0;
+
+                if (success) {
+                    logger.info("Deleted remote spawner " + spawnerId + " from " + targetServer + " database record");
+                }
+
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Error deleting remote spawner", e);
+            }
+
+            final boolean result = success;
+            Scheduler.runTask(() -> callback.accept(result));
+        });
+    }
+
+    /**
      * Estimate total item count from inventory JSON data.
      */
     private long estimateItemCount(String inventoryData) {

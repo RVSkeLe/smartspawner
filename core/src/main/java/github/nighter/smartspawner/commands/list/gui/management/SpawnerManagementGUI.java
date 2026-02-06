@@ -69,30 +69,34 @@ public class SpawnerManagementGUI {
         );
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
-        // Teleport button - disabled for remote servers
+        // Teleport button - disabled for remote servers (can't teleport cross-server)
         if (isRemote) {
             createDisabledTeleportItem(inv, TELEPORT_SLOT, targetServer);
         } else {
             createActionItem(inv, TELEPORT_SLOT, "spawner_management.teleport", Material.ENDER_PEARL);
         }
 
-        // Open spawner button - disabled for remote servers
+        // Open spawner info button - enabled for both local and remote
+        // For remote: shows spawner info from database
+        // For local: opens the actual spawner menu
         if (isRemote) {
-            createDisabledActionItem(inv, OPEN_SPAWNER_SLOT, "spawner_management.open_spawner", Material.ENDER_EYE, "Remote Server");
+            createRemoteActionItem(inv, OPEN_SPAWNER_SLOT, "spawner_management.open_spawner", Material.ENDER_EYE, "View Info");
         } else {
             createActionItem(inv, OPEN_SPAWNER_SLOT, "spawner_management.open_spawner", Material.ENDER_EYE);
         }
 
-        // Stack button - disabled for remote servers
+        // Stack button - enabled for both local and remote
+        // For remote: updates stack size in database
         if (isRemote) {
-            createDisabledActionItem(inv, STACK_SLOT, "spawner_management.stack", Material.SPAWNER, "Remote Server");
+            createRemoteActionItem(inv, STACK_SLOT, "spawner_management.stack", Material.SPAWNER, "Edit Stack Size");
         } else {
             createActionItem(inv, STACK_SLOT, "spawner_management.stack", Material.SPAWNER);
         }
 
-        // Remove button - disabled for remote servers
+        // Remove button - enabled for both local and remote
+        // For remote: removes from database (physical block remains until target server syncs)
         if (isRemote) {
-            createDisabledActionItem(inv, REMOVE_SLOT, "spawner_management.remove", Material.BARRIER, "Remote Server");
+            createRemoteActionItem(inv, REMOVE_SLOT, "spawner_management.remove", Material.BARRIER, "Remove from DB");
         } else {
             createActionItem(inv, REMOVE_SLOT, "spawner_management.remove", Material.BARRIER);
         }
@@ -144,6 +148,24 @@ public class SpawnerManagementGUI {
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
             item.setItemMeta(meta);
         }
+        inv.setItem(slot, item);
+    }
+
+    private void createRemoteActionItem(Inventory inv, int slot, String langKey, Material material, String action) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(languageManager.getGuiItemName(langKey + ".name"));
+            List<String> lore = new ArrayList<>(Arrays.asList(languageManager.getGuiItemLore(langKey + ".lore")));
+            lore.add("");
+            lore.add(ChatColor.YELLOW + "Remote Server Action");
+            lore.add(ChatColor.GRAY + "Changes are saved to database.");
+            lore.add(ChatColor.GRAY + "Target server will sync on next refresh.");
+            meta.setLore(lore);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+            item.setItemMeta(meta);
+        }
+        if (item.getType() == Material.SPAWNER) VersionInitializer.hideTooltip(item);
         inv.setItem(slot, item);
     }
 

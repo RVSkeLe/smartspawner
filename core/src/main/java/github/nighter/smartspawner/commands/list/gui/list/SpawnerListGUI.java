@@ -158,31 +158,40 @@ public class SpawnerListGUI implements Listener {
         String targetServer = holder.getTargetServer();
         boolean isRemote = holder.isRemoteServer();
 
-        // For remote servers, filter/sort buttons are disabled
-        if (!isRemote) {
-            // Handle filter button click
-            if (event.getSlot() == 48) {
-                // Cycle to next filter option
-                FilterOption nextFilter = currentFilter.getNextOption();
+        // Handle filter button click (works for both local and remote)
+        if (event.getSlot() == 48) {
+            // Cycle to next filter option
+            FilterOption nextFilter = currentFilter.getNextOption();
 
-                // Save user preference when they change filter
+            // Save user preference when they change filter (only for local)
+            if (!isRemote) {
                 listSubCommand.saveUserPreference(player, worldName, nextFilter, currentSort);
+            }
 
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, 1, nextFilter, currentSort);
+            } else {
                 listSubCommand.openSpawnerListGUI(player, worldName, 1, nextFilter, currentSort);
-                return;
             }
+            return;
+        }
 
-            // Handle sort button click
-            if (event.getSlot() == 50) {
-                // Cycle to next sort option
-                SortOption nextSort = currentSort.getNextOption();
+        // Handle sort button click (works for both local and remote)
+        if (event.getSlot() == 50) {
+            // Cycle to next sort option
+            SortOption nextSort = currentSort.getNextOption();
 
-                // Save user preference when they change sort
+            // Save user preference when they change sort (only for local)
+            if (!isRemote) {
                 listSubCommand.saveUserPreference(player, worldName, currentFilter, nextSort);
-
-                listSubCommand.openSpawnerListGUI(player, worldName, 1, currentFilter, nextSort);
-                return;
             }
+
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, 1, currentFilter, nextSort);
+            } else {
+                listSubCommand.openSpawnerListGUI(player, worldName, 1, currentFilter, nextSort);
+            }
+            return;
         }
 
         // Handle navigation - works for both local and remote

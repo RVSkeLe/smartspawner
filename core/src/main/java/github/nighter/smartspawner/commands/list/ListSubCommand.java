@@ -731,6 +731,15 @@ public class ListSubCommand extends BaseSubCommand {
      * Open spawner list GUI for a remote server (async database query).
      */
     public void openSpawnerListGUIForServer(Player player, String targetServer, String worldName, int page) {
+        // Use default filter and sort
+        openSpawnerListGUIForServer(player, targetServer, worldName, page, FilterOption.ALL, SortOption.DEFAULT);
+    }
+
+    /**
+     * Open spawner list GUI for a remote server with filter and sort options.
+     */
+    public void openSpawnerListGUIForServer(Player player, String targetServer, String worldName, int page,
+                                            FilterOption filter, SortOption sort) {
         if (!player.hasPermission("smartspawner.command.list")) {
             messageService.sendMessage(player, "no_permission");
             return;
@@ -740,7 +749,7 @@ public class ListSubCommand extends BaseSubCommand {
 
         // If it's the current server, use local data
         if (targetServer.equals(currentServer)) {
-            openSpawnerListGUI(player, worldName, page);
+            openSpawnerListGUI(player, worldName, page, filter, sort);
             return;
         }
 
@@ -754,7 +763,9 @@ public class ListSubCommand extends BaseSubCommand {
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
         final int requestedPage = page;
-        dbHandler.getCrossServerSpawnersAsync(targetServer, worldName, spawners -> {
+        final FilterOption finalFilter = filter;
+        final SortOption finalSort = sort;
+        dbHandler.getCrossServerSpawnersAsync(targetServer, worldName, filter.name(), sort.name(), spawners -> {
             if (spawners.isEmpty()) {
                 messageService.sendMessage(player, "no_spawners_found");
                 return;
@@ -773,7 +784,7 @@ public class ListSubCommand extends BaseSubCommand {
             String title = languageManager.getGuiTitle("gui_title_spawner_list", titlePlaceholders);
 
             Inventory inv = Bukkit.createInventory(
-                new SpawnerListHolder(currentPage, totalPages, worldName, FilterOption.ALL, SortOption.DEFAULT, targetServer),
+                new SpawnerListHolder(currentPage, totalPages, worldName, finalFilter, finalSort, targetServer),
                 54, title
             );
 
@@ -787,11 +798,14 @@ public class ListSubCommand extends BaseSubCommand {
                 inv.addItem(createCrossServerSpawnerItem(spawner, targetServer));
             }
 
-            // Add navigation buttons (filter/sort disabled for remote)
+            // Add navigation buttons
             // Previous page
             if (currentPage > 1) {
                 inv.setItem(45, createNavigationButton(Material.SPECTRAL_ARROW, "navigation.previous_page"));
             }
+
+            // Filter button (slot 48)
+            addControlButtons(inv, finalFilter, finalSort);
 
             // Back button
             inv.setItem(49, createNavigationButton(Material.RED_STAINED_GLASS_PANE, "navigation.back"));
