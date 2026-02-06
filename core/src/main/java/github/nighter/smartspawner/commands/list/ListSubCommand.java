@@ -82,13 +82,14 @@ public class ListSubCommand extends BaseSubCommand {
 
     /**
      * Check if cross-server sync is enabled.
-     * Requires DATABASE mode AND sync_across_servers = true
+     * Requires MYSQL mode AND sync_across_servers = true
+     * (SQLite is local-only and does not support cross-server sync)
      */
     public boolean isCrossServerEnabled() {
         String modeStr = plugin.getConfig().getString("database.mode", "YAML").toUpperCase();
         try {
             StorageMode mode = StorageMode.valueOf(modeStr);
-            if (mode != StorageMode.DATABASE) {
+            if (mode != StorageMode.MYSQL) {
                 return false;
             }
         } catch (IllegalArgumentException e) {

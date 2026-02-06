@@ -18,6 +18,7 @@ dependencies {
     // Database dependencies (shaded)
     shade 'com.zaxxer:HikariCP:5.1.0'
     shade 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
+    shade 'org.xerial:sqlite-jdbc:3.45.1.0'
 
     // Hook plugins
     compileOnly 'org.geysermc.floodgate:api:2.2.5-SNAPSHOT'
@@ -84,6 +85,7 @@ shadowJar {
     // Relocate shaded dependencies to avoid conflicts with other plugins
     relocate 'com.zaxxer.hikari', 'github.nighter.smartspawner.libs.hikari'
     relocate 'org.mariadb.jdbc', 'github.nighter.smartspawner.libs.mariadb'
+    relocate 'org.sqlite', 'github.nighter.smartspawner.libs.sqlite'
 
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     // Exclude unnecessary files from dependencies

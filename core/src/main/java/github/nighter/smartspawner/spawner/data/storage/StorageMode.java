@@ -11,8 +11,16 @@ public enum StorageMode {
     YAML,
 
     /**
-     * MariaDB database storage with HikariCP connection pool.
-     * Requires database configuration in config.yml
+     * MySQL/MariaDB database storage with HikariCP connection pool.
+     * Requires database server configuration in config.yml
+     * Supports cross-server spawner management.
      */
-    DATABASE
+    MYSQL,
+
+    /**
+     * SQLite database storage with HikariCP connection pool.
+     * Local file-based database, no external server required.
+     * Good for single-server setups wanting database performance without MariaDB.
+     */
+    SQLITE
 }

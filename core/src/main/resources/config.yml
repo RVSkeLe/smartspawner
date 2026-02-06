@@ -365,9 +365,10 @@ logging:
 # Database mode provides better performance for large servers
 # and enables cross-server spawner management.
 database:
-  # Storage mode: YAML or DATABASE
+  # Storage mode: YAML, MYSQL, or SQLITE
   # YAML: Default file-based storage (spawners_data.yml)
-  # DATABASE: MariaDB database storage with HikariCP connection pool
+  # MYSQL: MariaDB/MySQL database storage with HikariCP connection pool
+  # SQLITE: Local SQLite database storage (no external server required)
   mode: YAML
 
   # Server identifier for cross-server setups
@@ -378,14 +379,19 @@ database:
   # Enable cross-server spawner viewing in /smartspawner list
   # When true, shows a server selection page before world selection
   # Allows viewing spawners from all servers in the shared database
-  # Only works when mode is DATABASE
+  # Only works when mode is MYSQL (SQLite is local only)
   sync_across_servers: false
 
-  # Database name to use (only for DATABASE mode)
+  # Database name to use (only for MYSQL mode)
   database: "smartspawner"
 
-  # Connection settings for DATABASE mode
-  standalone:
+  # SQLite settings (only for SQLITE mode)
+  sqlite:
+    # Database file name (stored in plugin data folder)
+    file: "spawners.db"
+
+  # MySQL/MariaDB connection settings (only for MYSQL mode)
+  sql:
     host: "localhost"
     port: 3306
     username: "root"

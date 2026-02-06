@@ -300,9 +300,10 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
             mode = StorageMode.YAML;
         }
 
-        if (mode == StorageMode.DATABASE) {
-            getLogger().info("Initializing database storage mode...");
-            this.databaseManager = new DatabaseManager(this);
+        if (mode == StorageMode.MYSQL || mode == StorageMode.SQLITE) {
+            String dbType = mode == StorageMode.MYSQL ? "MySQL/MariaDB" : "SQLite";
+            getLogger().info("Initializing " + dbType + " database storage mode...");
+            this.databaseManager = new DatabaseManager(this, mode);
 
             if (databaseManager.initialize()) {
                 SpawnerDatabaseHandler dbHandler = new SpawnerDatabaseHandler(this, databaseManager);
@@ -320,7 +321,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
                         }
                     }
 
-                    getLogger().info("Database storage initialized successfully.");
+                    getLogger().info(dbType + " database storage initialized successfully.");
                 } else {
                     getLogger().severe("Failed to initialize database handler, falling back to YAML");
                     databaseManager.shutdown();
