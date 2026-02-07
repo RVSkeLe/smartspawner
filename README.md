@@ -13,7 +13,7 @@
 
 ## Requirements
 
-- **Minecraft Version:** 1.21 - 1.21.10
+- **Minecraft Version:** 1.21 - 1.21.11
 - **Server Software:** Paper, Folia or compatible forks
 - **Java Version:** 21+
 
@@ -30,7 +30,7 @@
 
 ## API
 
-For developers interested in integrating with SmartSpawner, visit our [Developer API Documentation](https://nighterdevelopment.github.io/smartspawner-docs/developer-api/) for installation instructions and documentation.
+For developers interested in integrating with SmartSpawner, visit our [Developer API Documentation](https://nighterdevelopment.github.io/smartspawner-docs/developer-api/api-installation/) for installation instructions and documentation.
 
 ## Building
 
