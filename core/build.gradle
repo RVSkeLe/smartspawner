@@ -29,7 +29,7 @@ dependencies {
     implementation 'com.github.Xyness:SimpleClaimSystem:1.12.3.2'
     implementation("com.github.Zrips:Residence:6.0.0.1") { exclude group: "org.bukkit" }
 
-    compileOnly("io.lumine:Mythic-Dist:5.11.1")
+    compileOnly("io.lumine:Mythic-Dist:5.11.2")
     compileOnly("com.iridium:IridiumSkyblock:4.1.2")
 
     implementation(platform("com.intellectualsites.bom:bom-newest:1.55"))
