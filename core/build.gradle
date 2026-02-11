@@ -59,7 +59,13 @@ dependencies {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs += ['-nowarn']
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-nowarn', '-Xlint:-deprecation']
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
 }
 
 jar {
@@ -83,8 +89,8 @@ shadowJar {
     configurations = [project.configurations.shade]
 
     // Relocate shaded dependencies to avoid conflicts with other plugins
-    relocate 'com.zaxxer.hikari', 'github.nighter.smartspawner.libs.hikari'
-    relocate 'org.mariadb.jdbc', 'github.nighter.smartspawner.libs.mariadb'
+    relocate('com.zaxxer.hikari', 'github.nighter.smartspawner.libs.hikari')
+    relocate('org.mariadb.jdbc', 'github.nighter.smartspawner.libs.mariadb')
     // NOTE: SQLite JDBC cannot be relocated - it uses JNI native libraries
 
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
@@ -99,6 +105,9 @@ shadowJar {
 
     // Exclude slf4j as it's provided by Paper/Bukkit
     exclude 'org/slf4j/**'
+
+    // Merge service files properly
+    mergeServiceFiles()
 }
 
 // Make shadowJar the default build artifact
