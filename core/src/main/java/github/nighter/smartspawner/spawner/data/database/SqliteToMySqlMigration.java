@@ -210,7 +210,7 @@ public class SqliteToMySqlMigration {
             logger.info("Migration completed. Total: " + totalSpawners + ", Migrated: " + migratedCount + ", Failed: " + failedCount);
 
             // Rename the SQLite file to prevent re-migration
-            if (failedCount == 0 || migratedCount > 0) {
+            if (failedCount == 0) {
                 File migratedFile = new File(plugin.getDataFolder(), sqliteFileName + MIGRATED_FILE_SUFFIX);
                 if (sqliteFile.renameTo(migratedFile)) {
                     logger.info("SQLite file renamed to " + sqliteFileName + MIGRATED_FILE_SUFFIX);
