@@ -68,7 +68,7 @@ public class SpawnerExplosionListener implements Listener {
                             e = new SpawnerExplodeEvent(null, spawnerData.getSpawnerLocation(), 1, true);
                         }
                         spawnerManager.removeSpawner(spawnerId);
-                        spawnerFileHandler.markSpawnerDeleted(spawnerId);
+                        spawnerManager.markSpawnerDeleted(spawnerId);
                     }
                     if (e != null) {
                         Bukkit.getPluginManager().callEvent(e);

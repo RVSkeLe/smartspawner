@@ -42,6 +42,7 @@ public class SpawnerStackerHandler implements Listener {
     private final LanguageManager languageManager;
     private final SpawnerItemFactory spawnerItemFactory;
     private final SpawnerLocationLockManager locationLockManager;
+    private final github.nighter.smartspawner.spawner.data.SpawnerManager spawnerManager;
 
     // Sound constants
     private static final Sound STACK_SOUND = Sound.ENTITY_EXPERIENCE_ORB_PICKUP;
@@ -77,6 +78,7 @@ public class SpawnerStackerHandler implements Listener {
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerMenuUI = plugin.getSpawnerMenuUI();
         this.locationLockManager = plugin.getSpawnerLocationLockManager();
+        this.spawnerManager = plugin.getSpawnerManager();
 
         // Start cleanup task - increased interval for less overhead
         startCleanupTask();
@@ -317,6 +319,10 @@ public class SpawnerStackerHandler implements Listener {
             // Update stack size and give spawners to player
             // setStackSize internally uses dataLock for thread safety
             spawner.setStackSize(targetSize);
+
+            // Mark spawner as modified for database save
+            spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+
             if (spawner.isItemSpawner()) {
                 giveItemSpawnersToPlayer(player, actualChange, spawner.getSpawnedItemMaterial());
             } else {
@@ -398,6 +404,9 @@ public class SpawnerStackerHandler implements Listener {
             removeValidSpawnersFromInventory(player, spawner.getEntityType(), actualChange, scanResult.spawnerSlots);
         }
         spawner.setStackSize(currentSize + actualChange);
+
+        // Mark spawner as modified for database save
+        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
 
         // Notify if max stack reached
         if (actualChange < changeAmount) {

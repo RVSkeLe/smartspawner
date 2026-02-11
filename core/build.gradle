@@ -1,9 +1,24 @@
+plugins {
+    id 'com.gradleup.shadow'
+}
+
+// Create a custom configuration for database dependencies to shade
+configurations {
+    shade
+    implementation.extendsFrom(shade)
+}
+
 dependencies {
     // API
     api project(':api')
 
     // Paper API
     compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
+
+    // Database dependencies (shaded)
+    shade 'com.zaxxer:HikariCP:5.1.0'
+    shade 'org.mariadb.jdbc:mariadb-java-client:3.3.2'
+    shade 'org.xerial:sqlite-jdbc:3.45.1.0'
 
     // Hook plugins
     compileOnly 'org.geysermc.floodgate:api:2.2.5-SNAPSHOT'
@@ -56,6 +71,38 @@ jar {
     exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
     // destinationDirectory = file('C:\\Users\\notni\\OneDrive\\Desktop\\paper_1.21.8\\plugins')
 }
+
+shadowJar {
+    archiveBaseName.set("SmartSpawner")
+    archiveVersion.set("${version}")
+    archiveClassifier.set("")
+
+    from { project(':api').sourceSets.main.output }
+
+    // Only include shade configuration dependencies
+    configurations = [project.configurations.shade]
+
+    // Relocate shaded dependencies to avoid conflicts with other plugins
+    relocate 'com.zaxxer.hikari', 'github.nighter.smartspawner.libs.hikari'
+    relocate 'org.mariadb.jdbc', 'github.nighter.smartspawner.libs.mariadb'
+    // NOTE: SQLite JDBC cannot be relocated - it uses JNI native libraries
+
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+    // Exclude unnecessary files from dependencies
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/MANIFEST.MF'
+    exclude 'META-INF/LICENSE*'
+    exclude 'META-INF/NOTICE*'
+
+    // Merge with main source output
+    from sourceSets.main.output
+
+    // Exclude slf4j as it's provided by Paper/Bukkit
+    exclude 'org/slf4j/**'
+}
+
+// Make shadowJar the default build artifact
+build.dependsOn shadowJar
 
 processResources {
     def props = [version: version]

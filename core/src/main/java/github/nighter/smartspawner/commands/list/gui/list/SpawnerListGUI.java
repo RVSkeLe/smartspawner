@@ -43,7 +43,7 @@ public class SpawnerListGUI implements Listener {
 
     @EventHandler
     public void onWorldSelectionClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder(false) instanceof WorldSelectionHolder)) return;
+        if (!(event.getInventory().getHolder(false) instanceof WorldSelectionHolder holder)) return;
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
         if (!player.hasPermission("smartspawner.command.list")) {
@@ -56,7 +56,28 @@ public class SpawnerListGUI implements Listener {
         if (clickedItem == null || !clickedItem.hasItemMeta() || !clickedItem.getItemMeta().hasDisplayName()) return;
 
         String displayName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        String targetServer = holder.getTargetServer();
+        boolean isRemote = holder.isRemoteServer();
 
+        // Handle back button for world selection (both local and remote when cross-server is enabled)
+        if (clickedItem.getType() == Material.RED_STAINED_GLASS_PANE) {
+            // Go back to server selection
+            listSubCommand.openServerSelectionGUI(player);
+            return;
+        }
+
+        // For remote servers, we need to use the async method
+        if (isRemote) {
+            // Extract world name from display name for remote servers
+            // The display name format is "World Name" or similar
+            String worldName = extractWorldNameFromDisplay(displayName);
+            if (worldName != null) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, 1);
+            }
+            return;
+        }
+
+        // Local server handling (original logic)
         // Check for original layout slots first (for backward compatibility)
         if (event.getSlot() == 11 && displayName.equals(ChatColor.stripColor(languageManager.getGuiTitle("world_buttons.overworld.name")))) {
             listSubCommand.openSpawnerListGUI(player, "world", 1);
@@ -90,6 +111,24 @@ public class SpawnerListGUI implements Listener {
         }
     }
 
+    /**
+     * Extract world name from display name for remote servers.
+     * Tries common world name patterns.
+     */
+    private String extractWorldNameFromDisplay(String displayName) {
+        // Check if it matches known world display names
+        if (displayName.equalsIgnoreCase("Overworld") || displayName.equalsIgnoreCase("World")) {
+            return "world";
+        } else if (displayName.equalsIgnoreCase("Nether") || displayName.equalsIgnoreCase("The Nether")) {
+            return "world_nether";
+        } else if (displayName.equalsIgnoreCase("The End") || displayName.equalsIgnoreCase("End")) {
+            return "world_the_end";
+        }
+        // For custom worlds, convert display name back to world name format
+        // "My Custom World" -> "my_custom_world"
+        return displayName.toLowerCase().replace(' ', '_');
+    }
+
     // Helper method to format world name (same as in listSubCommand)
     private String formatWorldName(String worldName) {
         // Convert something like "my_custom_world" to "My Custom World"
@@ -116,50 +155,78 @@ public class SpawnerListGUI implements Listener {
         int totalPages = holder.getTotalPages();
         FilterOption currentFilter = holder.getFilterOption();
         SortOption currentSort = holder.getSortType();
+        String targetServer = holder.getTargetServer();
+        boolean isRemote = holder.isRemoteServer();
 
-        // Handle filter button click
+        // Handle filter button click (works for both local and remote)
         if (event.getSlot() == 48) {
             // Cycle to next filter option
             FilterOption nextFilter = currentFilter.getNextOption();
 
-            // Save user preference when they change filter
-            listSubCommand.saveUserPreference(player, worldName, nextFilter, currentSort);
+            // Save user preference when they change filter (only for local)
+            if (!isRemote) {
+                listSubCommand.saveUserPreference(player, worldName, nextFilter, currentSort);
+            }
 
-            listSubCommand.openSpawnerListGUI(player, worldName, 1, nextFilter, currentSort);
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, 1, nextFilter, currentSort);
+            } else {
+                listSubCommand.openSpawnerListGUI(player, worldName, 1, nextFilter, currentSort);
+            }
             return;
         }
 
-        // Handle sort button click
+        // Handle sort button click (works for both local and remote)
         if (event.getSlot() == 50) {
             // Cycle to next sort option
             SortOption nextSort = currentSort.getNextOption();
 
-            // Save user preference when they change sort
-            listSubCommand.saveUserPreference(player, worldName, currentFilter, nextSort);
+            // Save user preference when they change sort (only for local)
+            if (!isRemote) {
+                listSubCommand.saveUserPreference(player, worldName, currentFilter, nextSort);
+            }
 
-            listSubCommand.openSpawnerListGUI(player, worldName, 1, currentFilter, nextSort);
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, 1, currentFilter, nextSort);
+            } else {
+                listSubCommand.openSpawnerListGUI(player, worldName, 1, currentFilter, nextSort);
+            }
             return;
         }
 
-        // Handle navigation
+        // Handle navigation - works for both local and remote
         if (event.getSlot() == 45 && currentPage > 1) {
             // Previous page
-            listSubCommand.openSpawnerListGUI(player, worldName, currentPage - 1, currentFilter, currentSort);
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, currentPage - 1);
+            } else {
+                listSubCommand.openSpawnerListGUI(player, worldName, currentPage - 1, currentFilter, currentSort);
+            }
             return;
         }
 
         if (event.getSlot() == 49) {
-            // Save preference before going back to world selection
-            listSubCommand.saveUserPreference(player, worldName, currentFilter, currentSort);
+            // Save preference before going back to world selection (only for local)
+            if (!isRemote) {
+                listSubCommand.saveUserPreference(player, worldName, currentFilter, currentSort);
+            }
 
             // Back to world selection
-            listSubCommand.openWorldSelectionGUI(player);
+            if (isRemote) {
+                listSubCommand.openWorldSelectionGUIForServer(player, targetServer);
+            } else {
+                listSubCommand.openWorldSelectionGUI(player);
+            }
             return;
         }
 
         if (event.getSlot() == 53 && currentPage < totalPages) {
             // Next page
-            listSubCommand.openSpawnerListGUI(player, worldName, currentPage + 1, currentFilter, currentSort);
+            if (isRemote) {
+                listSubCommand.openSpawnerListGUIForServer(player, targetServer, worldName, currentPage + 1);
+            } else {
+                listSubCommand.openSpawnerListGUI(player, worldName, currentPage + 1, currentFilter, currentSort);
+            }
             return;
         }
 
@@ -203,14 +270,25 @@ public class SpawnerListGUI implements Listener {
 
         if (matcher.find()) {
             String spawnerId = matcher.group(1);
-            SpawnerData spawner = spawnerManager.getSpawnerById(spawnerId);
+            String targetServer = holder.getTargetServer();
+            boolean isRemote = holder.isRemoteServer();
 
-            if (spawner != null) {
-                // Open the management GUI instead of directly teleporting
-                listSubCommand.openSpawnerManagementGUI(player, spawnerId, 
-                    holder.getWorldName(), holder.getCurrentPage());
+            // For remote servers, spawner data isn't available locally
+            if (isRemote) {
+                // Open management GUI with remote server context (actions will be disabled)
+                listSubCommand.openSpawnerManagementGUI(player, spawnerId,
+                    holder.getWorldName(), holder.getCurrentPage(), targetServer);
             } else {
-                messageService.sendMessage(player, "spawner_not_found");
+                // Local server - verify spawner exists
+                SpawnerData spawner = spawnerManager.getSpawnerById(spawnerId);
+
+                if (spawner != null) {
+                    // Open the management GUI
+                    listSubCommand.openSpawnerManagementGUI(player, spawnerId,
+                        holder.getWorldName(), holder.getCurrentPage(), null);
+                } else {
+                    messageService.sendMessage(player, "spawner_not_found");
+                }
             }
         }
     }

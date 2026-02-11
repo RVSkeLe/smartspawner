@@ -5,11 +5,14 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
+import github.nighter.smartspawner.spawner.data.database.SpawnerDatabaseHandler;
+import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -94,7 +97,7 @@ public class AdminStackerHandler implements Listener {
         }
 
         int newStackSize = spawner.getStackSize() + change;
-        
+
         // Ensure stack size is within valid bounds
         if (newStackSize < 1) {
             newStackSize = 1;
@@ -107,7 +110,10 @@ public class AdminStackerHandler implements Listener {
 
         // Update the spawner stack size
         spawner.setStackSize(newStackSize);
-        
+
+        // Mark spawner as modified for database save
+        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+
         // Track interaction
         spawner.updateLastInteractedPlayer(player.getName());
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -115,5 +121,104 @@ public class AdminStackerHandler implements Listener {
         // Refresh the GUI to show updated values
         AdminStackerUI adminStackerUI = new AdminStackerUI(plugin);
         adminStackerUI.openAdminStackerGui(player, spawner, worldName, listPage);
+    }
+
+    // ===== Remote Admin Stacker Handler =====
+
+    @EventHandler
+    public void onRemoteAdminStackerClick(InventoryClickEvent event) {
+        if (!(event.getInventory().getHolder(false) instanceof RemoteAdminStackerHolder holder)) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        event.setCancelled(true);
+        if (event.getCurrentItem() == null) return;
+
+        int slot = event.getSlot();
+        handleRemoteClick(player, holder, event.getInventory(), slot);
+    }
+
+    private void handleRemoteClick(Player player, RemoteAdminStackerHolder holder, Inventory inventory, int slot) {
+        if (slot == BACK_SLOT) {
+            // Save changes to database and return to management GUI
+            saveRemoteStackChanges(player, holder);
+            return;
+        }
+
+        if (slot == SPAWNER_INFO_SLOT) {
+            // Do nothing for info slot
+            return;
+        }
+
+        // Check if it's a decrease slot
+        for (int i = 0; i < DECREASE_SLOTS.length; i++) {
+            if (slot == DECREASE_SLOTS[i]) {
+                handleRemoteStackChange(player, holder, inventory, -STACK_AMOUNTS[i]);
+                return;
+            }
+        }
+
+        // Check if it's an increase slot
+        for (int i = 0; i < INCREASE_SLOTS.length; i++) {
+            if (slot == INCREASE_SLOTS[i]) {
+                handleRemoteStackChange(player, holder, inventory, STACK_AMOUNTS[i]);
+                return;
+            }
+        }
+    }
+
+    private void handleRemoteStackChange(Player player, RemoteAdminStackerHolder holder,
+                                          Inventory inventory, int change) {
+        if (!player.hasPermission("smartspawner.stack")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        // Adjust the stack size in the holder (not saved yet)
+        holder.adjustStackSize(change);
+
+        // Play feedback sound
+        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+
+        // Refresh the GUI to show updated values
+        AdminStackerUI adminStackerUI = new AdminStackerUI(plugin);
+        adminStackerUI.refreshRemoteStackerGui(inventory, holder);
+    }
+
+    private void saveRemoteStackChanges(Player player, RemoteAdminStackerHolder holder) {
+        SpawnerStorage storage = plugin.getSpawnerStorage();
+        if (!(storage instanceof SpawnerDatabaseHandler dbHandler)) {
+            messageService.sendMessage(player, "database_error");
+            return;
+        }
+
+        String targetServer = holder.getTargetServer();
+        String spawnerId = holder.getSpawnerId();
+        int newStackSize = holder.getCurrentStackSize();
+        int originalSize = holder.getSpawnerData().getStackSize();
+
+        // Only save if changed
+        if (newStackSize != originalSize) {
+            player.sendMessage("§eSaving stack size changes...");
+
+            dbHandler.updateRemoteSpawnerStackSizeAsync(targetServer, spawnerId, newStackSize, success -> {
+                if (success) {
+                    player.sendMessage("§aStack size updated from " + originalSize + " to " + newStackSize);
+                    player.sendMessage("§e[Note] Changes will sync to " + targetServer + " on next refresh.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+                } else {
+                    player.sendMessage("§cFailed to update stack size. Spawner may have been removed.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                }
+
+                // Return to management GUI
+                managementGUI.openManagementMenu(player, spawnerId, holder.getWorldName(),
+                        holder.getListPage(), targetServer);
+            });
+        } else {
+            // No changes, just go back
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+            managementGUI.openManagementMenu(player, spawnerId, holder.getWorldName(),
+                    holder.getListPage(), targetServer);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.data;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.Scheduler;
@@ -21,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class SpawnerFileHandler {
+public class SpawnerFileHandler implements SpawnerStorage {
     private final SmartSpawner plugin;
     private final Logger logger;
     private File spawnerDataFile;
@@ -42,6 +43,13 @@ public class SpawnerFileHandler {
         this.CURRENT_VERSION = plugin.getDATA_VERSION();
         setupSpawnerDataFile();
         startSaveTask();
+    }
+
+    @Override
+    public boolean initialize() {
+        // Initialization already happens in constructor
+        // This method exists for interface compliance
+        return spawnerDataFile != null && spawnerDataFile.exists();
     }
 
     private void setupSpawnerDataFile() {
@@ -74,6 +82,7 @@ public class SpawnerFileHandler {
         }, intervalTicks, intervalTicks);
     }
 
+    @Override
     public void markSpawnerModified(String spawnerId) {
         if (spawnerId != null) {
             dirtySpawners.add(spawnerId);
@@ -81,6 +90,7 @@ public class SpawnerFileHandler {
         }
     }
 
+    @Override
     public void markSpawnerDeleted(String spawnerId) {
         if (spawnerId != null) {
             deletedSpawners.add(spawnerId);
@@ -88,6 +98,7 @@ public class SpawnerFileHandler {
         }
     }
 
+    @Override
     public void flushChanges() {
         if (dirtySpawners.isEmpty() && deletedSpawners.isEmpty()) {
             plugin.debug("No changes to flush");
@@ -233,6 +244,7 @@ public class SpawnerFileHandler {
         }
     }
 
+    @Override
     public Map<String, SpawnerData> loadAllSpawnersRaw() {
         Map<String, SpawnerData> loadedSpawners = new HashMap<>();
 
@@ -255,6 +267,7 @@ public class SpawnerFileHandler {
         return loadedSpawners;
     }
 
+    @Override
     public SpawnerData loadSpecificSpawner(String spawnerId) {
         try {
             return loadSpawnerFromConfig(spawnerId, false);
@@ -267,6 +280,7 @@ public class SpawnerFileHandler {
     /**
      * Get the raw location string for a spawner (used by WorldEventHandler)
      */
+    @Override
     public String getRawLocationString(String spawnerId) {
         String path = "spawners." + spawnerId + ".location";
         return spawnerData.getString(path);
@@ -479,10 +493,12 @@ public class SpawnerFileHandler {
         return spawner;
     }
 
+    @Override
     public void queueSpawnerForSaving(String spawnerId) {
         markSpawnerModified(spawnerId);
     }
 
+    @Override
     public void shutdown() {
         if (saveTask != null) {
             saveTask.cancel();

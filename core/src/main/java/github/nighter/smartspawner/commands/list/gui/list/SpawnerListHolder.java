@@ -13,14 +13,28 @@ public class SpawnerListHolder implements InventoryHolder {
     private final String worldName;
     private final FilterOption filterOption;
     private final SortOption sortType;
+    private final String targetServer;
 
     public SpawnerListHolder(int currentPage, int totalPages, String worldName,
                              FilterOption filterOption, SortOption sortType) {
+        this(currentPage, totalPages, worldName, filterOption, sortType, null);
+    }
+
+    public SpawnerListHolder(int currentPage, int totalPages, String worldName,
+                             FilterOption filterOption, SortOption sortType, String targetServer) {
         this.currentPage = currentPage;
         this.totalPages = totalPages;
         this.worldName = worldName;
         this.filterOption = filterOption;
         this.sortType = sortType;
+        this.targetServer = targetServer;
+    }
+
+    /**
+     * Check if this list is showing spawners from a remote server.
+     */
+    public boolean isRemoteServer() {
+        return targetServer != null;
     }
 
     @Override
