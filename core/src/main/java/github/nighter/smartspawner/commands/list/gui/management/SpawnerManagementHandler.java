@@ -187,7 +187,7 @@ public class SpawnerManagementHandler implements Listener {
         // Fetch spawner data from database and display info
         SpawnerDatabaseHandler dbHandler = getDbHandler();
         if (dbHandler == null) {
-            messageService.sendMessage(player, "database_error");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 
