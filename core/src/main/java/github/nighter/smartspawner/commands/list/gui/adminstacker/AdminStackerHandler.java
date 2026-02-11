@@ -202,9 +202,6 @@ public class AdminStackerHandler implements Listener {
 
             dbHandler.updateRemoteSpawnerStackSizeAsync(targetServer, spawnerId, newStackSize, success -> {
                 if (success) {
-                    Map<String, String> placeholders = new HashMap<>();
-                    placeholders.put("old", String.valueOf(originalSize));
-                    placeholders.put("new", String.valueOf(newStackSize));
                     player.sendMessage("§aStack size updated from " + originalSize + " to " + newStackSize);
                     player.sendMessage("§e[Note] Changes will sync to " + targetServer + " on next refresh.");
                     player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
