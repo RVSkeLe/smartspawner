@@ -69,6 +69,7 @@ tasks.withType<Javadoc>().configureEach {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
 }
 
+// Don't use 'jar' task to build plugin jar, use 'shadowJar' task instead
 tasks.jar {
     archiveBaseName.set("SmartSpawnerJar")
     archiveVersion.set(version.toString())
@@ -76,8 +77,6 @@ tasks.jar {
     from(project(":api").sourceSets["main"].output)
     from(sourceSets["main"].output)
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
-
-    // destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
 }
 
 tasks.shadowJar {
@@ -104,7 +103,7 @@ tasks.shadowJar {
 
     mergeServiceFiles()
 
-    //destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
+    // destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
 }
 
 tasks.build {

@@ -48,7 +48,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-          dependency-graph: generate-and-submit
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
