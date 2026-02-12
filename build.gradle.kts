@@ -97,17 +97,3 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
-// Dependency updates configuration
-tasks.named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates").configure {
-    rejectVersionIf {
-        // Reject alpha, beta, RC versions
-        val rejectPatterns = listOf("alpha", "beta", "rc", "cr", "m", "preview", "b", "ea")
-        rejectPatterns.any { candidate.version.lowercase().contains(it) }
-    }
-
-    checkForGradleUpdate = true
-    outputFormatter = "plain,html,xml,json"
-    outputDir = "build/dependencyUpdates"
-    reportfileName = "report"
-}
-

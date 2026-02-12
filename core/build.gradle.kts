@@ -77,7 +77,7 @@ tasks.jar {
     from(sourceSets["main"].output)
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 
-    destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
+    // destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
 }
 
 tasks.shadowJar {
@@ -104,7 +104,7 @@ tasks.shadowJar {
 
     mergeServiceFiles()
 
-    destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
+    //destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
 }
 
 tasks.build {
