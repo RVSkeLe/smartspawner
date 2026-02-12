@@ -107,12 +107,3 @@ jobs:
             **/build/test-results/**
           retention-days: 7
           if-no-files-found: ignore
-
-      - name: Publish test results
-        if: always()
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: |
-            **/build/test-results/**/*.xml
-          check_name: Test Results
-          comment_mode: off
