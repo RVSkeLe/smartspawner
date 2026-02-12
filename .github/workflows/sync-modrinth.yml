@@ -1,4 +1,4 @@
-name: Sync Modrinth Releases to GitHub
+name: Sync Modrinth releases to GitHub
 
 on:
   schedule:
