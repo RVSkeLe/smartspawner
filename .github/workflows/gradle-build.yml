@@ -15,15 +15,22 @@ on:
       - 'LICENSE'
   workflow_dispatch:
 
+# Cancel in-progress runs for the same workflow and branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -35,41 +42,94 @@ jobs:
           cache: gradle
 
       - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/wrapper-validation-action@v3
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          dependency-graph: generate-and-submit
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build --no-daemon
-
-      - name: Run tests
-        run: ./gradlew test --no-daemon
-
-      - name: Extract version
+      - name: Extract version information
         id: extract_version
         run: |
-          VERSION=$(grep 'version =' build.gradle | head -n 1 | awk -F "'" '{print $2}')
+          VERSION=$(grep 'version = ' build.gradle.kts | head -n 1 | awk -F'"' '{print $2}')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           COMMIT_SHA_SHORT=$(git rev-parse --short HEAD)
           echo "COMMIT_SHA_SHORT=$COMMIT_SHA_SHORT" >> $GITHUB_ENV
+          echo "commit_sha_short=$COMMIT_SHA_SHORT" >> $GITHUB_OUTPUT
           echo "Version: $VERSION (Commit: $COMMIT_SHA_SHORT)"
 
-      - name: Upload JAR artifact
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon --stacktrace
+
+      - name: Run tests
+        run: ./gradlew test --no-daemon --stacktrace
+
+      - name: Generate Javadoc
+        run: ./gradlew javadoc --no-daemon
+
+      - name: Upload SmartSpawner JAR
         uses: actions/upload-artifact@v4
         with:
-          name: SmartSpawner-${{ env.VERSION }}
-          path: core/build/libs/SmartSpawner-${{ env.VERSION }}.jar
+          name: SmartSpawner-${{ steps.extract_version.outputs.version }}
+          path: core/build/libs/SmartSpawner-${{ steps.extract_version.outputs.version }}.jar
           retention-days: 90
           if-no-files-found: error
 
-      - name: Upload test reports on failure
-        if: failure()
+      - name: Upload API JAR
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports-${{ env.COMMIT_SHA_SHORT }}
-          path: build/reports/tests/
+          name: SmartSpawner-API-${{ steps.extract_version.outputs.version }}
+          path: api/build/libs/*.jar
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload Javadoc
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartSpawner-Javadoc-${{ steps.extract_version.outputs.version }}
+          path: core/build/docs/javadoc/**
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ steps.extract_version.outputs.commit_sha_short }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
           retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            **/build/test-results/**/*.xml
+          check_name: Test Results
+          comment_mode: off
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure

@@ -1,0 +1,4 @@
+rootProject.name = "SmartSpawner"
+include("core")
+include("api")
+
