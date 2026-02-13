@@ -12,6 +12,6 @@ updates:
     labels:
       - "dependencies"
     assignees:
-      - "NotNighter"
+      - "ptthanh02"
     commit-message:
       prefix: "chore"
