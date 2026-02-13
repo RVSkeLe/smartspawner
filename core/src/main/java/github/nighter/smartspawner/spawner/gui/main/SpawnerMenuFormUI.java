@@ -121,7 +121,7 @@ public class SpawnerMenuFormUI {
                         Scheduler.runTask(() -> {
                             switch (buttonInfo.action) {
                                 case "open_storage":
-                                    plugin.getSpawnerMenuAction().handleStorageClickBedrock(player, spawner);
+                                    plugin.getSpawnerMenuAction().handleStorageClick(player, spawner);
                                     break;
                                 case "open_stacker":
                                     handleSpawnerInfo(player, spawner);

@@ -215,7 +215,7 @@ public class TimerUpdateService {
 
             // Get inventory once and validate
             Inventory openInventory = player.getOpenInventory().getTopInventory();
-            if (openInventory == null || !(openInventory.getHolder(false) instanceof SpawnerMenuHolder)) {
+            if (!(openInventory.getHolder(false) instanceof SpawnerMenuHolder)) {
                 viewerTrackingManager.untrackViewer(playerId);
                 continue;
             }
