@@ -187,7 +187,7 @@ public class AdminStackerHandler implements Listener {
     private void saveRemoteStackChanges(Player player, RemoteAdminStackerHolder holder) {
         SpawnerStorage storage = plugin.getSpawnerStorage();
         if (!(storage instanceof SpawnerDatabaseHandler dbHandler)) {
-            messageService.sendMessage(player, "database_error");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 

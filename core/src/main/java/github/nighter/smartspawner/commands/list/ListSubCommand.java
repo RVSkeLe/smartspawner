@@ -756,7 +756,7 @@ public class ListSubCommand extends BaseSubCommand {
         // For remote servers, query async
         SpawnerDatabaseHandler dbHandler = getDbHandler();
         if (dbHandler == null) {
-            messageService.sendMessage(player, "database_error");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 

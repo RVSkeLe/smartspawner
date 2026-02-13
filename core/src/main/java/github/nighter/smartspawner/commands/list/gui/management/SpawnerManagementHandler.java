@@ -226,7 +226,7 @@ public class SpawnerManagementHandler implements Listener {
         // Open the admin stacker UI for remote spawner
         SpawnerDatabaseHandler dbHandler = getDbHandler();
         if (dbHandler == null) {
-            messageService.sendMessage(player, "database_error");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 
@@ -248,7 +248,7 @@ public class SpawnerManagementHandler implements Listener {
                                             String worldName, int listPage) {
         SpawnerDatabaseHandler dbHandler = getDbHandler();
         if (dbHandler == null) {
-            messageService.sendMessage(player, "database_error");
+            messageService.sendMessage(player, "action_failed");
             return;
         }
 
