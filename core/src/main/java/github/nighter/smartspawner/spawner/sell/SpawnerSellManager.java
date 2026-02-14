@@ -149,13 +149,17 @@ public class SpawnerSellManager {
 
                 // Update GUI viewers
                 spawnerGuiViewManager.updateSpawnerMenuViewers(spawner);
-                player.closeInventory();
+                // Note: Don't close inventory here - let the confirmation GUI handler reopen the previous GUI
+                // player.closeInventory();
 
                 // Send success message
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("amount", plugin.getLanguageManager().formatNumber(sellResult.getItemsSold()));
                 placeholders.put("price", plugin.getLanguageManager().formatNumber(amount));
                 messageService.sendMessage(player, "sell_success", placeholders);
+
+                // Play UI button click sound
+                player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
                 // Mark spawner as modified for saving
                 plugin.getSpawnerManager().markSpawnerModified(spawner.getSpawnerId());

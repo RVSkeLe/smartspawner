@@ -164,6 +164,46 @@ button_add:
     - '&#2cc483⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴅᴇᴍ ꜱᴛᴀᴄᴋ ʜɪɴᴢᴜᴢᴜꜰᴜᴇɢᴇɴ'
 
 # ---------------------------------------------------
+#            Verkaufsbestätigung GUI
+# ---------------------------------------------------
+gui_title_sell_confirm: '&#545454ᴠᴇʀᴋᴀᴜꜰ ʙᴇꜱᴛäᴛɪɢᴇɴ'
+
+button_sell_cancel:
+  name: '&#e74c3c✖ ᴀʙʙʀᴇᴄʜᴇɴ'
+  lore:
+    - ''
+    - '&#e74c3c⊳ &#ecf0f1ᴋʟɪᴄᴋᴇɴ ᴢᴜᴍ ᴀʙʙʀᴇᴄʜᴇɴ'
+
+button_sell_confirm:
+  name: '&#2ecc71✔ ᴠᴇʀᴋᴀᴜꜰ ʙᴇꜱᴛäᴛɪɢᴇɴ'
+  lore:
+    - ''
+    - '&#2ecc71◈ &#48e89bᴅᴜ ᴇʀʜäʟᴛꜱᴛ:'
+    - '  &#f8f8ff•  ɢᴇʟᴅ: &#2ecc71${total_sell_price}'
+    - ''
+    - '&#2ecc71⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴢᴜᴍ ʙᴇꜱᴛäᴛɪɢᴇɴ'
+
+button_sell_confirm_with_exp:
+  name: '&#2ecc71✔ ᴠᴇʀᴋᴀᴜꜰᴇɴ'
+  lore:
+    - ''
+    - '&#2ecc71◈ &#48e89bᴅᴜ ᴇʀʜäʟᴛꜱᴛ:'
+    - '  &#f8f8ff•  ɢᴇʟᴅ: &#2ecc71${total_sell_price}'
+    - '  &#f8f8ff•  xᴘ: &#2ecc71{current_exp}'
+    - ''
+    - '&#2ecc71⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴢᴜᴍ ʙᴇꜱᴛäᴛɪɢᴇɴ'
+
+button_sell_info:
+  name: '&#3498db{ᴇɴᴛɪᴛʏ} ꜱᴘᴀᴡɴᴇʀ'
+  lore:
+    - ''
+    - '&#3498db◈ &#ecf0f1ʟᴀɢᴇʀ ɪɴꜰᴏ:'
+    - '  &#bdc3c7•  ɢᴇɢᴇɴꜱᴛäɴᴅᴇ: &#3498db{current_items}'
+    - '  &#bdc3c7•  xᴘ: &#3498db{current_exp}'
+    - '  &#bdc3c7•  ᴡᴇʀᴛ: &#3498db${total_sell_price}'
+    - ''
+
+# ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
 gui_title_storage: '&#545454ꜱᴘᴀᴡɴᴇʀ ʟᴀɢᴇʀ - [{current_page}/{total_pages}]'

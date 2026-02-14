@@ -158,9 +158,15 @@ public class SpawnerMenuAction implements Listener {
                     messageService.sendMessage(player, "no_permission");
                     return true;
                 }
-                // Collect EXP and sell items in storage
-                handleExpBottleClick(player, spawner, true);
-                handleSellAllItems(player, spawner);
+                // Check if there are items to sell
+                if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+                    messageService.sendMessage(player, "no_items");
+                    return true;
+                }
+                // Open confirmation GUI with exp collection enabled
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner,
+                    github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI.PreviousGui.MAIN_MENU, true);
                 return true;
             case "sell_all":
                 if (isClickTooFrequent(player)) {
@@ -257,8 +263,17 @@ public class SpawnerMenuAction implements Listener {
             messageService.sendMessage(player, "no_permission");
             return;
         }
+
+        // Check if there are items to sell
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            messageService.sendMessage(player, "no_items");
+            return;
+        }
+
+        // Open confirmation GUI - from main menu, no exp collection
         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-        spawnerSellManager.sellAllItems(player, spawner);
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner,
+            github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI.PreviousGui.MAIN_MENU, false);
     }
 
     public void handleExpBottleClick(Player player, SpawnerData spawner, boolean isSell) {

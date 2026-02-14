@@ -192,8 +192,15 @@ public class SpawnerStorageAction implements Listener {
                     if (isClickTooFrequent(player)) {
                         return;
                     }
+                    // Check if there are items to sell
+                    if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+                        messageService.sendMessage(player, "no_items");
+                        return;
+                    }
+                    // Open confirmation GUI - from storage, no exp collection
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-                    spawnerSellManager.sellAllItems(player, spawner);
+                    plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner,
+                        github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI.PreviousGui.STORAGE, false);
                 }
                 break;
             case "return":

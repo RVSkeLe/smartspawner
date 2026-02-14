@@ -248,8 +248,16 @@ public class SpawnerMenuFormUI {
             messageService.sendMessage(player, "no_permission");
             return;
         }
-        plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
-        plugin.getSpawnerSellManager().sellAllItems(player, spawner);
+
+        // Check if there are items to sell
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            messageService.sendMessage(player, "no_items");
+            return;
+        }
+
+        // Open confirmation GUI with exp collection enabled for Bedrock players
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner,
+            github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI.PreviousGui.MAIN_MENU, true);
     }
 
     private void handleSellAll(Player player, SpawnerData spawner) {
@@ -257,7 +265,16 @@ public class SpawnerMenuFormUI {
             messageService.sendMessage(player, "no_permission");
             return;
         }
-        plugin.getSpawnerSellManager().sellAllItems(player, spawner);
+
+        // Check if there are items to sell
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            messageService.sendMessage(player, "no_items");
+            return;
+        }
+
+        // Open confirmation GUI without exp collection for Bedrock players
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner,
+            github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI.PreviousGui.MAIN_MENU, false);
     }
 
     private void handleExpCollection(Player player, SpawnerData spawner) {

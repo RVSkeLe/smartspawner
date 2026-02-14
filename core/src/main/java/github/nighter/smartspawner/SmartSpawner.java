@@ -34,6 +34,8 @@ import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewMan
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
 import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageAction;
+import github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmUI;
+import github.nighter.smartspawner.spawner.gui.sell.SpawnerSellConfirmListener;
 import github.nighter.smartspawner.spawner.interactions.click.SpawnerClickManager;
 import github.nighter.smartspawner.spawner.interactions.destroy.SpawnerBreakListener;
 import github.nighter.smartspawner.spawner.interactions.destroy.SpawnerExplosionListener;
@@ -100,6 +102,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerStorageUI spawnerStorageUI;
     private FilterConfigUI filterConfigUI;
     private SpawnerStackerUI spawnerStackerUI;
+    private SpawnerSellConfirmUI spawnerSellConfirmUI;
 
     // Core handlers
     private SpawnEggHandler spawnEggHandler;
@@ -111,6 +114,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerStackerHandler spawnerStackerHandler;
     private SpawnerStorageAction spawnerStorageAction;
     private SpawnerSellManager spawnerSellManager;
+    private SpawnerSellConfirmListener spawnerSellConfirmListener;
 
     // Core managers
     private SpawnerFileHandler spawnerFileHandler;
@@ -282,6 +286,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerStorageUI = new SpawnerStorageUI(this);
         this.filterConfigUI = new FilterConfigUI(this);
         this.spawnerMenuUI = new SpawnerMenuUI(this);
+        this.spawnerSellConfirmUI = new SpawnerSellConfirmUI(this);
         this.spawnerGuiViewManager = new SpawnerGuiViewManager(this);
         this.spawnerLootGenerator = new SpawnerLootGenerator(this);
         this.spawnerSellManager = new SpawnerSellManager(this);
@@ -401,6 +406,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         this.spawnerMenuAction = new SpawnerMenuAction(this);
         this.spawnerStackerHandler = new SpawnerStackerHandler(this);
         this.spawnerStorageAction = new SpawnerStorageAction(this);
+        this.spawnerSellConfirmListener = new SpawnerSellConfirmListener(this);
     }
 
     private void initializeListeners() {
@@ -441,7 +447,8 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         pm.registerEvents(adminStackerHandler, this);
         pm.registerEvents(serverSelectionHandler, this);
         pm.registerEvents(pricesGUI, this);
-        
+        pm.registerEvents(spawnerSellConfirmListener, this);
+
         // Register logging listener
         if (spawnerAuditListener != null) {
             pm.registerEvents(spawnerAuditListener, this);
