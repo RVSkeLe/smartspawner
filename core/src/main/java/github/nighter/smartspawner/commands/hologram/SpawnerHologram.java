@@ -5,16 +5,15 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.ColorUtil;
 import github.nighter.smartspawner.language.LanguageManager;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
-import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -84,6 +83,11 @@ public class SpawnerHologram {
                     td.setDefaultBackground(false);
                     td.setTransformation(new Transformation(TRANSLATION, ROTATION, SCALE, ROTATION));
                     td.setSeeThrough(plugin.getConfig().getBoolean("hologram.see_through", false));
+                    // Set background transparency based on config
+                    boolean transparentBg = plugin.getConfig().getBoolean("hologram.transparent_background", false);
+                    if (transparentBg) {
+                        td.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+                    }
                     // Add custom name for identification
                     td.setCustomName(uniqueIdentifier);
                     td.setCustomNameVisible(false);

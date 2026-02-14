@@ -194,7 +194,8 @@ hologram:
   # Display Settings
   alignment: CENTER     # Text alignment (CENTER, LEFT, or RIGHT)
   shadowed_text: true   # Apply shadow effect to text
-  see_through: false    # Text visible through blocks
+  see_through: false    # Hologram visible through blocks
+  transparent_background: false  # Make background fully transparent
 
 # Particle effect toggles for visual feedback
 particle:
