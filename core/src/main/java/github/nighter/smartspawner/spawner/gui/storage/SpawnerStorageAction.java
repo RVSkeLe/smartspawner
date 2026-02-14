@@ -654,6 +654,12 @@ public class SpawnerStorageAction implements Listener {
             spawner.clearInteracted();
         }
 
+        // If skip_main_gui is enabled, just close the storage GUI instead
+        if (plugin.getGuiLayoutConfig().isSkipMainGui()) {
+            player.closeInventory();
+            return;
+        }
+
         // Check if player is Bedrock and use appropriate menu
         if (isBedrockPlayer(player)) {
             if (plugin.getSpawnerMenuFormUI() != null) {

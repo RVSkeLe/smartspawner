@@ -104,6 +104,16 @@ public class SpawnerManagementHandler implements Listener {
     }
 
     private void handleOpenSpawner(Player player, SpawnerData spawner) {
+        // Check if skip_main_gui is enabled
+        if (plugin.getGuiLayoutConfig().isSkipMainGui()) {
+            // Open storage GUI directly
+            org.bukkit.inventory.Inventory storageInventory = plugin.getSpawnerStorageUI()
+                    .createStorageInventory(spawner, 1, -1);
+            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
+            player.openInventory(storageInventory);
+            return;
+        }
+
         // Check if player is Bedrock and use appropriate menu
         if (isBedrockPlayer(player)) {
             if (plugin.getSpawnerMenuFormUI() != null) {

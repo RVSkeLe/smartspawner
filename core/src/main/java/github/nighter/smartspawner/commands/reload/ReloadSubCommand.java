@@ -61,8 +61,18 @@ public class ReloadSubCommand extends BaseSubCommand {
             plugin.getSpawnerSettingsConfig().reload();
             plugin.getSpawnerManager().reloadSpawnerDropsAndConfigs();
             plugin.getLanguageManager().reloadLanguages();
+
+            // Reload GUI layout config FIRST (before MenuUI and ClickManager)
+            plugin.getGuiLayoutConfig().loadLayout();
+
+            // Then reload MenuUI and ClickManager (which depend on GUI layout)
             plugin.getSpawnerMenuUI().loadConfig();
             
+            // Reload cached config values in click manager
+            if (plugin.getSpawnerClickManager() != null) {
+                plugin.getSpawnerClickManager().loadConfig();
+            }
+
             // Recheck timer placeholders after language reload to detect GUI configuration changes
             plugin.getSpawnerGuiViewManager().recheckTimerPlaceholders();
 

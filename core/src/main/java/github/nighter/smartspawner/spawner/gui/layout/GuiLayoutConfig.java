@@ -17,6 +17,7 @@ public class GuiLayoutConfig {
     private static final String GUI_LAYOUTS_DIR = "gui_layouts";
     private static final String STORAGE_GUI_FILE = "storage_gui.yml";
     private static final String MAIN_GUI_FILE = "main_gui.yml";
+    private static final String GUI_CONFIG_FILE = "gui_config.yml";
     private static final String DEFAULT_LAYOUT = "default";
     private static final int MIN_SLOT = 1;
     private static final int MAX_SLOT = 9;
@@ -31,6 +32,8 @@ public class GuiLayoutConfig {
     private GuiLayout currentStorageLayout;
     @Getter
     private GuiLayout currentMainLayout;
+    @Getter
+    private boolean skipMainGui;
 
     public GuiLayoutConfig(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -46,6 +49,9 @@ public class GuiLayoutConfig {
         // Check and update layout files before loading
         layoutUpdater.checkAndUpdateLayouts();
         
+        // Load GUI config settings
+        loadGuiConfig();
+
         this.currentStorageLayout = loadCurrentStorageLayout();
         this.currentMainLayout = loadCurrentMainLayout();
     }
@@ -93,8 +99,42 @@ public class GuiLayoutConfig {
                     }
                 }
             }
+
+            // Save GUI config file (shared across all layouts)
+            File guiConfigFile = new File(layoutsDir, GUI_CONFIG_FILE);
+            String guiConfigResourcePath = GUI_LAYOUTS_DIR + "/" + GUI_CONFIG_FILE;
+
+            if (!guiConfigFile.exists()) {
+                try {
+                    plugin.saveResource(guiConfigResourcePath, false);
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.WARNING,
+                            "Failed to auto-save GUI config file: " + e.getMessage(), e);
+                }
+            }
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to auto-save layout files", e);
+        }
+    }
+
+    private void loadGuiConfig() {
+        File guiConfigFile = new File(layoutsDir, GUI_CONFIG_FILE);
+
+        if (!guiConfigFile.exists()) {
+            plugin.getLogger().warning("GUI config file not found, using defaults");
+            this.skipMainGui = false;
+            return;
+        }
+
+        try {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(guiConfigFile);
+            this.skipMainGui = config.getBoolean("skip_main_gui", false);
+
+            plugin.getLogger().info("Loaded GUI config - Skip Main GUI: " + skipMainGui);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Failed to load GUI config, using defaults: " + e.getMessage(), e);
+            this.skipMainGui = false;
         }
     }
 
