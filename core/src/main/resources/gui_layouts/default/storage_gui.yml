@@ -39,7 +39,7 @@ buttons:
   # Take all items button
   take_all:
     slot: 6
-    material: CHEST
+    material: BUNDLE
     enabled: true
 
   drop_page:

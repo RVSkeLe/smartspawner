@@ -59,7 +59,7 @@ public class ItemSpawnerSettingsConfig {
         try {
             InputStream inputStream = plugin.getResource("item_spawners_settings.yml");
             if (inputStream == null) {
-                plugin.getLogger().warning("Could not find item_spawners_settings.yml in plugin resources");
+                plugin.debug("Could not find item_spawners_settings.yml in plugin resources");
                 return;
             }
             
@@ -73,7 +73,7 @@ public class ItemSpawnerSettingsConfig {
                 }
             }
             
-            plugin.getLogger().info("Created default item_spawners_settings.yml configuration");
+            plugin.debug("Created default item_spawners_settings.yml configuration");
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to create default item_spawners_settings.yml: " + e.getMessage());
         }

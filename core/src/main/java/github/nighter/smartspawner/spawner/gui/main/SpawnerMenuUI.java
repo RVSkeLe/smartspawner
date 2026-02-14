@@ -39,6 +39,10 @@ public class SpawnerMenuUI {
     private String lootItemFormat;
     private String emptyLootMessage;
 
+    // Cached materials from layout config (for performance)
+    private Material cachedStorageMaterial = Material.CHEST;
+    private Material cachedExpMaterial = Material.EXPERIENCE_BOTTLE;
+
     // Cache for GUI items - cleared when spawner data changes
     // Using ConcurrentHashMap for thread-safety with Folia's async scheduler
     private final Map<String, ItemStack> itemCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -55,6 +59,14 @@ public class SpawnerMenuUI {
         clearCache();
         this.lootItemFormat = languageManager.getGuiItemName(LOOT_ITEM_FORMAT_KEY, EMPTY_PLACEHOLDERS);
         this.emptyLootMessage = languageManager.getGuiItemName(EMPTY_LOOT_MESSAGE_KEY, EMPTY_PLACEHOLDERS);
+
+        // Cache materials from layout config for performance
+        GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
+        GuiButton storageButton = layout.getButton("storage");
+        GuiButton expButton = layout.getButton("exp");
+
+        this.cachedStorageMaterial = storageButton != null ? storageButton.getMaterial() : Material.CHEST;
+        this.cachedExpMaterial = expButton != null ? expButton.getMaterial() : Material.EXPERIENCE_BOTTLE;
     }
 
     public void clearCache() {
@@ -171,8 +183,8 @@ public class SpawnerMenuUI {
             return cachedItem.clone();
         }
 
-        // Not in cache, create new item
-        ItemStack chestItem = new ItemStack(Material.CHEST);
+        // Use cached material for performance (no layout lookup needed)
+        ItemStack chestItem = new ItemStack(cachedStorageMaterial);
         ItemMeta chestMeta = chestItem.getItemMeta();
         if (chestMeta == null) return chestItem;
 
@@ -216,6 +228,11 @@ public class SpawnerMenuUI {
         List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders("spawner_storage_item.lore", placeholders);
         chestMeta.setLore(lore);
         chestItem.setItemMeta(chestMeta);
+
+        // Hide tooltip for BUNDLE material (prevents showing bundle contents)
+        if (cachedStorageMaterial == Material.BUNDLE) {
+            VersionInitializer.hideTooltip(chestItem);
+        }
 
         // Cache the result
         itemCache.put(cacheKey, chestItem.clone());
@@ -308,7 +325,7 @@ public class SpawnerMenuUI {
     public ItemStack createSpawnerInfoItem(Player player, SpawnerData spawner) {
         // Get layout configuration first for cache key calculation
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
-        GuiButton spawnerInfoButton = layout.getButton("spawner_info");
+        GuiButton spawnerInfoButton = getSpawnerInfoButton(layout, player);
 
         // Get important data upfront
         EntityType entityType = spawner.getEntityType();
@@ -492,8 +509,8 @@ public class SpawnerMenuUI {
             return cachedItem.clone();
         }
 
-        // Not in cache, create the ItemStack
-        ItemStack expItem = new ItemStack(Material.EXPERIENCE_BOTTLE);
+        // Use cached material for performance (no layout lookup needed)
+        ItemStack expItem = new ItemStack(cachedExpMaterial);
         ItemMeta expMeta = expItem.getItemMeta();
         if (expMeta == null) return expItem;
 
@@ -515,6 +532,11 @@ public class SpawnerMenuUI {
         expMeta.setLore(loreExp);
 
         expItem.setItemMeta(expMeta);
+
+        // Hide tooltip for BUNDLE material (prevents showing bundle contents)
+        if (cachedExpMaterial == Material.BUNDLE) {
+            VersionInitializer.hideTooltip(expItem);
+        }
 
         // Cache the result
         itemCache.put(cacheKey, expItem.clone());

@@ -337,6 +337,12 @@ public class SpawnerStorageUI {
             }
             item.setItemMeta(meta);
         }
+
+        // Hide tooltip for BUNDLE material (prevents showing bundle contents)
+        if (material == Material.BUNDLE) {
+            github.nighter.smartspawner.nms.VersionInitializer.hideTooltip(item);
+        }
+
         return item;
     }
 
