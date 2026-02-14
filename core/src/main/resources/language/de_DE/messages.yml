@@ -60,6 +60,10 @@ exp_collected_with_mending:
 # ------------------------------------------------------
 #            Spawner - Storage GUI Interactions
 # ------------------------------------------------------
+click_too_fast:
+  action_bar: "&#ff5252ᴅᴜ ᴋʟɪᴄᴋꜱᴛ ᴢᴜ ꜱᴄʜɴᴇʟʟ! ʙɪᴛᴛᴇ ʟᴀɴɢꜱᴀᴍᴇʀ."
+  sound: block.note_block.bass
+
 inventory_full:
   message: "&#ff5252ɪɴᴠᴇɴᴛᴀʀ ᴠᴏʟʟ!"
   sound: block.note_block.pling
@@ -172,9 +176,9 @@ natural_spawner_break_blocked:
 # ------------------------------------------------------
 #              Sell Integration Messages
 # ------------------------------------------------------
-sale_failed:
+sell_failed:
   message: "&#ff5252ᴠᴇʀᴋᴀᴜꜰ ꜰᴇʜʟɢᴇꜱᴄʜʟᴀɢᴇɴ! ʙɪᴛᴛᴇ ᴠᴇʀꜱᴜᴄʜᴇ ᴇꜱ ᴇʀɴᴇᴜᴛ."
-  sound: entity.item.break
+  sound: block.note_block.pling
 
 no_items:
   message: "&#ff5252ᴋᴇɪɴᴇ ɪᴛᴇᴍꜱ ᴢᴜᴍ ᴠᴇʀᴋᴀᴜꜰᴇɴ"

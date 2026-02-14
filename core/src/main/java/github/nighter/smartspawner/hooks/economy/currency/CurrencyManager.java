@@ -144,6 +144,34 @@ public class CurrencyManager {
         return false;
     }
 
+    public void withdraw(double amount, OfflinePlayer player) {
+        if (!currencyAvailable) {
+            plugin.getLogger().warning("Currency not available for withdraw operation.");
+            return;
+        }
+
+        if (configuredCurrencyType.equalsIgnoreCase("VAULT")) {
+            if (vaultEconomy == null) {
+                plugin.getLogger().warning("Vault economy is not initialized.");
+                return;
+            }
+            vaultEconomy.withdrawPlayer(player, amount).transactionSuccess();
+            return;
+        }
+
+        if (configuredCurrencyType.equalsIgnoreCase("COINSENGINE")) {
+            if (coinsEngineCurrency == null) {
+                plugin.getLogger().warning("CoinsEngine currency is not initialized.");
+                return;
+            }
+
+            CoinsEngineAPI.removeBalance(player.getUniqueId(), coinsEngineCurrency, amount);
+            return;
+        }
+
+        plugin.getLogger().warning("Unsupported currency type during withdraw: " + configuredCurrencyType);
+    }
+
     public void reload() {
         // Clean up existing connections
         cleanup();

@@ -120,7 +120,7 @@ public class SpawnerSellManager {
                     if(event.isCancelled()) return;
                     if(event.getMoneyAmount() >= 0) amount = event.getMoneyAmount();
                 }
-                boolean depositSuccess = plugin.getItemPriceManager()
+                boolean depositSuccess = plugin.getItemPriceManager().getCurrencyManager()
                         .deposit(amount, player);
 
                 if (!depositSuccess) {
@@ -136,6 +136,8 @@ public class SpawnerSellManager {
                     plugin.getLogger().warning("Critical: Could not remove all items after depositing money for player " + 
                         player.getName() + " at spawner " + spawner.getSpawnerId() + ". Possible exploit detected.");
                     // Note: Money has already been deposited, so we can't easily roll back without complex transaction handling
+                    plugin.getItemPriceManager().getCurrencyManager().withdraw(amount, player);
+                    messageService.sendMessage(player, "sell_failed");
                 }
 
                 // Update spawner state

@@ -394,15 +394,6 @@ public class ItemPriceManager {
         };
     }
 
-    public boolean deposit(double amount, OfflinePlayer player) {
-        if (!economyEnabled || currencyManager == null) {
-            plugin.getLogger().warning("Economy is not enabled or currency manager is not initialized.");
-            return false;
-        }
-
-        return currencyManager.deposit(amount, player);
-    }
-
     private void saveConfig() {
         if (!economyEnabled) return;
 

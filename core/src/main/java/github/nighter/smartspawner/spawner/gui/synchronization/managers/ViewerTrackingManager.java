@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.gui.synchronization.managers;
 
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -54,7 +55,14 @@ public class ViewerTrackingManager {
     private final Map<UUID, ViewerInfo> playerToSpawnerMap = new ConcurrentHashMap<>();
     private final Map<String, Set<UUID>> spawnerToPlayersMap = new ConcurrentHashMap<>();
 
+    /**
+     * -- GETTER --
+     *  Gets all main menu viewers.
+     *
+     * @return Map of player UUIDs to their viewer info
+     */
     // Track main menu viewers separately for timer updates
+    @Getter
     private final Map<UUID, ViewerInfo> mainMenuViewers = new ConcurrentHashMap<>();
     private final Map<String, Set<UUID>> spawnerToMainMenuViewers = new ConcurrentHashMap<>();
 
@@ -175,15 +183,6 @@ public class ViewerTrackingManager {
      */
     public ViewerInfo getViewerInfo(UUID playerId) {
         return playerToSpawnerMap.get(playerId);
-    }
-
-    /**
-     * Gets all main menu viewers.
-     *
-     * @return Map of player UUIDs to their viewer info
-     */
-    public Map<UUID, ViewerInfo> getMainMenuViewers() {
-        return mainMenuViewers;
     }
 
     /**
