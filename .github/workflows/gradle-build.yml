@@ -39,7 +39,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v2
@@ -50,6 +49,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          add-job-summary: 'on-failure'
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
