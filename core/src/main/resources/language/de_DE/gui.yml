@@ -178,16 +178,16 @@ button_sell_confirm:
   name: '&#2ecc71✔ ᴠᴇʀᴋᴀᴜꜰ ʙᴇꜱᴛäᴛɪɢᴇɴ'
   lore:
     - ''
-    - '&#2ecc71◈ &#48e89bᴅᴜ ᴇʀʜäʟᴛꜱᴛ:'
+    - '&#2ecc71◈ &#48e89bᴇʀʜäʟᴛꜱᴛ:'
     - '  &#f8f8ff•  ɢᴇʟᴅ: &#2ecc71${total_sell_price}'
     - ''
     - '&#2ecc71⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴢᴜᴍ ʙᴇꜱᴛäᴛɪɢᴇɴ'
 
 button_sell_confirm_with_exp:
-  name: '&#2ecc71✔ ᴠᴇʀᴋᴀᴜꜰᴇɴ'
+  name: '&#2ecc71✔ ᴠᴇʀᴋᴀᴜꜰᴇɴ & xᴘ ꜱᴀᴍᴍᴇʟɴ'
   lore:
     - ''
-    - '&#2ecc71◈ &#48e89bᴅᴜ ᴇʀʜäʟᴛꜱᴛ:'
+    - '&#2ecc71◈ &#48e89bᴇʀʜäʟᴛꜱᴛ:'
     - '  &#f8f8ff•  ɢᴇʟᴅ: &#2ecc71${total_sell_price}'
     - '  &#f8f8ff•  xᴘ: &#2ecc71{current_exp}'
     - ''
