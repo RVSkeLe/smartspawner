@@ -181,9 +181,10 @@ public class WorldEventHandler implements Listener {
             logger.info("Loaded " + loadedCount + " pending spawners for world: " + worldName);
 
             // Restart hoppers for the spawners in this world
-            if (plugin.getHopperHandler() != null) {
-                plugin.getHopperHandler().restartAllHoppers();
-            }
+            // TODO: What?
+//            if (plugin.getHopperHandler() != null) {
+//                plugin.getHopperHandler().restartAllHoppers();
+//            }
         }
     }
 

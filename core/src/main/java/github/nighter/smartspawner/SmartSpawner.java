@@ -20,7 +20,7 @@ import github.nighter.smartspawner.spawner.natural.NaturalSpawnerListener;
 import github.nighter.smartspawner.utils.TimeFormatter;
 import github.nighter.smartspawner.hooks.economy.ItemPriceManager;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.SpawnerProvider;
-import github.nighter.smartspawner.extras.HopperHandler;
+import github.nighter.smartspawner.extras.HopperService;
 import github.nighter.smartspawner.hooks.IntegrationManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.migration.SpawnerDataMigration;
@@ -121,7 +121,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private SpawnerStorage spawnerStorage;
     private DatabaseManager databaseManager;
     private SpawnerManager spawnerManager;
-    private HopperHandler hopperHandler;
+    private HopperService hopperService;
     private SpawnerLocationLockManager spawnerLocationLockManager;
 
     // Event handlers and utilities
@@ -418,13 +418,13 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     public void setUpHopperHandler() {
-        if (this.hopperHandler != null) {
-            this.hopperHandler.cleanup();
-            this.hopperHandler = null;
+        if (this.hopperService != null) {
+            this.hopperService.cleanup();
+            this.hopperService = null;
         }
         
         if (getConfig().getBoolean("hopper.enabled", false)) {
-            this.hopperHandler = new HopperHandler(this);
+            this.hopperService = new HopperService(this);
         }
     }
 
@@ -567,7 +567,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private void cleanupResources() {
         if (rangeChecker != null) rangeChecker.cleanup();
         if (spawnerGuiViewManager != null) spawnerGuiViewManager.cleanup();
-        if (hopperHandler != null) hopperHandler.cleanup();
+        if (hopperService != null) hopperService.cleanup();
         if (spawnerClickManager != null) spawnerClickManager.cleanup();
         if (spawnerStackerHandler != null) spawnerStackerHandler.cleanupAll();
         if (spawnerStorageUI != null) spawnerStorageUI.cleanup();

@@ -2,7 +2,7 @@ package github.nighter.smartspawner.spawner.interactions.destroy;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerPlayerBreakEvent;
-import github.nighter.smartspawner.extras.HopperHandler;
+import github.nighter.smartspawner.extras.HopperService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.hooks.protections.CheckBreakBlock;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
@@ -34,7 +34,7 @@ public class SpawnerBreakListener implements Listener {
     private final SmartSpawner plugin;
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
-    private final HopperHandler hopperHandler;
+    private final HopperService hopperService;
     private final SpawnerItemFactory spawnerItemFactory;
     private final SpawnerFileHandler spawnerFileHandler;
     private final SpawnerLocationLockManager locationLockManager;
@@ -43,7 +43,7 @@ public class SpawnerBreakListener implements Listener {
         this.plugin = plugin;
         this.messageService = plugin.getMessageService();
         this.spawnerManager = plugin.getSpawnerManager();
-        this.hopperHandler = plugin.getHopperHandler();
+        this.hopperService = plugin.getHopperService();
         this.spawnerItemFactory = plugin.getSpawnerItemFactory();
         this.spawnerFileHandler = plugin.getSpawnerFileHandler();
         this.locationLockManager = plugin.getSpawnerLocationLockManager();
@@ -98,7 +98,7 @@ public class SpawnerBreakListener implements Listener {
         }
 
         event.setCancelled(true);
-        cleanupAssociatedHopper(block);
+        hopperService.cleanupAssociatedHopper(block);
     }
 
     private void handleSmartSpawnerBreak(Block block, SpawnerData spawner, Player player) {
@@ -320,13 +320,6 @@ public class SpawnerBreakListener implements Listener {
         // Remove location lock to prevent memory leak
         Location location = block.getLocation();
         locationLockManager.removeLock(location);
-    }
-
-    private void cleanupAssociatedHopper(Block block) {
-        Block blockBelow = block.getRelative(BlockFace.DOWN);
-        if (blockBelow.getType() == Material.HOPPER && hopperHandler != null) {
-            hopperHandler.stopHopperTask(blockBelow.getLocation());
-        }
     }
 
     private boolean isValidTool(ItemStack tool) {
