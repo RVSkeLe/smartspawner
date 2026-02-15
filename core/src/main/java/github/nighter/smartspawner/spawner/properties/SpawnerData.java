@@ -25,7 +25,7 @@ public class SpawnerData {
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
-    
+
     // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
     private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
@@ -65,7 +65,7 @@ public class SpawnerData {
     private EntityType entityType;
     @Getter @Setter
     private EntityLootConfig lootConfig;
-    
+
     // Item spawner support - stores the material being spawned for item spawners
     @Getter @Setter
     private Material spawnedItemMaterial;
@@ -115,7 +115,7 @@ public class SpawnerData {
     // Sort preference for spawner storage
     @Getter @Setter
     private Material preferredSortItem;
-    
+
     // CRITICAL: Pre-generated loot storage for better UX - access must be synchronized via lootGenerationLock
     private volatile List<ItemStack> preGeneratedItems;
     private volatile int preGeneratedExperience;
@@ -174,7 +174,7 @@ public class SpawnerData {
         this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
         this.cachedSpawnDelay = (this.spawnDelay + 20L) * 50L; // Add 1 second buffer for GUI display and convert tick to ms
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
-        
+
         // Load loot config based on spawner type
         if (isItemSpawner() && spawnedItemMaterial != null) {
             this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
@@ -493,7 +493,10 @@ public class SpawnerData {
 
     public void updateLastInteractedPlayer(String playerName) {
         this.lastInteractedPlayer = playerName;
-        markInteracted();
+        // Prevent concurrent modification during spawn events to avoid hologram desync
+        if (System.currentTimeMillis() - lastSpawnTime < 50) {
+            markInteracted();
+        }
     }
 
     /**
@@ -509,7 +512,7 @@ public class SpawnerData {
      * @param priceCache Price cache from loot config
      */
     public void incrementSellValue(Map<VirtualInventory.ItemSignature, Long> itemsAdded,
-                                   Map<String, Double> priceCache) {
+            Map<String, Double> priceCache) {
         if (itemsAdded == null || itemsAdded.isEmpty()) {
             return;
         }
@@ -721,42 +724,42 @@ public class SpawnerData {
             inventoryLock.unlock();
         }
     }
-    
+
     public synchronized void storePreGeneratedLoot(List<ItemStack> items, int experience) {
         this.preGeneratedItems = items;
         this.preGeneratedExperience = experience;
     }
-    
+
     public synchronized List<ItemStack> getAndClearPreGeneratedItems() {
         List<ItemStack> items = preGeneratedItems;
         preGeneratedItems = null;
         return items;
     }
-    
+
     public synchronized int getAndClearPreGeneratedExperience() {
         int exp = preGeneratedExperience;
         preGeneratedExperience = 0;
         return exp;
     }
-    
+
     public synchronized boolean hasPreGeneratedLoot() {
         return (preGeneratedItems != null && !preGeneratedItems.isEmpty()) || preGeneratedExperience > 0;
     }
-    
+
     public synchronized void setPreGenerating(boolean generating) {
         this.isPreGenerating = generating;
     }
-    
+
     public synchronized boolean isPreGenerating() {
         return isPreGenerating;
     }
-    
+
     public synchronized void clearPreGeneratedLoot() {
         preGeneratedItems = null;
         preGeneratedExperience = 0;
         isPreGenerating = false;
     }
-    
+
     /**
      * Checks if this is an item spawner (spawns items instead of entities)
      * @return true if this spawner spawns items
