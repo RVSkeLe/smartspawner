@@ -109,11 +109,11 @@ public class SpawnerSellConfirmUI {
         // OPTIMIZATION: Get cached spawner type from placeholders
         if (placeholders.containsKey("spawnedItem")) {
             spawnerItem = SpawnerMobHeadTexture.getItemSpawnerHead(
-                    Material.valueOf(placeholders.get("spawnedItem")), player, metaModifier);
+                Material.valueOf(placeholders.get("spawnedItem")), player, metaModifier);
         } else {
             spawnerItem = SpawnerMobHeadTexture.getCustomHead(
-                    org.bukkit.entity.EntityType.valueOf(placeholders.get("entityType")),
-                    player, metaModifier);
+                org.bukkit.entity.EntityType.valueOf(placeholders.get("entityType")),
+                player, metaModifier);
         }
 
         if (spawnerItem.getType() == Material.SPAWNER) {

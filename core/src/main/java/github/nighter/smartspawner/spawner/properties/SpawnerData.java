@@ -512,7 +512,7 @@ public class SpawnerData {
      * @param priceCache Price cache from loot config
      */
     public void incrementSellValue(Map<VirtualInventory.ItemSignature, Long> itemsAdded,
-            Map<String, Double> priceCache) {
+                                   Map<String, Double> priceCache) {
         if (itemsAdded == null || itemsAdded.isEmpty()) {
             return;
         }

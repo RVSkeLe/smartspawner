@@ -77,8 +77,7 @@ public class SpawnerSellConfirmListener implements Listener {
         reopenPreviousGui(player, spawner, previousGui);
     }
 
-    private void handleConfirm(Player player, SpawnerData spawner, SpawnerSellConfirmUI.PreviousGui previousGui,
-            boolean collectExp) {
+    private void handleConfirm(Player player, SpawnerData spawner, SpawnerSellConfirmUI.PreviousGui previousGui, boolean collectExp) {
         // Collect exp if requested
         if (collectExp) {
             plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
@@ -121,7 +120,7 @@ public class SpawnerSellConfirmListener implements Listener {
 
     private boolean isBedrockPlayer(Player player) {
         if (plugin.getIntegrationManager() == null ||
-                plugin.getIntegrationManager().getFloodgateHook() == null) {
+            plugin.getIntegrationManager().getFloodgateHook() == null) {
             return false;
         }
         return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);

@@ -358,10 +358,10 @@ public class SpawnerStackerHandler implements Listener {
             if (plugin.getSpawnerActionLogger() != null) {
                 plugin.getSpawnerActionLogger().log(github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DESTACK_GUI, builder ->
                     builder.player(player.getName(), player.getUniqueId())
-                                .location(spawner.getSpawnerLocation())
-                                .entityType(spawner.getEntityType())
-                                .metadata("amount_removed", actualChange)
-                                .metadata("old_stack_size", currentSize)
+                        .location(spawner.getSpawnerLocation())
+                        .entityType(spawner.getEntityType())
+                        .metadata("amount_removed", actualChange)
+                        .metadata("old_stack_size", currentSize)
                         .metadata("new_stack_size", targetSize)
                 );
             }
@@ -954,8 +954,8 @@ public class SpawnerStackerHandler implements Listener {
             ItemStack item = contents[i];
             // Skip null items, non-spawners, vanilla spawners, or regular spawners
             if (item == null || item.getType() != Material.SPAWNER ||
-                    SpawnerTypeChecker.isVanillaSpawner(item) ||
-                    !SpawnerTypeChecker.isItemSpawner(item)) {
+                SpawnerTypeChecker.isVanillaSpawner(item) ||
+                !SpawnerTypeChecker.isItemSpawner(item)) {
                 continue;
             }
 
@@ -1041,8 +1041,8 @@ public class SpawnerStackerHandler implements Listener {
     }
 
     private boolean isBedrockPlayer(Player player) {
-        if (plugin.getIntegrationManager() == null ||
-                plugin.getIntegrationManager().getFloodgateHook() == null) {
+        if (plugin.getIntegrationManager() == null || 
+            plugin.getIntegrationManager().getFloodgateHook() == null) {
             return false;
         }
         return plugin.getIntegrationManager().getFloodgateHook().isBedrockPlayer(player);
