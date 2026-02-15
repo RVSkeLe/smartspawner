@@ -57,14 +57,14 @@ public class SpawnerExplosionListener implements Listener {
                     if (protect) {
                         blocksToRemove.add(block);
                         plugin.getSpawnerGuiViewManager().closeAllViewersInventory(spawnerData);
-                        hopperService.cleanupAssociatedHopper(block);
+                        cleanupAssociatedHopper(block);
                         if (SpawnerExplodeEvent.getHandlerList().getRegisteredListeners().length != 0) {
                             e = new SpawnerExplodeEvent(null, spawnerData.getSpawnerLocation(), 1, false);
                         }
                     } else {
                         spawnerData.getSpawnerStop().set(true);
                         String spawnerId = spawnerData.getSpawnerId();
-                        hopperService.cleanupAssociatedHopper(block);
+                        cleanupAssociatedHopper(block);
                         if (SpawnerExplodeEvent.getHandlerList().getRegisteredListeners().length != 0) {
                             e = new SpawnerExplodeEvent(null, spawnerData.getSpawnerLocation(), 1, true);
                         }
@@ -113,5 +113,13 @@ public class SpawnerExplosionListener implements Listener {
             }
         }
         return false;
+    }
+
+    // TODO: deduplicate
+    public void cleanupAssociatedHopper(Block block) {
+        Block blockBelow = block.getRelative(BlockFace.DOWN);
+        if (blockBelow.getType() == Material.HOPPER && hopperService != null) {
+            hopperService.getRegistry().remove(new BlockPos(blockBelow.getLocation()));
+        }
     }
 }

@@ -67,15 +67,4 @@ public class HopperService {
         }
     }
 
-    /**
-     * Convenience method to remove hopper from registry if it's no longer present in the world.
-     * @param block Associated Spawner
-     */
-    public void cleanupAssociatedHopper(Block block) {
-        Block blockBelow = block.getRelative(BlockFace.DOWN);
-        if (blockBelow.getType() == Material.HOPPER) {
-            registry.remove(new BlockPos(blockBelow.getLocation()));
-        }
-    }
-
 }

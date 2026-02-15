@@ -10,6 +10,7 @@ import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.item.SpawnerItemFactory;
 import github.nighter.smartspawner.spawner.data.SpawnerFileHandler;
 import github.nighter.smartspawner.spawner.utils.SpawnerLocationLockManager;
+import github.nighter.smartspawner.utils.BlockPos;
 import lombok.Getter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -98,7 +99,7 @@ public class SpawnerBreakListener implements Listener {
         }
 
         event.setCancelled(true);
-        hopperService.cleanupAssociatedHopper(block);
+        cleanupAssociatedHopper(block);
     }
 
     private void handleSmartSpawnerBreak(Block block, SpawnerData spawner, Player player) {
@@ -401,6 +402,14 @@ public class SpawnerBreakListener implements Listener {
 
         } else {
             messageService.sendMessage(player, "spawner_break_required_tools");
+        }
+    }
+
+    // TODO: deduplicate
+    public void cleanupAssociatedHopper(Block block) {
+        Block blockBelow = block.getRelative(BlockFace.DOWN);
+        if (blockBelow.getType() == Material.HOPPER && hopperService != null) {
+            hopperService.getRegistry().remove(new BlockPos(blockBelow.getLocation()));
         }
     }
 }
