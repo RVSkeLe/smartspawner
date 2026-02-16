@@ -70,6 +70,9 @@ public class SpawnerSellConfirmListener implements Listener {
         // Play sound instead of sending message
         player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
+        // Clear interaction state
+        spawner.clearInteracted();
+
         // Reopen previous GUI
         reopenPreviousGui(player, spawner, previousGui);
     }
@@ -79,6 +82,9 @@ public class SpawnerSellConfirmListener implements Listener {
         if (collectExp) {
             plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
         }
+
+        // Clear interaction state
+        spawner.clearInteracted();
 
         // Trigger the actual sell operation
         plugin.getSpawnerSellManager().sellAllItems(player, spawner);

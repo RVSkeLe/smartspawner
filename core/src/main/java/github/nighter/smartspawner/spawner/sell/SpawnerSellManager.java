@@ -62,19 +62,16 @@ public class SpawnerSellManager {
                 // Get all items for processing
                 Map<VirtualInventory.ItemSignature, Long> consolidatedItems = virtualInv.getConsolidatedItems();
 
-                // Process selling async to avoid blocking main thread
-                Scheduler.runTaskAsync(() -> {
-                    // Use cached sell value for optimization
-                    SellResult result = calculateSellValue(consolidatedItems, spawner);
 
-                    // Store the result in SpawnerData for later access
-                    spawner.setLastSellResult(result);
+                // Process selling synchronously to prevent race conditions
+                // Use cached sell value for optimization
+                SellResult result = calculateSellValue(consolidatedItems, spawner);
 
-                    // Return to main thread for inventory operations and player interaction
-                    Scheduler.runLocationTask(spawner.getSpawnerLocation(), () -> {
-                        processSellResult(player, spawner, result);
-                    });
-                });
+                // Store the result in SpawnerData for later access
+                spawner.setLastSellResult(result);
+
+                // Process result immediately on main thread
+                processSellResult(player, spawner, result);
 
             } finally {
                 spawner.getSellLock().unlock();

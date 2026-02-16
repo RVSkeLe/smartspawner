@@ -42,6 +42,15 @@ public class SpawnerSellConfirmUI {
             return;
         }
 
+        // Check if there are items to sell before opening
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            plugin.getMessageService().sendMessage(player, "no_items");
+            return;
+        }
+
+        // Mark spawner as interacted to lock state during transaction
+        spawner.markInteracted();
+
         // Cache title - no placeholders needed
         String title = languageManager.getGuiTitle("gui_title_sell_confirm", null);
         Inventory gui = Bukkit.createInventory(new SpawnerSellConfirmHolder(spawner, previousGui, collectExp), GUI_SIZE, title);
