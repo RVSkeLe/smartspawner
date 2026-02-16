@@ -320,6 +320,13 @@ public class SpawnerStorageUI {
             ItemStack sellIndicator = createSellButton(spawner, sellButton.getMaterial());
             updates.put(sellButton.getSlot(), sellIndicator);
         }
+
+        // Add sell and exp button if shop integration is available and button is enabled
+        if (layout.hasButton("sell_and_exp")) {
+            GuiButton sellAndExpButton = layout.getButton("sell_and_exp");
+            ItemStack sellAndExpIndicator = createSellAndExpButton(spawner, sellAndExpButton.getMaterial());
+            updates.put(sellAndExpButton.getSlot(), sellAndExpIndicator);
+        }
     }
 
     private int calculateTotalPages(SpawnerData spawner) {
@@ -377,6 +384,21 @@ public class SpawnerStorageUI {
         
         String name = languageManager.getGuiItemName("sell_button.name", placeholders);
         List<String> lore = languageManager.getGuiItemLoreAsList("sell_button.lore");
+        return createButton(material, name, lore);
+    }
+
+    private ItemStack createSellAndExpButton(SpawnerData spawner, Material material) {
+        // Create placeholders for total sell price
+        Map<String, String> placeholders = new HashMap<>();
+        // Check if sell value needs recalculation before displaying
+        if (spawner.isSellValueDirty()) {
+            spawner.recalculateSellValue();
+        }
+        double totalSellPrice = spawner.getAccumulatedSellValue();
+        placeholders.put("total_sell_price", languageManager.formatNumber(totalSellPrice));
+
+        String name = languageManager.getGuiItemName("sell_and_exp_button.name", placeholders);
+        List<String> lore = languageManager.getGuiItemLoreAsList("sell_and_exp_button.lore");
         return createButton(material, name, lore);
     }
 

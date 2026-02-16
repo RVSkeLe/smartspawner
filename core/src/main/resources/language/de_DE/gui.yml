@@ -243,6 +243,11 @@ sell_button:
   lore:
     - '&a⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴀʟʟᴇ ɪᴛᴇᴍꜱ ᴢᴜ ᴠᴇʀᴋᴀᴜꜰᴇɴ'
 
+sell_and_exp_button:
+  name: '&aᴠᴇʀᴋᴀᴜꜰᴇɴ & ᴇxᴘ: +${total_sell_price}'
+  lore:
+    - '&a⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ɪᴛᴇᴍꜱ ᴢᴜ ᴠᴇʀᴋᴀᴜꜰᴇɴ ᴜɴᴅ ᴇxᴘ ᴢᴜ ꜱᴀᴍᴍᴇʟɴ'
+
 return_button:
   name: '&#ff5252ᴢᴜʀᴜᴇᴄᴋ ᴢᴜᴍ ʜᴀᴜᴘᴛᴍᴇɴᴜᴇ'
   lore:

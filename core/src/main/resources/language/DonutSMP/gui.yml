@@ -162,6 +162,11 @@ sell_button:
   lore:
     - '&fClick to sell all mob drops'
 
+sell_and_exp_button:
+  name: '&aꜱᴇʟʟ & ᴇxᴘ: +${total_sell_price}'
+  lore:
+    - '&fClick to sell items and collect experience'
+
 return_button:
   name: '&#FC0000ʀᴇᴛᴜʀɴ'
   lore:

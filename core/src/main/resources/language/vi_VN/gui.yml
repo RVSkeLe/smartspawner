@@ -239,9 +239,14 @@ navigation_button_next:
     - '&#2cc483⊳ &#f8f8ffɴʜấᴘ để đếɴ ᴛʀᴀɴɢ &#37eb9a{target_page}'
 
 sell_button:
-  name: '&aʙáɴ ᴠậᴛ ᴘʜẩᴍ: +${total_sell_price}'
+  name: '&aʙáɴ ᴠậᴛ ᴘʜẩᴍ: +{total_sell_price}$'
   lore:
     - '&a⊳ &#f8f8ffɴʜấᴘ để ʙáɴ ᴛấᴛ ᴄả ᴠậᴛ ᴘʜẩᴍ'
+
+sell_and_exp_button:
+  name: '&aʙáɴ & ɴʜậɴ ᴇxᴘ: +{total_sell_price}đ'
+  lore:
+    - '&a⊳ &#f8f8ffɴʜấᴘ để ʙáɴ ᴠậᴛ ᴘʜẩᴍ ᴠà ɴʜậɴ ᴋɪɴʜ ɴɢʜɪệᴍ'
 
 return_button:
   name: '&#ff5252ᴛʀở ᴠề ᴍᴇɴᴜ ᴄʜíɴʜ'

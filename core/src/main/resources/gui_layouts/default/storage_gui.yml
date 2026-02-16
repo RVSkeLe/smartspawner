@@ -22,14 +22,22 @@ buttons:
     material: HOPPER
     enabled: true
 
-  # Sell or Return button (handled by legacy button type logic)
+  # Sell button (only sell items, no XP collection)
   sell_all:
     slot: 5
     material: GOLD_INGOT
     enabled: true
     condition: "shop_integration"
   
-  # Return to main menu button (fallback for slot 5 when no shop integration)
+  # Sell and collect XP button (sell items + collect XP)
+  # Note: Can only be enabled if sell_all is disabled, as they occupy the same slot
+  sell_and_exp:
+    slot: 5
+    material: GOLD_INGOT
+    enabled: false
+    condition: "shop_integration"
+
+  # Return to main menu button (fallback when no shop integration)
   return:
     slot: 5
     material: RED_STAINED_GLASS_PANE

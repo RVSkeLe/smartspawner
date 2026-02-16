@@ -153,6 +153,25 @@ public class SpawnerStorageAction implements Listener {
                     plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, false);
                 }
                 break;
+            case "sell_and_exp":
+                if (plugin.hasSellIntegration()) {
+                    if (!player.hasPermission("smartspawner.sellall")) {
+                        messageService.sendMessage(player, "no_permission");
+                        return;
+                    }
+                    if (isControlClickTooFrequent(player)) {
+                        return;
+                    }
+                    // Check if there are items to sell
+                    if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+                        messageService.sendMessage(player, "no_items");
+                        return;
+                    }
+                    // Open confirmation GUI - from storage, WITH exp collection
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+                    plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, true);
+                }
+                break;
             case "return":
                 openMainMenu(player, spawner);
                 break;
