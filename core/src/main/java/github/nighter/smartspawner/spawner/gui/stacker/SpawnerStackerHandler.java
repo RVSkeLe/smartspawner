@@ -335,23 +335,34 @@ public class SpawnerStackerHandler implements Listener {
                 return;
             }
 
+            // Check inventory capacity before removing from stack
+            int inventoryCapacity = countAvailableSpawnerCapacity(player, spawner);
+            if (inventoryCapacity <= 0) {
+                messageService.sendMessage(player, "inventory_full");
+                return;
+            }
+            actualChange = Math.min(actualChange, inventoryCapacity);
+            targetSize = currentSize - actualChange;
+
+            // Create final variables for lambda
+            final int finalActualChange = actualChange;
+            final int finalTargetSize = targetSize;
+
             if(SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
-                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), targetSize, actualChange);
+                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), finalTargetSize, finalActualChange);
                 Bukkit.getPluginManager().callEvent(e);
                 if (e.isCancelled()) return;
             }
 
-            // Update stack size and give spawners to player
-            // setStackSize internally uses dataLock for thread safety
-            spawner.setStackSize(targetSize);
-
-            // Mark spawner as modified for database save
+            // Update stack size first (after capacity check, so it's safe)
+            spawner.setStackSize(finalTargetSize);
             spawnerManager.markSpawnerModified(spawner.getSpawnerId());
 
+            // Give spawners to player after decreasing stack
             if (spawner.isItemSpawner()) {
-                giveItemSpawnersToPlayer(player, actualChange, spawner.getSpawnedItemMaterial());
+                giveItemSpawnersToPlayer(player, finalActualChange, spawner.getSpawnedItemMaterial());
             } else {
-                giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+                giveSpawnersToPlayer(player, finalActualChange, spawner.getEntityType());
             }
 
             // Log destack operation
@@ -360,9 +371,9 @@ public class SpawnerStackerHandler implements Listener {
                     builder.player(player.getName(), player.getUniqueId())
                         .location(spawner.getSpawnerLocation())
                         .entityType(spawner.getEntityType())
-                        .metadata("amount_removed", actualChange)
+                        .metadata("amount_removed", finalActualChange)
                         .metadata("old_stack_size", currentSize)
-                        .metadata("new_stack_size", targetSize)
+                        .metadata("new_stack_size", finalTargetSize)
                 );
             }
 
@@ -487,15 +498,7 @@ public class SpawnerStackerHandler implements Listener {
                 return;
         }
 
-        // Update stack size first and ensure data is marked as modified
-        spawner.setStackSize(currentSize + actualChange);
-        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
-
-        if (spawner.isInteracted()) {
-            player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
-            return;
-        }
-
+        // Remove spawners from inventory first (same order as handleStackIncrease)
         if (spawner.isItemSpawner()) {
             removeValidItemSpawnersFromInventory(player, spawner.getSpawnedItemMaterial(), actualChange,
                     scanResult.spawnerSlots);
@@ -503,6 +506,10 @@ public class SpawnerStackerHandler implements Listener {
             removeValidSpawnersFromInventory(player, spawner.getEntityType(), actualChange,
                     scanResult.spawnerSlots);
         }
+
+        // Update stack size after removing from inventory
+        spawner.setStackSize(currentSize + actualChange);
+        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
 
         player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
     }
@@ -534,34 +541,38 @@ public class SpawnerStackerHandler implements Listener {
             actualChange = Math.min(actualChange, inventoryCapacity);
             int newStackSize = currentSize - actualChange;
 
+            // Create final variables for lambda
+            final int finalActualChange = actualChange;
+            final int finalNewStackSize = newStackSize;
+
             if (SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
-                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), newStackSize,
-                        actualChange);
+                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), finalNewStackSize,
+                        finalActualChange);
                 Bukkit.getPluginManager().callEvent(e);
                 if (e.isCancelled())
                     return;
             }
 
-            spawner.setStackSize(newStackSize);
+            // Update stack size first (after capacity check, so it's safe)
+            spawner.setStackSize(finalNewStackSize);
             spawnerManager.markSpawnerModified(spawner.getSpawnerId());
 
+            // Give spawners to player after decreasing stack
             if (spawner.isItemSpawner()) {
-                giveItemSpawnersToPlayer(player, actualChange, spawner.getSpawnedItemMaterial());
+                giveItemSpawnersToPlayer(player, finalActualChange, spawner.getSpawnedItemMaterial());
             } else {
-                giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+                giveSpawnersToPlayer(player, finalActualChange, spawner.getEntityType());
             }
 
             if (plugin.getSpawnerActionLogger() != null) {
-                final int logActualChange = actualChange;
-                final int logNewStackSize = newStackSize;
                 plugin.getSpawnerActionLogger().log(
                         github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DESTACK_GUI,
                         builder -> builder.player(player.getName(), player.getUniqueId())
                                 .location(spawner.getSpawnerLocation())
                                 .entityType(spawner.getEntityType())
-                                .metadata("amount_removed", logActualChange)
+                                .metadata("amount_removed", finalActualChange)
                                 .metadata("old_stack_size", currentSize)
-                                .metadata("new_stack_size", logNewStackSize));
+                                .metadata("new_stack_size", finalNewStackSize));
             }
 
             player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
