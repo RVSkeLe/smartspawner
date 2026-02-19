@@ -145,6 +145,12 @@ button_sell_info:
 # ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
+# Available placeholders for gui_title_storage:
+# {current_page}     - Current page number
+# {total_pages}      - Total number of pages
+# {entity}           - Formatted entity name (e.g., "Zombie")
+# {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# {amount}           - Number of spawners stacked
 gui_title_storage: "&#545454ꜱᴘᴀᴡɴᴇʀ ꜱᴛᴏʀᴀɢᴇ - [{current_page}/{total_pages}]"
 
 navigation_button_previous:

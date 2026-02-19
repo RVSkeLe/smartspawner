@@ -1,11 +1,10 @@
-package github.nighter.smartspawner.spawner.gui.storage.ui;
+package github.nighter.smartspawner.spawner.gui.storage;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
-import github.nighter.smartspawner.spawner.gui.storage.StoragePageHolder;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
@@ -150,22 +149,47 @@ public class SpawnerStorageUI {
     /**
      * Gets the formatted title for storage GUI with page information.
      * Uses cached title format pattern for performance.
-     * 
+     * Optimized to only compute entity placeholders if they're used in the title.
+     *
+     * @param spawner The spawner data
      * @param page Current page number
      * @param totalPages Total number of pages
      * @return Formatted title with page information
      */
-    private String getStorageTitle(int page, int totalPages) {
+    private String getStorageTitle(SpawnerData spawner, int page, int totalPages) {
         // Cache the title format pattern (not the filled title)
         if (cachedStorageTitleFormat == null) {
             cachedStorageTitleFormat = languageManager.getGuiTitle("gui_title_storage");
         }
         
-        // Use placeholder replacement pattern similar to PricesGUI
-        return languageManager.getGuiTitle("gui_title_storage", Map.of(
-            "current_page", String.valueOf(page),
-            "total_pages", String.valueOf(totalPages)
-        ));
+        // Build base placeholders (always present)
+        Map<String, String> placeholders = new HashMap<>(4);
+        placeholders.put("current_page", String.valueOf(page));
+        placeholders.put("total_pages", String.valueOf(totalPages));
+
+        // OPTIMIZATION: Only compute entity placeholders if they exist in the title format
+        if (cachedStorageTitleFormat.contains("{entity}") || cachedStorageTitleFormat.contains("{ᴇɴᴛɪᴛʏ}")) {
+            String entityName;
+            if (spawner.isItemSpawner()) {
+                entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+            } else {
+                entityName = languageManager.getFormattedMobName(spawner.getEntityType());
+            }
+
+            if (cachedStorageTitleFormat.contains("{entity}")) {
+                placeholders.put("entity", entityName);
+            }
+            if (cachedStorageTitleFormat.contains("{ᴇɴᴛɪᴛʏ}")) {
+                placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityName));
+            }
+        }
+
+        // OPTIMIZATION: Only compute amount if it exists in the title format
+        if (cachedStorageTitleFormat.contains("{amount}")) {
+            placeholders.put("amount", String.valueOf(spawner.getStackSize()));
+        }
+
+        return languageManager.getGuiTitle("gui_title_storage", placeholders);
     }
 
     public Inventory createStorageInventory(SpawnerData spawner, int page, int totalPages) {
@@ -181,7 +205,7 @@ public class SpawnerStorageUI {
         Inventory pageInv = Bukkit.createInventory(
                 new StoragePageHolder(spawner, page, totalPages),
                 INVENTORY_SIZE,
-                getStorageTitle(page, totalPages)
+                getStorageTitle(spawner, page, totalPages)
         );
 
         // Populate the inventory

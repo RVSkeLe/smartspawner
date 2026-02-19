@@ -63,7 +63,6 @@ spawner_storage_item:
 # Entity Information:
 # {entity}           - Formatted entity name (e.g., "Zombie")
 # {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
-# {entity_type}      - Raw entity type (e.g., "ZOMBIE")
 #
 # Stack Information:
 # {stack_size}       - Number of spawners stacked at this location
@@ -225,6 +224,12 @@ button_sell_info:
 # ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
+# Available placeholders for gui_title_storage:
+# {current_page}     - Current page number
+# {total_pages}      - Total number of pages
+# {entity}           - Formatted entity name (e.g., "Zombie")
+# {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# {amount}           - Number of spawners stacked
 
 gui_title_storage: '&#545454ᴋʜᴏ ꜱᴘᴀᴡɴᴇʀ - [{current_page}/{total_pages}]'
 

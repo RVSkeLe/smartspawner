@@ -404,7 +404,7 @@ public class SpawnerMenuUI {
 
         // Define all available placeholders
         Set<String> availablePlaceholders = Set.of(
-            "entity", "ᴇɴᴛɪᴛʏ", "entity_type", "stack_size", "range", "delay", "min_mobs", "max_mobs",
+            "entity", "ᴇɴᴛɪᴛʏ", "stack_size", "range", "delay", "min_mobs", "max_mobs",
             "current_items", "max_items", "percent_storage_decimal", "percent_storage_rounded",
             "current_exp", "max_exp", "raw_current_exp", "raw_max_exp", "percent_exp_decimal", "percent_exp_rounded",
             "total_sell_price", "time"
@@ -433,9 +433,6 @@ public class SpawnerMenuUI {
             if (usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
                 placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityName));
             }
-        }
-        if (usedPlaceholders.contains("entity_type")) {
-            placeholders.put("entity_type", entityType.toString());
         }
 
         // Stack information
