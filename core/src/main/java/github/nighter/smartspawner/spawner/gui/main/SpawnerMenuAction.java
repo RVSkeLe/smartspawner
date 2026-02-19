@@ -127,9 +127,9 @@ public class SpawnerMenuAction implements Listener {
         }
 
         var button = buttonOpt.get();
-        String action = button.getAction(clickType);
-        
-        if (action == null) {
+        String action = button.getActionWithFallback(clickType);
+
+        if (action == null || action.isEmpty()) {
             return false;
         }
 

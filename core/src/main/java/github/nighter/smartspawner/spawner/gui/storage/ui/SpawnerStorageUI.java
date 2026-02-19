@@ -73,60 +73,78 @@ public class SpawnerStorageUI {
     }
 
     private void initializeStaticButtons() {
-        GuiLayout layout = layoutConfig.getCurrentLayout();
+        GuiLayout layout = layoutConfig.getCurrentStorageLayout();
 
-        // Create return button
-        GuiButton returnButton = layout.getButton("return");
-        if (returnButton != null) {
-            staticButtons.put("return", createButton(
-                    returnButton.getMaterial(),
-                    languageManager.getGuiItemName("return_button.name"),
-                    languageManager.getGuiItemLoreAsList("return_button.lore")
-            ));
+        // OPTIMIZATION: Iterate through all buttons and create static buttons by action
+        for (GuiButton button : layout.getAllButtons().values()) {
+            String action = getAnyActionFromButton(button);
+            if (action == null) continue;
+
+            switch (action) {
+                case "return_main":
+                    staticButtons.put("return", createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("return_button.name"),
+                            languageManager.getGuiItemLoreAsList("return_button.lore")
+                    ));
+                    break;
+                case "take_all":
+                    staticButtons.put("takeAll", createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("take_all_button.name"),
+                            languageManager.getGuiItemLoreAsList("take_all_button.lore")
+                    ));
+                    break;
+                case "sort_items":
+                    // Sort button is created dynamically (material stored for later)
+                    break;
+                case "drop_page":
+                    staticButtons.put("dropPage", createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("drop_page_button.name"),
+                            languageManager.getGuiItemLoreAsList("drop_page_button.lore")
+                    ));
+                    break;
+                case "open_filter":
+                    staticButtons.put("itemFilter", createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("item_filter_button.name"),
+                            languageManager.getGuiItemLoreAsList("item_filter_button.lore")
+                    ));
+                    break;
+                // Note: Sell buttons are created dynamically to show current total sell price
+            }
+        }
+    }
+
+    /**
+     * Get any action from button - checks click, left_click, right_click
+     * OPTIMIZATION: Return first found action
+     */
+    private String getAnyActionFromButton(GuiButton button) {
+        // Check click type actions in priority order
+        Map<String, String> actions = button.getActions();
+        if (actions == null || actions.isEmpty()) {
+            return null;
         }
 
-        // Create take all button
-        GuiButton takeAllButton = layout.getButton("take_all");
-        if (takeAllButton != null) {
-            staticButtons.put("takeAll", createButton(
-                    takeAllButton.getMaterial(),
-                    languageManager.getGuiItemName("take_all_button.name"),
-                    languageManager.getGuiItemLoreAsList("take_all_button.lore")
-            ));
+        // Check in priority: click -> left_click -> right_click
+        String action = actions.get("click");
+        if (action != null && !action.isEmpty()) {
+            return action;
         }
 
-        // Create sort items button
-        GuiButton sortItemsButton = layout.getButton("sort_items");
-        if (sortItemsButton != null) {
-            staticButtons.put("sortItems", createButton(
-                    sortItemsButton.getMaterial(),
-                    languageManager.getGuiItemName("sort_items_button.name"),
-                    languageManager.getGuiItemLoreAsList("sort_items_button.lore")
-            ));
+        action = actions.get("left_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
         }
 
-        // Create drop page button
-        GuiButton dropPageButton = layout.getButton("drop_page");
-        if (dropPageButton != null) {
-            staticButtons.put("dropPage", createButton(
-                    dropPageButton.getMaterial(),
-                    languageManager.getGuiItemName("drop_page_button.name"),
-                    languageManager.getGuiItemLoreAsList("drop_page_button.lore")
-            ));
+        action = actions.get("right_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
         }
 
-        // Create item filter button
-        GuiButton itemFilterButton = layout.getButton("item_filter");
-        if (itemFilterButton != null) {
-            staticButtons.put("itemFilter", createButton(
-                    itemFilterButton.getMaterial(),
-                    languageManager.getGuiItemName("item_filter_button.name"),
-                    languageManager.getGuiItemLoreAsList("item_filter_button.lore")
-            ));
-        }
-
-        // Note: Sell button is created dynamically in updateDynamicButtons() 
-        // to show the current total sell price
+        return null;
     }
 
     /**
@@ -269,69 +287,86 @@ public class SpawnerStorageUI {
             totalPages = calculateTotalPages(spawner);
         }
 
-        GuiLayout layout = layoutConfig.getCurrentLayout();
+        GuiLayout layout = layoutConfig.getCurrentStorageLayout();
 
-        // Add previous page button if not on first page and button is enabled
-        if (page > 1 && layout.hasButton("previous_page")) {
-            GuiButton prevButton = layout.getButton("previous_page");
-            String cacheKey = "prev-" + (page - 1);
-            ItemStack prevItem = navigationButtonCache.computeIfAbsent(
-                    cacheKey, k -> createNavigationButton("previous", page - 1, prevButton.getMaterial()));
-            updates.put(prevButton.getSlot(), prevItem);
+        // OPTIMIZATION: Iterate through all buttons and add items based on action
+        for (GuiButton button : layout.getAllButtons().values()) {
+            if (!button.isEnabled()) {
+                continue;
+            }
+
+            // Check condition if present
+            if (button.hasCondition() && !evaluateButtonCondition(button)) {
+                continue;
+            }
+
+            String action = getAnyActionFromButton(button);
+            if (action == null) continue;
+
+            ItemStack item = null;
+
+            switch (action) {
+                case "previous_page":
+                    if (page > 1) {
+                        String cacheKey = "prev-" + (page - 1);
+                        item = navigationButtonCache.computeIfAbsent(
+                                cacheKey, k -> createNavigationButton("previous", page - 1, button.getMaterial()));
+                    }
+                    break;
+                case "next_page":
+                    if (page < totalPages) {
+                        String cacheKey = "next-" + (page + 1);
+                        item = navigationButtonCache.computeIfAbsent(
+                                cacheKey, k -> createNavigationButton("next", page + 1, button.getMaterial()));
+                    }
+                    break;
+                case "take_all":
+                    item = staticButtons.get("takeAll");
+                    break;
+                case "sort_items":
+                    item = createSortButton(spawner, button.getMaterial());
+                    break;
+                case "drop_page":
+                    item = staticButtons.get("dropPage");
+                    break;
+                case "open_filter":
+                    item = staticButtons.get("itemFilter");
+                    break;
+                case "return_main":
+                    item = staticButtons.get("return");
+                    break;
+                case "sell_all":
+                    item = createSellButton(spawner, button.getMaterial());
+                    break;
+                case "sell_and_exp":
+                    item = createSellAndExpButton(spawner, button.getMaterial());
+                    break;
+            }
+
+            if (item != null) {
+                updates.put(button.getSlot(), item);
+            }
+        }
+    }
+
+    /**
+     * Evaluate button condition based on server state
+     * OPTIMIZATION: Centralized condition evaluation for storage GUI
+     */
+    private boolean evaluateButtonCondition(GuiButton button) {
+        String condition = button.getCondition();
+        if (condition == null || condition.isEmpty()) {
+            return true;
         }
 
-        // Add next page button if not on last page and button is enabled
-        if (page < totalPages && layout.hasButton("next_page")) {
-            GuiButton nextButton = layout.getButton("next_page");
-            String cacheKey = "next-" + (page + 1);
-            ItemStack nextItem = navigationButtonCache.computeIfAbsent(
-                    cacheKey, k -> createNavigationButton("next", page + 1, nextButton.getMaterial()));
-            updates.put(nextButton.getSlot(), nextItem);
-        }
-
-        // Add take all button if enabled
-        if (layout.hasButton("take_all")) {
-            GuiButton takeAllButton = layout.getButton("take_all");
-            updates.put(takeAllButton.getSlot(), staticButtons.get("takeAll"));
-        }
-
-        // Add sort items button if enabled
-        if (layout.hasButton("sort_items")) {
-            GuiButton sortItemsButton = layout.getButton("sort_items");
-            ItemStack sortButton = createSortButton(spawner, sortItemsButton.getMaterial());
-            updates.put(sortItemsButton.getSlot(), sortButton);
-        }
-
-        // Add drop page button if enabled
-        if (layout.hasButton("drop_page")) {
-            GuiButton dropPageButton = layout.getButton("drop_page");
-            updates.put(dropPageButton.getSlot(), staticButtons.get("dropPage"));
-        }
-
-        // Add item filter button if enabled
-        if (layout.hasButton("item_filter")) {
-            GuiButton itemFilterButton = layout.getButton("item_filter");
-            updates.put(itemFilterButton.getSlot(), staticButtons.get("itemFilter"));
-        }
-
-        // Add return button if enabled
-        if (layout.hasButton("return")) {
-            GuiButton returnButton = layout.getButton("return");
-            updates.put(returnButton.getSlot(), staticButtons.get("return"));
-        }
-
-        // Add sell button if shop integration is available and button is enabled
-        if (layout.hasButton("sell_all")) {
-            GuiButton sellButton = layout.getButton("sell_all");
-            ItemStack sellIndicator = createSellButton(spawner, sellButton.getMaterial());
-            updates.put(sellButton.getSlot(), sellIndicator);
-        }
-
-        // Add sell and exp button if shop integration is available and button is enabled
-        if (layout.hasButton("sell_and_exp")) {
-            GuiButton sellAndExpButton = layout.getButton("sell_and_exp");
-            ItemStack sellAndExpIndicator = createSellAndExpButton(spawner, sellAndExpButton.getMaterial());
-            updates.put(sellAndExpButton.getSlot(), sellAndExpIndicator);
+        switch (condition) {
+            case "shop_integration":
+                return plugin.hasSellIntegration();
+            case "no_shop_integration":
+                return !plugin.hasSellIntegration();
+            default:
+                plugin.getLogger().warning("Unknown button condition: " + condition);
+                return true;
         }
     }
 

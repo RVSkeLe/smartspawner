@@ -11,18 +11,21 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 
 public class GuiLayoutConfig {
     private static final String GUI_LAYOUTS_DIR = "gui_layouts";
     private static final String STORAGE_GUI_FILE = "storage_gui.yml";
     private static final String MAIN_GUI_FILE = "main_gui.yml";
+    private static final String SELL_CONFIRM_GUI_FILE = "sell_confirm_gui.yml";
     private static final String GUI_CONFIG_FILE = "gui_config.yml";
     private static final String DEFAULT_LAYOUT = "default";
     private static final int MIN_SLOT = 1;
     private static final int MAX_SLOT = 9;
     private static final int SLOT_OFFSET = 44;
     private static final int MAIN_GUI_SIZE = 27;
+    private static final int SELL_CONFIRM_GUI_SIZE = 27;
 
     private final SmartSpawner plugin;
     private final File layoutsDir;
@@ -33,7 +36,11 @@ public class GuiLayoutConfig {
     @Getter
     private GuiLayout currentMainLayout;
     @Getter
+    private GuiLayout currentSellConfirmLayout;
+    @Getter
     private boolean skipMainGui;
+    @Getter
+    private boolean skipSellConfirmation;
 
     public GuiLayoutConfig(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -54,6 +61,7 @@ public class GuiLayoutConfig {
 
         this.currentStorageLayout = loadCurrentStorageLayout();
         this.currentMainLayout = loadCurrentMainLayout();
+        this.currentSellConfirmLayout = loadCurrentSellConfirmLayout();
     }
 
     private void initializeLayoutsDirectory() {
@@ -98,6 +106,19 @@ public class GuiLayoutConfig {
                                 "Failed to auto-save main layout resource for " + layoutName + ": " + e.getMessage(), e);
                     }
                 }
+
+                // Save sell confirm GUI layout
+                File sellConfirmFile = new File(layoutDir, SELL_CONFIRM_GUI_FILE);
+                String sellConfirmResourcePath = GUI_LAYOUTS_DIR + "/" + layoutName + "/" + SELL_CONFIRM_GUI_FILE;
+
+                if (!sellConfirmFile.exists()) {
+                    try {
+                        plugin.saveResource(sellConfirmResourcePath, false);
+                    } catch (Exception e) {
+                        plugin.getLogger().log(Level.WARNING,
+                                "Failed to auto-save sell confirm layout resource for " + layoutName + ": " + e.getMessage(), e);
+                    }
+                }
             }
 
             // Save GUI config file (shared across all layouts)
@@ -123,18 +144,22 @@ public class GuiLayoutConfig {
         if (!guiConfigFile.exists()) {
             plugin.getLogger().warning("GUI config file not found, using defaults");
             this.skipMainGui = false;
+            this.skipSellConfirmation = false;
             return;
         }
 
         try {
             FileConfiguration config = YamlConfiguration.loadConfiguration(guiConfigFile);
             this.skipMainGui = config.getBoolean("skip_main_gui", false);
+            this.skipSellConfirmation = config.getBoolean("skip_sell_confirmation", false);
 
-            plugin.getLogger().info("Loaded GUI config - Skip Main GUI: " + skipMainGui);
+            plugin.getLogger().info("Loaded GUI config - Skip Main GUI: " + skipMainGui +
+                    ", Skip Sell Confirmation: " + skipSellConfirmation);
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING,
                     "Failed to load GUI config, using defaults: " + e.getMessage(), e);
             this.skipMainGui = false;
+            this.skipSellConfirmation = false;
         }
     }
 
@@ -144,6 +169,10 @@ public class GuiLayoutConfig {
 
     private GuiLayout loadCurrentMainLayout() {
         return loadLayoutFromFile(MAIN_GUI_FILE, "main");
+    }
+
+    private GuiLayout loadCurrentSellConfirmLayout() {
+        return loadLayoutFromFile(SELL_CONFIRM_GUI_FILE, "sell_confirm");
     }
 
     private GuiLayout loadLayoutFromFile(String fileName, String layoutType) {
@@ -181,16 +210,36 @@ public class GuiLayoutConfig {
             FileConfiguration config = YamlConfiguration.loadConfiguration(file);
             GuiLayout layout = new GuiLayout();
 
-            if (!config.contains("buttons")) {
-                plugin.getLogger().warning("No buttons section found in GUI layout: " + file.getName());
+            // OPTIMIZATION: Read buttons directly from root (no "buttons:" wrapper)
+            // Support both old format (buttons.xxx) and new format (slot_X)
+            Set<String> buttonKeys = config.getKeys(false);
+
+            // DEBUG: Log what keys were found
+            plugin.getLogger().info("Loading " + layoutType + " layout from " + file.getName());
+            plugin.getLogger().info("Found keys: " + buttonKeys);
+
+            if (buttonKeys.isEmpty()) {
+                plugin.getLogger().warning("No buttons found in GUI layout: " + file.getName());
                 return layout;
             }
 
-            for (String buttonKey : config.getConfigurationSection("buttons").getKeys(false)) {
-                if (!loadButton(config, layout, buttonKey, layoutType)) {
+            int loadedButtons = 0;
+            for (String buttonKey : buttonKeys) {
+                // Skip non-button keys (like comments)
+                if (!buttonKey.startsWith("slot_")) {
+                    plugin.getLogger().info("Skipping non-slot key: " + buttonKey);
                     continue;
                 }
+
+                if (loadButton(config, layout, buttonKey, layoutType)) {
+                    loadedButtons++;
+                    plugin.getLogger().info("Loaded button: " + buttonKey);
+                } else {
+                    plugin.getLogger().warning("Failed to load button: " + buttonKey);
+                }
             }
+
+            plugin.getLogger().info("Loaded " + loadedButtons + " buttons for " + layoutType + " layout");
 
             return layout;
         } catch (Exception e) {
@@ -201,15 +250,21 @@ public class GuiLayoutConfig {
     }
 
     private boolean loadButton(FileConfiguration config, GuiLayout layout, String buttonKey, String layoutType) {
-        String path = "buttons." + buttonKey;
-
-        if (!config.getBoolean(path + ".enabled", true)) {
+        // OPTIMIZATION: Parse slot from button key (slot_11, slot_14_shop, etc.)
+        // Extract slot number from key (slot_11 -> 11, slot_14_shop -> 14)
+        int slot = parseSlotFromKey(buttonKey);
+        if (slot == -1) {
+            plugin.getLogger().warning("Invalid button key format: " + buttonKey + ". Expected format: slot_X or slot_X_name");
             return false;
         }
 
-        int slot = config.getInt(path + ".slot", -1);
-        String materialName = config.getString(path + ".material", "STONE");
-        String condition = config.getString(path + ".condition", null);
+        // Read button config directly from root (no "buttons." prefix)
+        if (!config.getBoolean(buttonKey + ".enabled", true)) {
+            return false;
+        }
+
+        String materialName = config.getString(buttonKey + ".material", "STONE");
+        String condition = config.getString(buttonKey + ".condition", null);
 
         // Validate slot based on layout type
         if (!isValidSlot(slot, layoutType)) {
@@ -227,21 +282,49 @@ public class GuiLayoutConfig {
         Material material = parseMaterial(materialName, buttonKey);
         int actualSlot = calculateActualSlot(slot, layoutType);
 
-        // Load actions
+        // OPTIMIZATION: Load actions directly from button config (no "actions:" wrapper)
+        // Support: click, left_click, right_click, shift_left_click, shift_right_click
         Map<String, String> actions = new HashMap<>();
-        ConfigurationSection actionsSection = config.getConfigurationSection(path + ".actions");
-        if (actionsSection != null && !actionsSection.getKeys(false).isEmpty()) {
-            for (String actionKey : actionsSection.getKeys(false)) {
-                String actionValue = actionsSection.getString(actionKey);
-                if (actionValue != null && !actionValue.equals("none")) {
-                    actions.put(actionKey, actionValue);
-                }
+
+        // Read all possible click types
+        String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
+        for (String clickType : clickTypes) {
+            String action = config.getString(buttonKey + "." + clickType);
+            if (action != null && !action.isEmpty() && !action.equals("none")) {
+                actions.put(clickType, action);
             }
         }
 
         GuiButton button = new GuiButton(buttonKey, actualSlot, material, true, condition, actions);
         layout.addButton(buttonKey, button);
         return true;
+    }
+
+    /**
+     * Parse slot number from button key
+     * OPTIMIZATION: Extract slot from key like "slot_11" -> 11 or "slot_14_shop" -> 14
+     * @param buttonKey The button key (e.g., "slot_11", "slot_14_shop")
+     * @return Slot number or -1 if invalid
+     */
+    private int parseSlotFromKey(String buttonKey) {
+        if (!buttonKey.startsWith("slot_")) {
+            return -1;
+        }
+
+        try {
+            // Remove "slot_" prefix
+            String slotPart = buttonKey.substring(5);
+
+            // Handle keys like "slot_14_shop" - extract just the number part
+            int underscoreIndex = slotPart.indexOf('_');
+            if (underscoreIndex > 0) {
+                slotPart = slotPart.substring(0, underscoreIndex);
+            }
+
+            return Integer.parseInt(slotPart);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private boolean isValidSlot(int slot, String layoutType) {
@@ -253,14 +336,21 @@ public class GuiLayoutConfig {
     }
 
     private int getMaxSlot(String layoutType) {
-        return "storage".equals(layoutType) ? MAX_SLOT : MAIN_GUI_SIZE;
+        if ("storage".equals(layoutType)) {
+            return MAX_SLOT;
+        } else if ("sell_confirm".equals(layoutType)) {
+            return SELL_CONFIRM_GUI_SIZE;
+        } else {
+            return MAIN_GUI_SIZE;
+        }
     }
 
     private int calculateActualSlot(int slot, String layoutType) {
         if ("storage".equals(layoutType)) {
             return SLOT_OFFSET + slot;
         } else {
-            return slot - 1; // Convert 1-based to 0-based indexing for main GUI
+            // Both main and sell_confirm use 1-based to 0-based conversion
+            return slot - 1;
         }
     }
 

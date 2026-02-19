@@ -4,6 +4,8 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.nms.VersionInitializer;
 import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
+import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
+import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -20,16 +22,25 @@ import java.util.function.Consumer;
 
 public class SpawnerSellConfirmUI {
     private static final int GUI_SIZE = 27;
-    private static final int SPAWNER_INFO_SLOT = 13;
-    private static final int CANCEL_SLOT = 10;
-    private static final int CONFIRM_SLOT = 16;
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
 
+    // Cached layout - loaded once for performance
+    private GuiLayout cachedLayout;
+
     public SpawnerSellConfirmUI(SmartSpawner plugin) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
+        loadLayout();
+    }
+
+    private void loadLayout() {
+        this.cachedLayout = plugin.getGuiLayoutConfig().getCurrentSellConfirmLayout();
+    }
+
+    public void reload() {
+        loadLayout();
     }
 
     public enum PreviousGui {
@@ -45,6 +56,27 @@ public class SpawnerSellConfirmUI {
         // Check if there are items to sell before opening
         if (spawner.getVirtualInventory().getUsedSlots() == 0) {
             plugin.getMessageService().sendMessage(player, "no_items");
+            return;
+        }
+
+        // OPTIMIZATION: Check if sell confirmation should be skipped
+        if (plugin.getGuiLayoutConfig().isSkipSellConfirmation()) {
+            // Skip confirmation - directly perform sell action
+            spawner.markInteracted();
+
+            // Collect exp if requested
+            if (collectExp) {
+                plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
+            }
+
+            // Clear interaction state
+            spawner.clearInteracted();
+
+            // Trigger the actual sell operation
+            plugin.getSpawnerSellManager().sellAllItems(player, spawner);
+
+            // Close current inventory if open
+            player.closeInventory();
             return;
         }
 
@@ -64,28 +96,58 @@ public class SpawnerSellConfirmUI {
         // OPTIMIZATION: Create placeholders once and reuse for all buttons
         Map<String, String> placeholders = createPlaceholders(spawner, collectExp);
 
-        // Add cancel button (RED_STAINED_GLASS_PANE) at slot 10
-        gui.setItem(CANCEL_SLOT, createCancelButton(placeholders));
+        // OPTIMIZATION: Use cached layout instead of querying every time
+        if (cachedLayout == null) {
+            plugin.getLogger().warning("Sell confirm layout not loaded, using empty GUI");
+            return;
+        }
 
-        // Add confirm button (LIME_STAINED_GLASS_PANE) at slot 16
-        gui.setItem(CONFIRM_SLOT, createConfirmButton(placeholders, collectExp));
+        // Iterate through all buttons in the layout
+        for (GuiButton button : cachedLayout.getAllButtons().values()) {
+            if (!button.isEnabled()) {
+                continue;
+            }
 
-        // Add spawner info in the center
-        gui.setItem(SPAWNER_INFO_SLOT, createSpawnerInfoButton(player, placeholders));
+            String action = button.getDefaultAction();
+            if (action == null) {
+                continue;
+            }
+
+            ItemStack buttonItem = null;
+
+            switch (action) {
+                case "cancel":
+                    buttonItem = createCancelButton(button.getMaterial(), placeholders);
+                    break;
+                case "confirm":
+                    buttonItem = createConfirmButton(button.getMaterial(), placeholders, collectExp);
+                    break;
+                case "info":
+                    buttonItem = createSpawnerInfoButton(player, placeholders);
+                    break;
+                default:
+                    plugin.getLogger().warning("Unknown action in sell confirm GUI: " + action);
+                    continue;
+            }
+
+            if (buttonItem != null) {
+                gui.setItem(button.getSlot(), buttonItem);
+            }
+        }
     }
 
-    private ItemStack createCancelButton(Map<String, String> placeholders) {
+    private ItemStack createCancelButton(Material material, Map<String, String> placeholders) {
         String name = languageManager.getGuiItemName("button_sell_cancel.name", placeholders);
         String[] lore = languageManager.getGuiItemLore("button_sell_cancel.lore", placeholders);
-        return createButton(Material.RED_STAINED_GLASS_PANE, name, lore);
+        return createButton(material, name, lore);
     }
 
-    private ItemStack createConfirmButton(Map<String, String> placeholders, boolean collectExp) {
+    private ItemStack createConfirmButton(Material material, Map<String, String> placeholders, boolean collectExp) {
         // Use different button key based on whether exp is collected
         String buttonKey = collectExp ? "button_sell_confirm_with_exp" : "button_sell_confirm";
         String name = languageManager.getGuiItemName(buttonKey + ".name", placeholders);
         String[] lore = languageManager.getGuiItemLore(buttonKey + ".lore", placeholders);
-        return createButton(Material.LIME_STAINED_GLASS_PANE, name, lore);
+        return createButton(material, name, lore);
     }
 
     private ItemStack createSpawnerInfoButton(Player player, Map<String, String> placeholders) {

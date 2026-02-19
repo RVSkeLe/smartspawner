@@ -27,6 +27,41 @@ public class GuiButton {
         return actions != null ? actions.get(clickType) : null;
     }
 
+    /**
+     * Get action for click type with fallback to "click" for any-click actions
+     * OPTIMIZATION: Check specific click type first, then fallback to "click"
+     * @param clickType The specific click type (e.g., "left_click", "right_click")
+     * @return The action string, or null if no action found
+     */
+    public String getActionWithFallback(String clickType) {
+        if (actions == null || actions.isEmpty()) {
+            return null;
+        }
+
+        // First check for specific click type action
+        String specificAction = actions.get(clickType);
+        if (specificAction != null && !specificAction.isEmpty()) {
+            return specificAction;
+        }
+
+        // Fallback to generic "click" action (matches any click)
+        return actions.get("click");
+    }
+
+    public String getDefaultAction() {
+        // OPTIMIZATION: Check "click" first as it's most common, then fallback to "default"
+        if (actions == null || actions.isEmpty()) {
+            return null;
+        }
+
+        String clickAction = actions.get("click");
+        if (clickAction != null && !clickAction.isEmpty()) {
+            return clickAction;
+        }
+
+        return actions.get("default");
+    }
+
     public boolean hasCondition() {
         return condition != null && !condition.isEmpty();
     }

@@ -98,24 +98,32 @@ public class SpawnerStorageAction implements Listener {
 
         // Handle control button clicks
         if (isControlSlot(slot)) {
-            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
+            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), event.getClick(), layout);
         }
     }
 
     private void handleControlSlotClick(Player player, int slot, StoragePageHolder holder,
-                                        SpawnerData spawner, Inventory inventory, GuiLayout layout) {
-        Optional<String> buttonTypeOpt = layout.getButtonTypeAtSlot(slot);
-        if (buttonTypeOpt.isEmpty()) {
+                                        SpawnerData spawner, Inventory inventory, org.bukkit.event.inventory.ClickType clickType, GuiLayout layout) {
+        // OPTIMIZATION: Get button and action with click type fallback
+        Optional<github.nighter.smartspawner.spawner.gui.layout.GuiButton> buttonOpt = layout.getButtonAtSlot(slot);
+        if (buttonOpt.isEmpty()) {
             return;
         }
 
-        String buttonType = buttonTypeOpt.get();
+        var button = buttonOpt.get();
+        String clickTypeString = getClickTypeString(clickType);
+        String action = button.getActionWithFallback(clickTypeString);
 
-        switch (buttonType) {
+        if (action == null || action.isEmpty()) {
+            return;
+        }
+
+        // OPTIMIZATION: Handle actions based on action value, not button name
+        switch (action) {
             case "sort_items":
                 handleSortItemsClick(player, spawner, inventory);
                 break;
-            case "item_filter":
+            case "open_filter":
                 openFilterConfig(player, spawner);
                 break;
             case "previous_page":
@@ -135,47 +143,70 @@ public class SpawnerStorageAction implements Listener {
                 handleDropPageItems(player, spawner, inventory);
                 break;
             case "sell_all":
-                if (plugin.hasSellIntegration()) {
-                    if (!player.hasPermission("smartspawner.sellall")) {
-                        messageService.sendMessage(player, "no_permission");
-                        return;
-                    }
-                    if (isControlClickTooFrequent(player)) {
-                        return;
-                    }
-                    // Check if there are items to sell
-                    if (spawner.getVirtualInventory().getUsedSlots() == 0) {
-                        messageService.sendMessage(player, "no_items");
-                        return;
-                    }
-                    // Open confirmation GUI - from storage, no exp collection
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-                    plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, false);
-                }
+                handleSellAction(player, spawner, false);
                 break;
             case "sell_and_exp":
-                if (plugin.hasSellIntegration()) {
-                    if (!player.hasPermission("smartspawner.sellall")) {
-                        messageService.sendMessage(player, "no_permission");
-                        return;
-                    }
-                    if (isControlClickTooFrequent(player)) {
-                        return;
-                    }
-                    // Check if there are items to sell
-                    if (spawner.getVirtualInventory().getUsedSlots() == 0) {
-                        messageService.sendMessage(player, "no_items");
-                        return;
-                    }
-                    // Open confirmation GUI - from storage, WITH exp collection
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-                    plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, true);
-                }
+                handleSellAction(player, spawner, true);
                 break;
-            case "return":
-                openMainMenu(player, spawner);
+            case "return_main":
+                handleReturnToMainMenu(player, spawner);
+                break;
+            default:
+                // Unknown action, log warning
+                plugin.getLogger().warning("Unknown storage action: " + action);
                 break;
         }
+    }
+
+    /**
+     * Convert Bukkit ClickType to string for action lookup
+     * OPTIMIZATION: Cached string values to avoid repeated string creation
+     */
+    private String getClickTypeString(org.bukkit.event.inventory.ClickType clickType) {
+        return switch (clickType) {
+            case LEFT -> "left_click";
+            case RIGHT -> "right_click";
+            case SHIFT_LEFT -> "shift_left_click";
+            case SHIFT_RIGHT -> "shift_right_click";
+            default -> "left_click";
+        };
+    }
+
+    /**
+     * Handle sell action with optional exp collection
+     * OPTIMIZATION: Extracted common sell logic to reduce code duplication
+     */
+    private void handleSellAction(Player player, SpawnerData spawner, boolean collectExp) {
+        if (!plugin.hasSellIntegration()) {
+            return;
+        }
+
+        if (!player.hasPermission("smartspawner.sellall")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        if (isControlClickTooFrequent(player)) {
+            return;
+        }
+
+        // Check if there are items to sell
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            messageService.sendMessage(player, "no_items");
+            return;
+        }
+
+        // Open confirmation GUI
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, collectExp);
+    }
+
+    /**
+     * Handle return to main menu action
+     */
+    private void handleReturnToMainMenu(Player player, SpawnerData spawner) {
+        player.closeInventory();
+        spawnerMenuUI.openSpawnerMenu(player, spawner, false);
     }
 
     private boolean isControlSlot(int slot) {
