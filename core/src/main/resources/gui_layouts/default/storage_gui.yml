@@ -6,14 +6,16 @@
 #   slot_X:                    # X = slot number (1-9)
 #     material: MATERIAL_NAME  # Material to display
 #     enabled: true/false      # Show/hide button
-#     condition: "condition"   # Optional: show only if condition met
 #     click: "action"          # Action for any click (left/right/shift)
 #     left_click: "action"     # Action for left click only (overrides click)
 #     right_click: "action"    # Action for right click only (overrides click)
+#     if:                      # Optional: conditional actions
+#       condition_name:
+#         click: "action"      # Actions when condition is met
 #
 # Conditions:
-#   shop_integration: Show only when shop integration is enabled
-#   no_shop_integration: Show only when shop integration is disabled
+#   sell_integration: When sell/shop integration is enabled
+#   no_sell_integration: When sell/shop integration is disabled
 #
 # Actions:
 #   previous_page: Go to previous page
@@ -25,9 +27,6 @@
 #   return_main: Return to main menu
 #   take_all: Take all items from current page
 #   drop_page: Drop all items from current page
-#
-# Multiple buttons can use same slot with different conditions
-# First matching condition will be displayed
 
 # Previous page button
 slot_1:
@@ -47,19 +46,16 @@ slot_4:
   enabled: true
   click: "open_filter"
 
-# Sell all button (with shop integration)
-slot_5_sell:
+# Multi-purpose button (sell with integration, return without)
+slot_5:
   material: GOLD_INGOT
   enabled: true
-  condition: "shop_integration"
-  click: "sell_all"
-
-# Return to main menu (without shop integration)
-slot_5_return:
-  material: RED_STAINED_GLASS_PANE
-  enabled: true
-  condition: "no_shop_integration"
-  click: "return_main"
+  if:
+    sell_integration:
+      click: "sell_all"
+    no_sell_integration:
+      material: RED_STAINED_GLASS_PANE
+      click: "return_main"
 
 # Take all items button
 slot_6:

@@ -6,23 +6,21 @@
 #   slot_X:                    # X = slot number (1-27)
 #     material: MATERIAL_NAME  # Material to display (use PLAYER_HEAD for spawner mob head)
 #     enabled: true/false      # Show/hide button
-#     condition: "condition"   # Optional: show only if condition met
+#     info_button: true/false  # Optional: Mark as spawner info button for timer updates
 #     click: "action"          # Action for any click (left/right/shift)
 #     left_click: "action"     # Action for left click only (overrides click)
 #     right_click: "action"    # Action for right click only (overrides click)
 #
 # Conditions:
-#   shop_integration: Show only when shop integration is enabled
-#   no_shop_integration: Show only when shop integration is disabled
+#   sell_integration: Show only when sell/shop integration is enabled
+#   no_sell_integration: Show only when sell/shop integration is disabled
 #
 # Actions:
 #   open_storage: Open storage GUI
 #   open_stacker: Open stacker GUI
 #   sell_and_exp: Sell all items and collect exp
 #   collect_exp: Collect exp only
-#
-# Multiple buttons can use same slot with different conditions
-# First matching condition will be displayed
+#   none: Display only, no action
 
 # Storage button
 slot_12:
@@ -30,19 +28,16 @@ slot_12:
   enabled: true
   click: "open_storage"
 
-# Spawner info with shop integration
-slot_14_shop:
+# Spawner info button (conditional actions)
+slot_14:
   material: PLAYER_HEAD
   enabled: true
-  condition: "shop_integration"
-  click: "sell_and_exp"
-
-# Spawner info without shop integration
-slot_14_no_shop:
-  material: PLAYER_HEAD
-  enabled: true
-  condition: "no_shop_integration"
-  click: "none"
+  info_button: true
+  if:
+    sell_integration:
+      click: "sell_and_exp"
+    no_sell_integration:
+      click: "none"
 
 # Experience bottle
 slot_16:

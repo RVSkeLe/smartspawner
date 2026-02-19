@@ -36,47 +36,33 @@ public class SlotCacheManager {
             return;
         }
 
-        // OPTIMIZATION: Find buttons by ACTION instead of name to support new slot-based format
+        // OPTIMIZATION: Find buttons by ACTION and INFO_BUTTON flag
         int storageSlot = -1;
         int expSlot = -1;
         int spawnerInfoSlot = -1;
-
-        boolean hasShopIntegration = plugin.hasSellIntegration();
 
         for (GuiButton button : layout.getAllButtons().values()) {
             if (!button.isEnabled()) {
                 continue;
             }
 
+            // Check for spawner info button first (marked with info_button: true)
+            if (button.isInfoButton()) {
+                spawnerInfoSlot = button.getSlot();
+                continue; // Found info button, continue to find others
+            }
+
             // Get any action from button
             String action = getAnyActionFromButton(button);
             if (action == null) continue;
 
-            // Find button slots by their actions
+            // Find other button slots by their actions
             switch (action) {
                 case "open_storage":
                     storageSlot = button.getSlot();
                     break;
                 case "collect_exp":
                     expSlot = button.getSlot();
-                    break;
-                case "open_stacker":
-                case "sell_and_exp":
-                case "none":
-                    // Spawner info button - check condition
-                    if (!button.hasCondition()) {
-                        // No condition = fallback button
-                        if (spawnerInfoSlot == -1) {
-                            spawnerInfoSlot = button.getSlot();
-                        }
-                    } else {
-                        // Check if condition matches
-                        String condition = button.getCondition();
-                        if (("shop_integration".equals(condition) && hasShopIntegration) ||
-                            ("no_shop_integration".equals(condition) && !hasShopIntegration)) {
-                            spawnerInfoSlot = button.getSlot();
-                        }
-                    }
                     break;
             }
         }

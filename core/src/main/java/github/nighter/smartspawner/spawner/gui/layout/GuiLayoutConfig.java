@@ -250,8 +250,7 @@ public class GuiLayoutConfig {
     }
 
     private boolean loadButton(FileConfiguration config, GuiLayout layout, String buttonKey, String layoutType) {
-        // OPTIMIZATION: Parse slot from button key (slot_11, slot_14_shop, etc.)
-        // Extract slot number from key (slot_11 -> 11, slot_14_shop -> 14)
+        // OPTIMIZATION: Parse slot from button key (slot_11, slot_14, etc.)
         int slot = parseSlotFromKey(buttonKey);
         if (slot == -1) {
             plugin.getLogger().warning("Invalid button key format: " + buttonKey + ". Expected format: slot_X or slot_X_name");
@@ -265,6 +264,7 @@ public class GuiLayoutConfig {
 
         String materialName = config.getString(buttonKey + ".material", "STONE");
         String condition = config.getString(buttonKey + ".condition", null);
+        boolean infoButton = config.getBoolean(buttonKey + ".info_button", false);
 
         // Validate slot based on layout type
         if (!isValidSlot(slot, layoutType)) {
@@ -274,7 +274,7 @@ public class GuiLayoutConfig {
             return false;
         }
 
-        // Check condition if present
+        // Check condition if present (OLD format)
         if (condition != null && !evaluateCondition(condition)) {
             return false;
         }
@@ -282,20 +282,48 @@ public class GuiLayoutConfig {
         Material material = parseMaterial(materialName, buttonKey);
         int actualSlot = calculateActualSlot(slot, layoutType);
 
-        // OPTIMIZATION: Load actions directly from button config (no "actions:" wrapper)
-        // Support: click, left_click, right_click, shift_left_click, shift_right_click
+        // OPTIMIZATION: Load actions with support for conditional "if" blocks
         Map<String, String> actions = new HashMap<>();
 
-        // Read all possible click types
-        String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
-        for (String clickType : clickTypes) {
-            String action = config.getString(buttonKey + "." + clickType);
-            if (action != null && !action.isEmpty() && !action.equals("none")) {
-                actions.put(clickType, action);
+        // Check for NEW "if" conditional format first
+        ConfigurationSection ifSection = config.getConfigurationSection(buttonKey + ".if");
+        if (ifSection != null) {
+            // NEW format: if: { sell_integration: { click: "action" }, no_sell_integration: { click: "action2" } }
+            for (String conditionKey : ifSection.getKeys(false)) {
+                if (evaluateCondition(conditionKey)) {
+                    // This condition matches, load its actions
+                    ConfigurationSection conditionActions = ifSection.getConfigurationSection(conditionKey);
+                    if (conditionActions != null) {
+                        // Load material override if present
+                        String conditionalMaterial = conditionActions.getString("material");
+                        if (conditionalMaterial != null) {
+                            material = parseMaterial(conditionalMaterial, buttonKey);
+                        }
+
+                        // Load all click actions from this condition
+                        String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
+                        for (String clickType : clickTypes) {
+                            String action = conditionActions.getString(clickType);
+                            if (action != null && !action.isEmpty() && !action.equals("none")) {
+                                actions.put(clickType, action);
+                            }
+                        }
+                    }
+                    break; // Only use first matching condition
+                }
+            }
+        } else {
+            // OLD format: Direct click actions at button level
+            String[] clickTypes = {"click", "left_click", "right_click", "shift_left_click", "shift_right_click"};
+            for (String clickType : clickTypes) {
+                String action = config.getString(buttonKey + "." + clickType);
+                if (action != null && !action.isEmpty() && !action.equals("none")) {
+                    actions.put(clickType, action);
+                }
             }
         }
 
-        GuiButton button = new GuiButton(buttonKey, actualSlot, material, true, condition, actions);
+        GuiButton button = new GuiButton(buttonKey, actualSlot, material, true, condition, actions, infoButton);
         layout.addButton(buttonKey, button);
         return true;
     }
@@ -356,9 +384,11 @@ public class GuiLayoutConfig {
 
     private boolean evaluateCondition(String condition) {
         switch (condition) {
-            case "shop_integration":
+            case "sell_integration":
+            case "shop_integration": // Backward compatibility
                 return plugin.hasSellIntegration();
-            case "no_shop_integration":
+            case "no_sell_integration":
+            case "no_shop_integration": // Backward compatibility
                 return !plugin.hasSellIntegration();
             default:
                 plugin.getLogger().warning("Unknown condition: " + condition);

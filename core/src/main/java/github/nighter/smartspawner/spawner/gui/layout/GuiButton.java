@@ -13,14 +13,16 @@ public class GuiButton {
     private final boolean enabled;
     private final String condition;
     private final Map<String, String> actions;
+    private final boolean infoButton; // Marks this as spawner info button for timer updates
 
-    public GuiButton(String buttonType, int slot, Material material, boolean enabled, String condition, Map<String, String> actions) {
+    public GuiButton(String buttonType, int slot, Material material, boolean enabled, String condition, Map<String, String> actions, boolean infoButton) {
         this.buttonType = buttonType;
         this.slot = slot;
         this.material = material;
         this.enabled = enabled;
         this.condition = condition;
         this.actions = actions;
+        this.infoButton = infoButton;
     }
 
     public String getAction(String clickType) {
