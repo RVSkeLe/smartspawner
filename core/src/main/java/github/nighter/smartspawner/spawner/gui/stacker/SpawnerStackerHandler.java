@@ -480,14 +480,6 @@ public class SpawnerStackerHandler implements Listener {
             return;
         }
 
-        if (scanResult.availableSpawners == 0) {
-            Map<String, String> placeholders = new HashMap<>(4);
-            placeholders.put("amountChange", String.valueOf(spaceLeft));
-            placeholders.put("amountAvailable", "0");
-            messageService.sendMessage(player, "spawner_insufficient_quantity", placeholders);
-            return;
-        }
-
         int actualChange = Math.min(spaceLeft, scanResult.availableSpawners);
 
         if (SpawnerStackEvent.getHandlerList().getRegisteredListeners().length != 0) {
@@ -498,7 +490,7 @@ public class SpawnerStackerHandler implements Listener {
                 return;
         }
 
-        // Remove spawners from inventory first (same order as handleStackIncrease)
+        // Remove spawners from inventory first
         if (spawner.isItemSpawner()) {
             removeValidItemSpawnersFromInventory(player, spawner.getSpawnedItemMaterial(), actualChange,
                     scanResult.spawnerSlots);

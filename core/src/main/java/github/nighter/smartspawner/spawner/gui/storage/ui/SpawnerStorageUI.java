@@ -192,6 +192,12 @@ public class SpawnerStorageUI {
             slotsToEmpty.add(i);
         }
 
+        // Also mark all button slots for potential clearing (fixes visual bug where buttons remain when they shouldn't)
+        GuiLayout layout = layoutConfig.getCurrentLayout();
+        if (layout != null) {
+            slotsToEmpty.addAll(layout.getUsedSlots());
+        }
+
         // Add items from virtual inventory
         addPageItems(updates, slotsToEmpty, spawner, page);
 
