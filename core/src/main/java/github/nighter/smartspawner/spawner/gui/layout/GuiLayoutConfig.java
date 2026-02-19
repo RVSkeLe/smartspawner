@@ -385,10 +385,8 @@ public class GuiLayoutConfig {
     private boolean evaluateCondition(String condition) {
         switch (condition) {
             case "sell_integration":
-            case "shop_integration": // Backward compatibility
                 return plugin.hasSellIntegration();
             case "no_sell_integration":
-            case "no_shop_integration": // Backward compatibility
                 return !plugin.hasSellIntegration();
             default:
                 plugin.getLogger().warning("Unknown condition: " + condition);

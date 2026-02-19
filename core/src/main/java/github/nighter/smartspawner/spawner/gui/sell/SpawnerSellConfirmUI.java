@@ -108,8 +108,9 @@ public class SpawnerSellConfirmUI {
                 continue;
             }
 
-            String action = button.getDefaultAction();
-            if (action == null) {
+            // OPTIMIZATION: Use getAnyActionFromButton to check all click types
+            String action = getAnyActionFromButton(button);
+            if (action == null || action.isEmpty()) {
                 continue;
             }
 
@@ -122,7 +123,8 @@ public class SpawnerSellConfirmUI {
                 case "confirm":
                     buttonItem = createConfirmButton(button.getMaterial(), placeholders, collectExp);
                     break;
-                case "info":
+                case "none":
+                    // Display-only button (spawner info)
                     buttonItem = createSpawnerInfoButton(player, placeholders);
                     break;
                 default:
@@ -227,18 +229,44 @@ public class SpawnerSellConfirmUI {
     }
 
     private ItemStack createButton(Material material, String name, String[] lore) {
-        ItemStack button = new ItemStack(material);
-        ItemMeta meta = button.getItemMeta();
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(name);
+            if (name != null) {
+                meta.setDisplayName(name);
+            }
             if (lore != null && lore.length > 0) {
                 meta.setLore(Arrays.asList(lore));
             }
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
-            button.setItemMeta(meta);
+            item.setItemMeta(meta);
         }
-        VersionInitializer.hideTooltip(button);
-        return button;
+        return item;
+    }
+
+    /**
+     * Get any action from button - checks click, left_click, right_click
+     * OPTIMIZATION: Return first found action for item creation
+     */
+    private String getAnyActionFromButton(GuiButton button) {
+        // Check in priority order: click -> left_click -> right_click
+        String action = button.getDefaultAction(); // checks "click" first
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        // Check left_click
+        action = button.getAction("left_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        // Check right_click
+        action = button.getAction("right_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        return null;
     }
 }
-

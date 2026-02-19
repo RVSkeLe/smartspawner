@@ -23,6 +23,7 @@
 #   collect_exp: Collect exp only
 #   none: Display only, no action
 
+
 # Storage button
 slot_12:
   material: CHEST

@@ -28,6 +28,7 @@
 #   take_all: Take all items from current page
 #   drop_page: Drop all items from current page
 
+
 # Previous page button
 slot_1:
   material: SPECTRAL_ARROW

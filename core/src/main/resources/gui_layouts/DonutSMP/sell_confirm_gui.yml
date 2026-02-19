@@ -6,6 +6,7 @@
 #   slot_X:                    # X = slot number (1-27)
 #     material: MATERIAL_NAME  # Material to display
 #     enabled: true/false      # Show/hide button
+#     info_button: true/false  # Optional: Mark as spawner info button (display only)
 #     click: "action"          # Action for any click (left/right/shift)
 #     left_click: "action"     # Action for left click only (overrides click)
 #     right_click: "action"    # Action for right click only (overrides click)
@@ -13,10 +14,8 @@
 # Actions:
 #   cancel: Close confirmation and return to previous GUI
 #   confirm: Confirm and sell all items
-#   info: Display only, not clickable (shows spawner info)
-#
-# Multiple buttons can use same slot
-# You can add multiple cancel/confirm buttons by using different slot numbers
+#   none: Display only, not clickable (no action when clicked)
+
 
 # Cancel button
 slot_11:
@@ -28,7 +27,8 @@ slot_11:
 slot_14:
   material: SPAWNER
   enabled: true
-  click: "info"
+  info_button: true
+  click: "none"
 
 # Confirm button
 slot_17:

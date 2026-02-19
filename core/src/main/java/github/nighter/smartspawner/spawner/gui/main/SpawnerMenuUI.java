@@ -363,10 +363,17 @@ public class SpawnerMenuUI {
         // Get layout configuration first
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
 
-        // Find spawner info button by checking for relevant actions
+        // OPTIMIZATION: Find spawner info button by info_button flag first
         GuiButton spawnerInfoButton = null;
         for (GuiButton button : layout.getAllButtons().values()) {
-            String action = button.getDefaultAction();
+            // Check info_button flag first (most reliable)
+            if (button.isInfoButton()) {
+                spawnerInfoButton = button;
+                break;
+            }
+
+            // Fallback: check by action for backward compatibility
+            String action = getAnyActionFromButton(button);
             if (action != null && (action.equals("open_stacker") || action.equals("sell_and_exp") || action.equals("none"))) {
                 // Check if button condition matches current state
                 if (!button.hasCondition() || evaluateButtonCondition(button, player)) {
@@ -651,9 +658,9 @@ public class SpawnerMenuUI {
         }
 
         switch (condition) {
-            case "shop_integration":
+            case "sell_integration":
                 return plugin.hasSellIntegration();
-            case "no_shop_integration":
+            case "no_sell_integration":
                 return !plugin.hasSellIntegration();
             default:
                 plugin.getLogger().warning("Unknown button condition: " + condition);
