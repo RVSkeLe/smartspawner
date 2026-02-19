@@ -152,9 +152,6 @@ public class GuiLayoutConfig {
             FileConfiguration config = YamlConfiguration.loadConfiguration(guiConfigFile);
             this.skipMainGui = config.getBoolean("skip_main_gui", false);
             this.skipSellConfirmation = config.getBoolean("skip_sell_confirmation", false);
-
-            plugin.getLogger().info("Loaded GUI config - Skip Main GUI: " + skipMainGui +
-                    ", Skip Sell Confirmation: " + skipSellConfirmation);
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING,
                     "Failed to load GUI config, using defaults: " + e.getMessage(), e);
@@ -182,7 +179,6 @@ public class GuiLayoutConfig {
         if (layoutFile.exists()) {
             GuiLayout layout = loadLayout(layoutFile, layoutType);
             if (layout != null) {
-                plugin.getLogger().info("Loaded " + layoutType + " GUI layout: " + currentLayout);
                 return layout;
             }
         }
@@ -214,32 +210,22 @@ public class GuiLayoutConfig {
             // Support both old format (buttons.xxx) and new format (slot_X)
             Set<String> buttonKeys = config.getKeys(false);
 
-            // DEBUG: Log what keys were found
-            plugin.getLogger().info("Loading " + layoutType + " layout from " + file.getName());
-            plugin.getLogger().info("Found keys: " + buttonKeys);
-
             if (buttonKeys.isEmpty()) {
                 plugin.getLogger().warning("No buttons found in GUI layout: " + file.getName());
                 return layout;
             }
 
-            int loadedButtons = 0;
             for (String buttonKey : buttonKeys) {
                 // Skip non-button keys (like comments)
                 if (!buttonKey.startsWith("slot_")) {
-                    plugin.getLogger().info("Skipping non-slot key: " + buttonKey);
                     continue;
                 }
 
-                if (loadButton(config, layout, buttonKey, layoutType)) {
-                    loadedButtons++;
-                    plugin.getLogger().info("Loaded button: " + buttonKey);
-                } else {
+                if (!loadButton(config, layout, buttonKey, layoutType)) {
                     plugin.getLogger().warning("Failed to load button: " + buttonKey);
                 }
             }
 
-            plugin.getLogger().info("Loaded " + loadedButtons + " buttons for " + layoutType + " layout");
 
             return layout;
         } catch (Exception e) {
