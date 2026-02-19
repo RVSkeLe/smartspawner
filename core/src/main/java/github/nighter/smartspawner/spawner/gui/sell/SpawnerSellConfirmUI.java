@@ -108,33 +108,36 @@ public class SpawnerSellConfirmUI {
                 continue;
             }
 
-            // OPTIMIZATION: Use getAnyActionFromButton to check all click types
-            String action = getAnyActionFromButton(button);
-            if (action == null || action.isEmpty()) {
-                continue;
-            }
+            ItemStack buttonItem;
 
-            ItemStack buttonItem = null;
-
-            switch (action) {
-                case "cancel":
-                    buttonItem = createCancelButton(button.getMaterial(), placeholders);
-                    break;
-                case "confirm":
-                    buttonItem = createConfirmButton(button.getMaterial(), placeholders, collectExp);
-                    break;
-                case "none":
-                    // Display-only button (spawner info)
-                    buttonItem = createSpawnerInfoButton(player, placeholders);
-                    break;
-                default:
-                    plugin.getLogger().warning("Unknown action in sell confirm GUI: " + action);
+            // Check if this is an info button (spawner display)
+            if (button.isInfoButton()) {
+                buttonItem = createSpawnerInfoButton(player, placeholders);
+            } else {
+                // OPTIMIZATION: Use getAnyActionFromButton to check all click types
+                String action = getAnyActionFromButton(button);
+                if (action == null || action.isEmpty()) {
                     continue;
+                }
+
+                switch (action) {
+                    case "cancel":
+                        buttonItem = createCancelButton(button.getMaterial(), placeholders);
+                        break;
+                    case "confirm":
+                        buttonItem = createConfirmButton(button.getMaterial(), placeholders, collectExp);
+                        break;
+                    case "none":
+                        // Display-only button (spawner info) - fallback for old format
+                        buttonItem = createSpawnerInfoButton(player, placeholders);
+                        break;
+                    default:
+                        plugin.getLogger().warning("Unknown action in sell confirm GUI: " + action);
+                        continue;
+                }
             }
 
-            if (buttonItem != null) {
-                gui.setItem(button.getSlot(), buttonItem);
-            }
+            gui.setItem(button.getSlot(), buttonItem);
         }
     }
 
