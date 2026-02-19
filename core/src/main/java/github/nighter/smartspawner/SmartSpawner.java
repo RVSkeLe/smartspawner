@@ -496,6 +496,11 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
         spawnerStorageUI.reload();
         filterConfigUI.reload();
 
+        // Reload sell confirm UI to update cached layout
+        if (spawnerSellConfirmUI != null) {
+            spawnerSellConfirmUI.reload();
+        }
+
         // reload services
         integrationManager.reload();
         spawnerMenuAction.reload();
