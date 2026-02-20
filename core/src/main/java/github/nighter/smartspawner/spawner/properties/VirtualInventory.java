@@ -164,7 +164,8 @@ public class VirtualInventory {
         // Calculate total amounts to remove in a single pass
         for (ItemStack item : items) {
             if (item == null || item.getAmount() <= 0) continue;
-            ItemSignature sig = new ItemSignature(item);
+            // Use cached signature to avoid excessive cloning
+            ItemSignature sig = getSignature(item);
             toRemove.merge(sig, (long) item.getAmount(), Long::sum);
         }
 

@@ -519,7 +519,8 @@ public class SpawnerData {
 
         double addedValue = 0.0;
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : itemsAdded.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
@@ -552,7 +553,8 @@ public class SpawnerData {
 
         double removedValue = 0.0;
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidated.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
@@ -582,7 +584,8 @@ public class SpawnerData {
         double totalValue = 0.0;
 
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
