@@ -545,7 +545,8 @@ public class SpawnerData {
         Map<VirtualInventory.ItemSignature, Long> consolidated = new java.util.HashMap<>();
         for (ItemStack item : itemsRemoved) {
             if (item == null || item.getAmount() <= 0) continue;
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+            // Use cached signature to avoid excessive cloning
+            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
             consolidated.merge(sig, (long) item.getAmount(), Long::sum);
         }
 
@@ -679,7 +680,8 @@ public class SpawnerData {
             Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
             for (ItemStack item : items) {
                 if (item == null || item.getAmount() <= 0) continue;
-                VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+                // Use cached signature to avoid excessive cloning
+                VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
                 itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
             }
 

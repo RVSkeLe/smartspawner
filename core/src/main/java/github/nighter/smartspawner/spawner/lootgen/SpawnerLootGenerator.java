@@ -262,7 +262,8 @@ public class SpawnerLootGenerator {
 
             // Add to simulation and check slot count
             Map<VirtualInventory.ItemSignature, Long> tempSimulation = new HashMap<>(simulatedInventory);
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+            // Use cached signature to avoid excessive cloning
+            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
             tempSimulation.merge(sig, (long) item.getAmount(), Long::sum);
 
             // Calculate slots needed
@@ -326,7 +327,8 @@ public class SpawnerLootGenerator {
         for (ItemStack item : items) {
             if (item == null || item.getAmount() <= 0) continue;
 
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+            // Use cached signature to avoid excessive cloning
+            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
             simulatedItems.merge(sig, (long) item.getAmount(), Long::sum);
         }
 

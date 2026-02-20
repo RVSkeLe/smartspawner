@@ -224,9 +224,10 @@ public class VirtualInventory {
             // Apply preferred sort if set, otherwise sort alphabetically
             if (preferredSortMaterial != null) {
                 sortedEntriesCache.sort((e1, e2) -> {
-                    boolean e1Preferred = e1.getKey().getTemplate().getType() == preferredSortMaterial;
-                    boolean e2Preferred = e2.getKey().getTemplate().getType() == preferredSortMaterial;
-                    
+                    // Use getTemplateRef() to avoid cloning - we only need to read the type
+                    boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredSortMaterial;
+                    boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredSortMaterial;
+
                     if (e1Preferred && !e2Preferred) return -1;
                     if (!e1Preferred && e2Preferred) return 1;
                     
@@ -343,9 +344,10 @@ public class VirtualInventory {
         if (preferredMaterial != null) {
             this.sortedEntriesCache = consolidatedItems.entrySet().stream()
                 .sorted((e1, e2) -> {
-                    boolean e1Preferred = e1.getKey().getTemplate().getType() == preferredMaterial;
-                    boolean e2Preferred = e2.getKey().getTemplate().getType() == preferredMaterial;
-                    
+                    // Use getTemplateRef() to avoid cloning - we only need to read the type
+                    boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredMaterial;
+                    boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredMaterial;
+
                     if (e1Preferred && !e2Preferred) return -1;
                     if (!e1Preferred && e2Preferred) return 1;
                     
