@@ -27,11 +27,9 @@ public class HopperTransfer {
     private final SmartSpawner plugin;
     private final SpawnerManager spawnerManager;
     private final SpawnerGuiViewManager guiManager;
-    private final HopperService service;
 
-    public HopperTransfer(SmartSpawner plugin, HopperService hopperService) {
+    public HopperTransfer(SmartSpawner plugin) {
         this.plugin = plugin;
-        this.service = hopperService;
         this.spawnerManager = plugin.getSpawnerManager();
         this.guiManager = plugin.getSpawnerGuiViewManager();
     }
@@ -74,7 +72,7 @@ public class HopperTransfer {
             List<ItemStack> removed = new ArrayList<>();
 
             for (ItemStack item : displayItems.values()) {
-                if (transferred >= service.getStackPerTransfer()) break;
+                if (transferred >= plugin.getHopperConfig().getStackPerTransfer()) break;
                 if (item == null || item.getType() == Material.AIR) continue;
 
                 HashMap<Integer, ItemStack> leftovers = hopperInv.addItem(item.clone());

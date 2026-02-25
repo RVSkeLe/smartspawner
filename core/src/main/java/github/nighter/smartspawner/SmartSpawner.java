@@ -11,6 +11,7 @@ import github.nighter.smartspawner.commands.list.gui.management.SpawnerManagemen
 import github.nighter.smartspawner.commands.list.gui.adminstacker.AdminStackerHandler;
 import github.nighter.smartspawner.commands.list.gui.serverselection.ServerSelectionHandler;
 import github.nighter.smartspawner.commands.prices.PricesGUI;
+import github.nighter.smartspawner.extras.HopperConfig;
 import github.nighter.smartspawner.spawner.config.SpawnerSettingsConfig;
 import github.nighter.smartspawner.spawner.config.ItemSpawnerSettingsConfig;
 import github.nighter.smartspawner.logging.LoggingConfig;
@@ -122,6 +123,7 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     private DatabaseManager databaseManager;
     private SpawnerManager spawnerManager;
     private HopperService hopperService;
+    private HopperConfig hopperConfig;
     private SpawnerLocationLockManager spawnerLocationLockManager;
 
     // Event handlers and utilities
@@ -418,12 +420,14 @@ public class SmartSpawner extends JavaPlugin implements SmartSpawnerPlugin {
     }
 
     public void setUpHopperHandler() {
+        this.hopperConfig = new HopperConfig(this);
+
         if (this.hopperService != null) {
             this.hopperService.cleanup();
             this.hopperService = null;
         }
         
-        if (getConfig().getBoolean("hopper.enabled", false)) {
+        if (hopperConfig.isHopperEnabled()) {
             this.hopperService = new HopperService(this);
         }
     }

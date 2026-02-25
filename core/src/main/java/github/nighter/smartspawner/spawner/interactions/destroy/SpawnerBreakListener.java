@@ -408,7 +408,7 @@ public class SpawnerBreakListener implements Listener {
     // TODO: deduplicate
     public void cleanupAssociatedHopper(Block block) {
         Block blockBelow = block.getRelative(BlockFace.DOWN);
-        if (blockBelow.getType() == Material.HOPPER && hopperService != null) {
+        if (plugin.getHopperConfig().isHopperEnabled() && blockBelow.getType() == Material.HOPPER) {
             hopperService.getRegistry().remove(new BlockPos(blockBelow.getLocation()));
         }
     }

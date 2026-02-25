@@ -21,18 +21,12 @@ public class HopperService {
     @Getter
     private final HopperTracker tracker;
     private final Scheduler.Task task;
-    @Getter
-    private final boolean hopperEnabled;
-    @Getter
-    private final int stackPerTransfer;
 
     public HopperService(SmartSpawner plugin) {
         this.plugin = plugin;
-        this.hopperEnabled = plugin.getConfig().getBoolean("hopper.enabled", false);
-        this.stackPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
         this.registry = new HopperRegistry();
-        this.transfer = new HopperTransfer(plugin, this);
-        this.tracker = new HopperTracker(plugin, this);
+        this.transfer = new HopperTransfer(plugin);
+        this.tracker = new HopperTracker(plugin, registry);
         this.tracker.scanLoadedChunks();
 
         long delay = plugin.getTimeFromConfig("hopper.check_delay", "3s");
@@ -41,7 +35,7 @@ public class HopperService {
     }
 
     private void tick() {
-        if (!this.hopperEnabled) return;
+        if (!plugin.getHopperConfig().isHopperEnabled()) return;
 
         registry.forEachChunk((worldId, chunkKey) -> {
 
