@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
 
 
 public class HopperTransfer {
@@ -25,9 +27,11 @@ public class HopperTransfer {
     private final SmartSpawner plugin;
     private final SpawnerManager spawnerManager;
     private final SpawnerGuiViewManager guiManager;
+    private final HopperService service;
 
-    public HopperTransfer(SmartSpawner plugin) {
+    public HopperTransfer(SmartSpawner plugin, HopperService hopperService) {
         this.plugin = plugin;
+        this.service = hopperService;
         this.spawnerManager = plugin.getSpawnerManager();
         this.guiManager = plugin.getSpawnerGuiViewManager();
     }
@@ -50,37 +54,45 @@ public class HopperTransfer {
         SpawnerData spawner = spawnerManager.getSpawnerByLocation(spawnerLoc);
         if (spawner == null) return;
 
-        VirtualInventory virtualInv = spawner.getVirtualInventory();
-        if (virtualInv == null) return;
+        ReentrantLock lock = spawner.getInventoryLock();
+        if (!lock.tryLock()) return;
 
-        Hopper hopper = (Hopper) hopperLoc.getBlock().getState(false);
-        if (hopper == null) return;
+        try {
+            VirtualInventory virtualInv = spawner.getVirtualInventory();
+            if (virtualInv == null) return;
 
-        Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
-        if (displayItems == null || displayItems.isEmpty()) return;
+            Hopper hopper = (Hopper) hopperLoc.getBlock().getState(false);
+            if (hopper == null) return;
 
-        Inventory hopperInv = hopper.getInventory();
+            Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
+            if (displayItems == null || displayItems.isEmpty()) return;
 
-        int maxTransfers = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
-        int transferred = 0;
+            Inventory hopperInv = hopper.getInventory();
 
-        List<ItemStack> removed = new ArrayList<>();
+            int transferred = 0;
 
-        for (ItemStack item : displayItems.values()) {
-            if (transferred >= maxTransfers) break;
-            if (item == null || item.getType() == Material.AIR) continue;
+            List<ItemStack> removed = new ArrayList<>();
 
-            HashMap<Integer, ItemStack> leftovers = hopperInv.addItem(item.clone());
+            for (ItemStack item : displayItems.values()) {
+                if (transferred >= service.getStackPerTransfer()) break;
+                if (item == null || item.getType() == Material.AIR) continue;
 
-            if (leftovers.isEmpty()) {
-                removed.add(item.clone());
-                transferred++;
+                HashMap<Integer, ItemStack> leftovers = hopperInv.addItem(item.clone());
+
+                if (leftovers.isEmpty()) {
+                    removed.add(item.clone());
+                    transferred++;
+                }
             }
-        }
 
-        if (!removed.isEmpty()) {
-            spawner.removeItemsAndUpdateSellValue(removed);
-            guiManager.updateSpawnerMenuViewers(spawner);
+            if (!removed.isEmpty()) {
+                spawner.removeItemsAndUpdateSellValue(removed);
+                guiManager.updateSpawnerMenuViewers(spawner);
+            }
+        } catch (Exception ex) {
+            plugin.getLogger().log(Level.WARNING, "Error transferring items from spawner to hopper at " + hopperLoc, ex);
+        } finally {
+            lock.unlock();
         }
     }
 }

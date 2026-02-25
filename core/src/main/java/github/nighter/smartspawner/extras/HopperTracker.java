@@ -18,11 +18,13 @@ import org.bukkit.event.world.ChunkUnloadEvent;
 public class HopperTracker implements Listener {
 
     private final SmartSpawner plugin;
+    private final HopperService service;
     private final HopperRegistry registry;
 
-    public HopperTracker(SmartSpawner plugin, HopperRegistry registry) {
+    public HopperTracker(SmartSpawner plugin, HopperService service) {
         this.plugin = plugin;
-        this.registry = registry;
+        this.service = service;
+        this.registry = service.getRegistry();
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -61,14 +63,14 @@ public class HopperTracker implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent e) {
-        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        if (!plugin.getHopperService().isHopperEnabled()) return;
 
         scanChunk(e.getChunk());
     }
 
     @EventHandler
     public void onChunkUnload(ChunkUnloadEvent e) {
-        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        if (!service.isHopperEnabled()) return;
 
         Chunk chunk = e.getChunk();
         registry.removeChunk(chunk.getWorld().getUID(),
@@ -79,7 +81,7 @@ public class HopperTracker implements Listener {
 
     @EventHandler
     public void onPlace(BlockPlaceEvent e) {
-        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        if (!service.isHopperEnabled()) return;
 
         if (e.getBlockPlaced().getType() == Material.HOPPER) {
             tryAdd(e.getBlockPlaced());
@@ -88,7 +90,7 @@ public class HopperTracker implements Listener {
 
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
-        if (!plugin.getConfig().getBoolean("hopper.enabled", false)) return;
+        if (!service.isHopperEnabled()) return;
 
         if (e.getBlock().getType() == Material.HOPPER) {
             registry.remove(new BlockPos(e.getBlock().getLocation()));

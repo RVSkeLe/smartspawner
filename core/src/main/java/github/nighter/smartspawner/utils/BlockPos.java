@@ -3,6 +3,7 @@ package github.nighter.smartspawner.utils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 
 import java.util.UUID;
 
@@ -21,6 +22,18 @@ public record BlockPos(int x, int y, int z, UUID worldId) {
         if (world == null) return null;
 
         return new Location(world, x, y, z);
+    }
+
+    public int getChunkX() {
+        return x >> 4;
+    }
+
+    public int getChunkZ() {
+        return z >> 4;
+    }
+
+    public long getChunkKey() {
+        return ChunkUtil.getChunkKey(getChunkX(), getChunkZ());
     }
 
     public BlockPos above() {

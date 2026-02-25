@@ -13,7 +13,7 @@ public final class HopperRegistry {
 
     public void add(BlockPos pos) {
         UUID worldId = pos.worldId();
-        long chunkKey = ChunkUtil.getChunkKey(pos.x() >> 4, pos.z() >> 4);
+        long chunkKey = ChunkUtil.getChunkKey(pos.getChunkX(), pos.getChunkZ());
 
         data.computeIfAbsent(worldId, w -> new ConcurrentHashMap<>())
                 .computeIfAbsent(chunkKey, c -> ConcurrentHashMap.newKeySet())
@@ -25,7 +25,7 @@ public final class HopperRegistry {
         Map<Long, Set<BlockPos>> worldMap = data.get(worldId);
         if (worldMap == null) return;
 
-        long chunkKey = ChunkUtil.getChunkKey(pos.x() >> 4, pos.z() >> 4);
+        long chunkKey = ChunkUtil.getChunkKey(pos.getChunkX(), pos.getChunkZ());
         Set<BlockPos> set = worldMap.get(chunkKey);
         if (set == null) return;
 
@@ -54,7 +54,7 @@ public final class HopperRegistry {
 
     /**
      * Iterates all active chunks.
-     * Does NOT touch blocks — safe for global thread.
+     * Does NOT touch blocks (safe for global thread).
      */
     public void forEachChunk(BiConsumer<UUID, Long> consumer) {
         for (var worldEntry : data.entrySet()) {
