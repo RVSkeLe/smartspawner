@@ -37,6 +37,8 @@ public class HopperTransfer {
     public void process(BlockPos hopperPos) {
 
         Location hopperLoc = hopperPos.toLocation();
+        if (hopperLoc == null) return; // This should never happen, world was unloaded but not yet removed from the Tracker
+
         Block hopperBlock = hopperLoc.getBlock();
 
         if (hopperBlock.getType() != Material.HOPPER) return;
