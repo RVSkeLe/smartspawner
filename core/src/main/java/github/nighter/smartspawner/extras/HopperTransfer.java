@@ -59,8 +59,8 @@ public class HopperTransfer {
             VirtualInventory virtualInv = spawner.getVirtualInventory();
             if (virtualInv == null) return;
 
-            Hopper hopper = (Hopper) hopperLoc.getBlock().getState(false);
-            if (hopper == null) return;
+            var state = hopperLoc.getBlock().getState(false);
+            if (!(state instanceof Hopper hopper)) return;
 
             Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
             if (displayItems == null || displayItems.isEmpty()) return;
@@ -75,10 +75,21 @@ public class HopperTransfer {
                 if (transferred >= plugin.getHopperConfig().getStackPerTransfer()) break;
                 if (item == null || item.getType() == Material.AIR) continue;
 
-                HashMap<Integer, ItemStack> leftovers = hopperInv.addItem(item.clone());
+                ItemStack clone = item.clone();
+                int originalAmount = clone.getAmount();
 
-                if (leftovers.isEmpty()) {
-                    removed.add(item.clone());
+                HashMap<Integer, ItemStack> leftovers = hopperInv.addItem(clone);
+
+                int insertedAmount = originalAmount;
+
+                if (!leftovers.isEmpty()) {
+                    insertedAmount -= leftovers.values().iterator().next().getAmount();
+                }
+
+                if (insertedAmount > 0) {
+                    ItemStack toRemove = item.clone();
+                    toRemove.setAmount(insertedAmount);
+                    removed.add(toRemove);
                     transferred++;
                 }
             }

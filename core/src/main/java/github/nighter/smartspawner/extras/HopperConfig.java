@@ -12,6 +12,7 @@ public class HopperConfig {
 
     public HopperConfig(SmartSpawner plugin) {
         this.hopperEnabled = plugin.getConfig().getBoolean("hopper.enabled", false);
-        this.stackPerTransfer = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
+        int stackValue = plugin.getConfig().getInt("hopper.stack_per_transfer", 5);
+        this.stackPerTransfer = Math.min(stackValue, 5); // Add safeguard?
     }
 }
