@@ -64,7 +64,6 @@ spawner_storage_item:
 # Entity Information:
 # {entity}           - Formatted entity name (e.g., "Zombie")
 # {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
-# {entity_type}      - Raw entity type (e.g., "ZOMBIE")
 #
 # Stack Information:
 # {stack_size}       - Number of spawners stacked at this location
@@ -163,6 +162,26 @@ button_add:
     - ''
     - '&#2cc483⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴅᴇᴍ ꜱᴛᴀᴄᴋ ʜɪɴᴢᴜᴢᴜꜰᴜᴇɢᴇɴ'
 
+button_remove_all:
+  name: '&#ff5252ᴀʟʟᴇ ᴇɴᴛꜰᴇʀɴᴇɴ'
+  lore:
+    - ''
+    - '&#e63939◈ &#ff7070ᴀᴋᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ᴀʟʟᴇ ꜱᴘᴀᴡɴᴇʀ ᴇɴᴛꜰᴇʀɴᴇɴ'
+    - '  &#f8f8ff•  ᴀᴋᴛᴜᴇʟʟ: &#ff5252{stack_size}'
+    - ''
+    - '&#e63939⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴀʟʟᴇ ᴠᴏᴍ ꜱᴛᴀᴄᴋ ᴢᴜ ᴇɴᴛꜰᴇʀɴᴇɴ'
+
+button_add_all:
+  name: '&#37eb9aᴀʟʟᴇ ʜɪɴᴢᴜꜰᴜᴇɢᴇɴ'
+  lore:
+    - ''
+    - '&#2cc483◈ &#48e89bᴀᴋᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ᴀʟʟᴇ ꜱᴘᴀᴡɴᴇʀ ᴀᴜꜱ ɪɴᴠᴇɴᴛᴀʀ ʜɪɴᴢᴜꜰᴜᴇɢᴇɴ'
+    - '  &#f8f8ff•  ᴀᴋᴛᴜᴇʟʟ: &#37eb9a{stack_size}'
+    - ''
+    - '&#2cc483⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴀʟʟᴇ ᴅᴇᴍ ꜱᴛᴀᴄᴋ ʜɪɴᴢᴜᴢᴜꜰᴜᴇɢᴇɴ'
+
 # ---------------------------------------------------
 #            Verkaufsbestätigung GUI
 # ---------------------------------------------------
@@ -206,6 +225,12 @@ button_sell_info:
 # ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
+# Available placeholders for gui_title_storage:
+# {current_page}     - Current page number
+# {total_pages}      - Total number of pages
+# {entity}           - Formatted entity name (e.g., "Zombie")
+# {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# {amount}           - Number of spawners stacked
 gui_title_storage: '&#545454ꜱᴘᴀᴡɴᴇʀ ʟᴀɢᴇʀ - [{current_page}/{total_pages}]'
 
 navigation_button_previous:
@@ -222,6 +247,11 @@ sell_button:
   name: '&aᴀʟʟᴇ ɪᴛᴇᴍꜱ ᴠᴇʀᴋᴀᴜꜰᴇɴ: +${total_sell_price}'
   lore:
     - '&a⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ᴀʟʟᴇ ɪᴛᴇᴍꜱ ᴢᴜ ᴠᴇʀᴋᴀᴜꜰᴇɴ'
+
+sell_and_exp_button:
+  name: '&aᴠᴇʀᴋᴀᴜꜰᴇɴ & ᴇxᴘ: +${total_sell_price}'
+  lore:
+    - '&a⊳ &#f8f8ffᴋʟɪᴄᴋᴇɴ ᴜᴍ ɪᴛᴇᴍꜱ ᴢᴜ ᴠᴇʀᴋᴀᴜꜰᴇɴ ᴜɴᴅ ᴇxᴘ ᴢᴜ ꜱᴀᴍᴍᴇʟɴ'
 
 return_button:
   name: '&#ff5252ᴢᴜʀᴜᴇᴄᴋ ᴢᴜᴍ ʜᴀᴜᴘᴛᴍᴇɴᴜᴇ'

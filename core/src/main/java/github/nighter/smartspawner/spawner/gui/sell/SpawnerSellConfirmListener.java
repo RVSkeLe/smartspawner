@@ -1,6 +1,8 @@
 package github.nighter.smartspawner.spawner.gui.sell;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
+import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,9 +12,9 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.InventoryHolder;
 
+import java.util.Optional;
+
 public class SpawnerSellConfirmListener implements Listener {
-    private static final int CANCEL_SLOT = 10;
-    private static final int CONFIRM_SLOT = 16;
 
     private final SmartSpawner plugin;
 
@@ -43,16 +45,35 @@ public class SpawnerSellConfirmListener implements Listener {
 
         int slot = event.getRawSlot();
 
-        // Check if clicked on cancel button
-        if (slot == CANCEL_SLOT) {
-            handleCancel(player, spawner, confirmHolder.getPreviousGui());
+        // OPTIMIZATION: Get layout once and check action based on clicked slot
+        GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentSellConfirmLayout();
+        if (layout == null) {
+            player.closeInventory();
             return;
         }
 
-        // Check if clicked on confirm button
-        if (slot == CONFIRM_SLOT) {
-            handleConfirm(player, spawner, confirmHolder.getPreviousGui(), confirmHolder.isCollectExp());
+        Optional<GuiButton> buttonOpt = layout.getButtonAtSlot(slot);
+        if (!buttonOpt.isPresent()) {
             return;
+        }
+
+        GuiButton button = buttonOpt.get();
+        String action = button.getDefaultAction();
+
+        if (action == null) {
+            return;
+        }
+
+        switch (action) {
+            case "cancel":
+                handleCancel(player, spawner, confirmHolder.getPreviousGui());
+                break;
+            case "confirm":
+                handleConfirm(player, spawner, confirmHolder.getPreviousGui(), confirmHolder.isCollectExp());
+                break;
+            default:
+                // Info button or unknown action - do nothing
+                break;
         }
     }
 
@@ -70,6 +91,9 @@ public class SpawnerSellConfirmListener implements Listener {
         // Play sound instead of sending message
         player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
 
+        // Clear interaction state
+        spawner.clearInteracted();
+
         // Reopen previous GUI
         reopenPreviousGui(player, spawner, previousGui);
     }
@@ -79,6 +103,9 @@ public class SpawnerSellConfirmListener implements Listener {
         if (collectExp) {
             plugin.getSpawnerMenuAction().handleExpBottleClick(player, spawner, true);
         }
+
+        // Clear interaction state
+        spawner.clearInteracted();
 
         // Trigger the actual sell operation
         plugin.getSpawnerSellManager().sellAllItems(player, spawner);

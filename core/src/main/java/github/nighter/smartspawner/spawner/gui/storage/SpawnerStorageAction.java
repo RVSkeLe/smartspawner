@@ -4,7 +4,6 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
 import github.nighter.smartspawner.spawner.gui.storage.filter.FilterConfigUI;
-import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.main.SpawnerMenuUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
@@ -98,24 +97,32 @@ public class SpawnerStorageAction implements Listener {
 
         // Handle control button clicks
         if (isControlSlot(slot)) {
-            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), layout);
+            handleControlSlotClick(player, slot, holder, spawner, event.getInventory(), event.getClick(), layout);
         }
     }
 
     private void handleControlSlotClick(Player player, int slot, StoragePageHolder holder,
-                                        SpawnerData spawner, Inventory inventory, GuiLayout layout) {
-        Optional<String> buttonTypeOpt = layout.getButtonTypeAtSlot(slot);
-        if (buttonTypeOpt.isEmpty()) {
+                                        SpawnerData spawner, Inventory inventory, org.bukkit.event.inventory.ClickType clickType, GuiLayout layout) {
+        // OPTIMIZATION: Get button and action with click type fallback
+        Optional<github.nighter.smartspawner.spawner.gui.layout.GuiButton> buttonOpt = layout.getButtonAtSlot(slot);
+        if (buttonOpt.isEmpty()) {
             return;
         }
 
-        String buttonType = buttonTypeOpt.get();
+        var button = buttonOpt.get();
+        String clickTypeString = getClickTypeString(clickType);
+        String action = button.getActionWithFallback(clickTypeString);
 
-        switch (buttonType) {
+        if (action == null || action.isEmpty()) {
+            return;
+        }
+
+        // OPTIMIZATION: Handle actions based on action value, not button name
+        switch (action) {
             case "sort_items":
                 handleSortItemsClick(player, spawner, inventory);
                 break;
-            case "item_filter":
+            case "open_filter":
                 openFilterConfig(player, spawner);
                 break;
             case "previous_page":
@@ -135,28 +142,70 @@ public class SpawnerStorageAction implements Listener {
                 handleDropPageItems(player, spawner, inventory);
                 break;
             case "sell_all":
-                if (plugin.hasSellIntegration()) {
-                    if (!player.hasPermission("smartspawner.sellall")) {
-                        messageService.sendMessage(player, "no_permission");
-                        return;
-                    }
-                    if (isControlClickTooFrequent(player)) {
-                        return;
-                    }
-                    // Check if there are items to sell
-                    if (spawner.getVirtualInventory().getUsedSlots() == 0) {
-                        messageService.sendMessage(player, "no_items");
-                        return;
-                    }
-                    // Open confirmation GUI - from storage, no exp collection
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
-                    plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, false);
-                }
+                handleSellAction(player, spawner, false);
                 break;
-            case "return":
-                openMainMenu(player, spawner);
+            case "sell_and_exp":
+                handleSellAction(player, spawner, true);
+                break;
+            case "return_main":
+                handleReturnToMainMenu(player, spawner);
+                break;
+            default:
+                // Unknown action, log warning
+                plugin.getLogger().warning("Unknown storage action: " + action);
                 break;
         }
+    }
+
+    /**
+     * Convert Bukkit ClickType to string for action lookup
+     * OPTIMIZATION: Cached string values to avoid repeated string creation
+     */
+    private String getClickTypeString(org.bukkit.event.inventory.ClickType clickType) {
+        return switch (clickType) {
+            case LEFT -> "left_click";
+            case RIGHT -> "right_click";
+            case SHIFT_LEFT -> "shift_left_click";
+            case SHIFT_RIGHT -> "shift_right_click";
+            default -> "left_click";
+        };
+    }
+
+    /**
+     * Handle sell action with optional exp collection
+     * OPTIMIZATION: Extracted common sell logic to reduce code duplication
+     */
+    private void handleSellAction(Player player, SpawnerData spawner, boolean collectExp) {
+        if (!plugin.hasSellIntegration()) {
+            return;
+        }
+
+        if (!player.hasPermission("smartspawner.sellall")) {
+            messageService.sendMessage(player, "no_permission");
+            return;
+        }
+
+        if (isControlClickTooFrequent(player)) {
+            return;
+        }
+
+        // Check if there are items to sell
+        if (spawner.getVirtualInventory().getUsedSlots() == 0) {
+            messageService.sendMessage(player, "no_items");
+            return;
+        }
+
+        // Open confirmation GUI
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        plugin.getSpawnerSellConfirmUI().openSellConfirmGui(player, spawner, STORAGE, collectExp);
+    }
+
+    /**
+     * Handle return to main menu action
+     */
+    private void handleReturnToMainMenu(Player player, SpawnerData spawner) {
+        player.closeInventory();
+        spawnerMenuUI.openSpawnerMenu(player, spawner, false);
     }
 
     private boolean isControlSlot(int slot) {
@@ -464,10 +513,37 @@ public class SpawnerStorageAction implements Listener {
     }
 
     private void updateInventoryTitle(Player player, SpawnerData spawner, int page, int totalPages) {
-        String newTitle = languageManager.getGuiTitle("gui_title_storage", Map.of(
-                "current_page", String.valueOf(page),
-                "total_pages", String.valueOf(totalPages)
-        ));
+        // Build placeholders map with all supported placeholders
+        Map<String, String> placeholders = new HashMap<>(5);
+        placeholders.put("current_page", String.valueOf(page));
+        placeholders.put("total_pages", String.valueOf(totalPages));
+
+        // Get cached title format to check which placeholders are used
+        String titleFormat = languageManager.getGuiTitle("gui_title_storage");
+
+        // Add entity placeholders if used in title
+        if (titleFormat.contains("{entity}") || titleFormat.contains("{ᴇɴᴛɪᴛʏ}")) {
+            String entityName;
+            if (spawner.isItemSpawner()) {
+                entityName = languageManager.getVanillaItemName(spawner.getSpawnedItemMaterial());
+            } else {
+                entityName = languageManager.getFormattedMobName(spawner.getEntityType());
+            }
+
+            if (titleFormat.contains("{entity}")) {
+                placeholders.put("entity", entityName);
+            }
+            if (titleFormat.contains("{ᴇɴᴛɪᴛʏ}")) {
+                placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityName));
+            }
+        }
+
+        // Add amount placeholder if used in title
+        if (titleFormat.contains("{amount}")) {
+            placeholders.put("amount", String.valueOf(spawner.getStackSize()));
+        }
+
+        String newTitle = languageManager.getGuiTitle("gui_title_storage", placeholders);
 
         try {
             player.getOpenInventory().setTitle(newTitle);

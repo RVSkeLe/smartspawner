@@ -64,7 +64,6 @@ spawner_storage_item:
 # Entity Information:
 # {entity}           - Formatted entity name (e.g., "Zombie")
 # {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
-# {entity_type}      - Raw entity type (e.g., "ZOMBIE")
 #
 # Stack Information:
 # {stack_size}       - Number of spawners stacked at this location
@@ -163,6 +162,26 @@ button_add:
     - ''
     - '&#2cc483⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ᴀᴅᴅ ᴛᴏ ꜱᴛᴀᴄᴋ'
 
+button_remove_all:
+  name: '&#ff5252ʀᴇᴍᴏᴠᴇ ᴀʟʟ'
+  lore:
+    - ''
+    - '&#e63939◈ &#ff7070ᴀᴄᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ʀᴇᴍᴏᴠᴇ ᴀʟʟ ꜱᴘᴀᴡɴᴇʀꜱ'
+    - '  &#f8f8ff•  ᴄᴜʀʀᴇɴᴛ: &#ff5252{stack_size}'
+    - ''
+    - '&#e63939⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ꜰʀᴏᴍ ꜱᴛᴀᴄᴋ'
+
+button_add_all:
+  name: '&#37eb9aᴀᴅᴅ ᴀʟʟ'
+  lore:
+    - ''
+    - '&#2cc483◈ &#48e89bᴀᴄᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ᴀᴅᴅ ᴀʟʟ ꜱᴘᴀᴡɴᴇʀꜱ ꜰʀᴏᴍ ɪɴᴠᴇɴᴛᴏʀʏ'
+    - '  &#f8f8ff•  ᴄᴜʀʀᴇɴᴛ: &#37eb9a{stack_size}'
+    - ''
+    - '&#2cc483⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ᴀᴅᴅ ᴀʟʟ ᴛᴏ ꜱᴛᴀᴄᴋ'
+
 # ---------------------------------------------------
 #            Sell Confirmation GUI
 # ---------------------------------------------------
@@ -206,6 +225,12 @@ button_sell_info:
 # ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
+# Available placeholders for gui_title_storage:
+# {current_page}     - Current page number
+# {total_pages}      - Total number of pages
+# {entity}           - Formatted entity name (e.g., "Zombie")
+# {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# {amount}           - Number of spawners stacked
 gui_title_storage: '&#545454ꜱᴘᴀᴡɴᴇʀ ꜱᴛᴏʀᴀɢᴇ - [{current_page}/{total_pages}]'
 
 navigation_button_previous:
@@ -222,6 +247,11 @@ sell_button:
   name: '&aꜱᴇʟʟ ᴀʟʟ ɪᴛᴇᴍꜱ: +${total_sell_price}'
   lore:
     - '&a⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ꜱᴇʟʟ ᴀʟʟ ɪᴛᴇᴍꜱ'
+
+sell_and_exp_button:
+  name: '&aꜱᴇʟʟ & ᴄᴏʟʟᴇᴄᴛ ᴇxᴘ: +${total_sell_price}'
+  lore:
+    - '&a⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ꜱᴇʟʟ ɪᴛᴇᴍꜱ ᴀɴᴅ ᴄᴏʟʟᴇᴄᴛ ᴇxᴘ'
 
 return_button:
   name: '&#ff5252ʀᴇᴛᴜʀɴ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ'
@@ -461,7 +491,7 @@ bedrock:
 
     # Spawner Info Configuration (displayed below buttons in Bedrock UI)
     # Available placeholders (same as spawner_info_item):
-    # Entity: {entity}, {ᴇɴᴛɪᴛʏ}, {entity_type}
+    # Entity: {entity}, {ᴇɴᴛɪᴛʏ},
     # Stack: {stack_size}
     # Settings: {range}, {delay}, {delay_raw}, {min_mobs}, {max_mobs}
     # Storage: {current_items}, {max_items}, {percent_storage_decimal}

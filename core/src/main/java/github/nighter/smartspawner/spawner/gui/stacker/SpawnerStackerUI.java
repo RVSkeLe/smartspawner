@@ -22,6 +22,8 @@ public class SpawnerStackerUI {
     private static final int[] INCREASE_SLOTS = {17, 16, 15};
     private static final int SPAWNER_INFO_SLOT = 13;
     private static final int[] STACK_AMOUNTS = {64, 10, 1};
+    private static final int REMOVE_ALL_SLOT = 22;
+    private static final int ADD_ALL_SLOT = 4;
 
     private final SmartSpawner plugin;
     private final LanguageManager languageManager;
@@ -58,6 +60,8 @@ public class SpawnerStackerUI {
             gui.setItem(INCREASE_SLOTS[i], createActionButton("add", spawner, STACK_AMOUNTS[i]));
         }
         gui.setItem(SPAWNER_INFO_SLOT, createSpawnerInfoButton(spawner));
+        gui.setItem(REMOVE_ALL_SLOT, createAllActionButton("remove_all", spawner));
+        gui.setItem(ADD_ALL_SLOT, createAllActionButton("add_all", spawner));
     }
 
     private ItemStack createActionButton(String action, SpawnerData spawner, int amount) {
@@ -75,6 +79,15 @@ public class SpawnerStackerUI {
         String name = languageManager.getGuiItemName("button_spawner.name", placeholders);
         String[] lore = languageManager.getGuiItemLore("button_spawner.lore", placeholders);
         return createButton(Material.SPAWNER, name, lore);
+    }
+
+    private ItemStack createAllActionButton(String action, SpawnerData spawner) {
+        Map<String, String> placeholders = createPlaceholders(spawner, 0);
+        String name = languageManager.getGuiItemName("button_" + action + ".name", placeholders);
+        String[] lore = languageManager.getGuiItemLore("button_" + action + ".lore", placeholders);
+        Material material = action.equals("add_all") ? Material.LIME_STAINED_GLASS_PANE
+                : Material.RED_STAINED_GLASS_PANE;
+        return createButton(material, name, lore);
     }
 
     private Map<String, String> createPlaceholders(SpawnerData spawner, int amount) {

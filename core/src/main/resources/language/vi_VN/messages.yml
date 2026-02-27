@@ -60,7 +60,7 @@ exp_collected_with_mending:
 #            Spawner - Storage GUI Interactions
 # ------------------------------------------------------
 click_too_fast:
-  action_bar: "&#ff5252ʙạɴ đᴀɴɢ ɴʜấᴘ ǫᴜá ɴʜᴀɴʜ! ᴠᴜɪ ʟòɴɢ ᴄʜậᴍ ʟạɪ."
+  message: "&#ff5252ʙạɴ đᴀɴɢ ɴʜấᴘ ǫᴜá ɴʜᴀɴʜ! ᴠᴜɪ ʟòɴɢ ᴄʜậᴍ ʟạɪ."
   sound: block.note_block.bass
 
 inventory_full:

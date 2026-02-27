@@ -25,7 +25,7 @@ public class SpawnerData {
     private String spawnerId;
     @Getter
     private final Location spawnerLocation;
-    
+
     // Fine-grained locks for different operations (Lock Striping Pattern)
     @Getter
     private final ReentrantLock inventoryLock = new ReentrantLock();  // For storage operations
@@ -65,7 +65,7 @@ public class SpawnerData {
     private EntityType entityType;
     @Getter @Setter
     private EntityLootConfig lootConfig;
-    
+
     // Item spawner support - stores the material being spawned for item spawners
     @Getter @Setter
     private Material spawnedItemMaterial;
@@ -115,7 +115,7 @@ public class SpawnerData {
     // Sort preference for spawner storage
     @Getter @Setter
     private Material preferredSortItem;
-    
+
     // CRITICAL: Pre-generated loot storage for better UX - access must be synchronized via lootGenerationLock
     private volatile List<ItemStack> preGeneratedItems;
     private volatile int preGeneratedExperience;
@@ -174,7 +174,7 @@ public class SpawnerData {
         this.spawnDelay = plugin.getTimeFromConfig("spawner_properties.default.delay", "25s");
         this.cachedSpawnDelay = (this.spawnDelay + 20L) * 50L; // Add 1 second buffer for GUI display and convert tick to ms
         this.spawnerRange = plugin.getConfig().getInt("spawner_properties.default.range", 16);
-        
+
         // Load loot config based on spawner type
         if (isItemSpawner() && spawnedItemMaterial != null) {
             this.lootConfig = plugin.getItemSpawnerSettingsConfig().getLootConfig(spawnedItemMaterial);
@@ -486,7 +486,10 @@ public class SpawnerData {
 
     public void updateLastInteractedPlayer(String playerName) {
         this.lastInteractedPlayer = playerName;
-        markInteracted();
+        // Prevent concurrent modification during spawn events to avoid hologram desync
+        if (System.currentTimeMillis() - lastSpawnTime < 50) {
+            markInteracted();
+        }
     }
 
     /**
@@ -509,7 +512,8 @@ public class SpawnerData {
 
         double addedValue = 0.0;
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : itemsAdded.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
@@ -535,13 +539,15 @@ public class SpawnerData {
         Map<VirtualInventory.ItemSignature, Long> consolidated = new java.util.HashMap<>();
         for (ItemStack item : itemsRemoved) {
             if (item == null || item.getAmount() <= 0) continue;
-            VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+            // Use cached signature to avoid excessive cloning
+            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
             consolidated.merge(sig, (long) item.getAmount(), Long::sum);
         }
 
         double removedValue = 0.0;
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidated.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
@@ -571,7 +577,8 @@ public class SpawnerData {
         double totalValue = 0.0;
 
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             double itemPrice = findItemPrice(template, priceCache);
             if (itemPrice > 0.0) {
@@ -669,7 +676,8 @@ public class SpawnerData {
             Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
             for (ItemStack item : items) {
                 if (item == null || item.getAmount() <= 0) continue;
-                VirtualInventory.ItemSignature sig = new VirtualInventory.ItemSignature(item);
+                // Use cached signature to avoid excessive cloning
+                VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
                 itemsToAdd.merge(sig, (long) item.getAmount(), Long::sum);
             }
 
@@ -714,42 +722,42 @@ public class SpawnerData {
             inventoryLock.unlock();
         }
     }
-    
+
     public synchronized void storePreGeneratedLoot(List<ItemStack> items, int experience) {
         this.preGeneratedItems = items;
         this.preGeneratedExperience = experience;
     }
-    
+
     public synchronized List<ItemStack> getAndClearPreGeneratedItems() {
         List<ItemStack> items = preGeneratedItems;
         preGeneratedItems = null;
         return items;
     }
-    
+
     public synchronized int getAndClearPreGeneratedExperience() {
         int exp = preGeneratedExperience;
         preGeneratedExperience = 0;
         return exp;
     }
-    
+
     public synchronized boolean hasPreGeneratedLoot() {
         return (preGeneratedItems != null && !preGeneratedItems.isEmpty()) || preGeneratedExperience > 0;
     }
-    
+
     public synchronized void setPreGenerating(boolean generating) {
         this.isPreGenerating = generating;
     }
-    
+
     public synchronized boolean isPreGenerating() {
         return isPreGenerating;
     }
-    
+
     public synchronized void clearPreGeneratedLoot() {
         preGeneratedItems = null;
         preGeneratedExperience = 0;
         isPreGenerating = false;
     }
-    
+
     /**
      * Checks if this is an item spawner (spawns items instead of entities)
      * @return true if this spawner spawns items

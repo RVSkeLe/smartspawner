@@ -42,7 +42,8 @@ public class ItemStackSerializer {
         Map<Material, ItemGroup> groupedItems = new HashMap<>();
 
         for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
-            ItemStack template = entry.getKey().getTemplate();
+            // Use getTemplateRef() to avoid cloning - we only need to read properties
+            ItemStack template = entry.getKey().getTemplateRef();
             Material material = template.getType();
             ItemGroup group = groupedItems.computeIfAbsent(material, ItemGroup::new);
 

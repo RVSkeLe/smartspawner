@@ -55,6 +55,8 @@ public class SpawnerStackerHandler implements Listener {
     private static final int[] INCREASE_SLOTS = {17, 16, 15};
     private static final int SPAWNER_INFO_SLOT = 13;
     private static final int[] STACK_AMOUNTS = {64, 10, 1};
+    private static final int REMOVE_ALL_SLOT = 22;
+    private static final int ADD_ALL_SLOT = 4;
 
     // Player interaction tracking - using more efficient data structures
     private final Map<UUID, Long> lastClickTime = new ConcurrentHashMap<>(16, 0.75f, 2);
@@ -135,6 +137,29 @@ public class SpawnerStackerHandler implements Listener {
 
         // Process stack modification
         int slotIndex = event.getRawSlot();
+
+        // Handle "all" buttons
+        if (slotIndex == ADD_ALL_SLOT) {
+            lastClickTime.put(playerId, System.currentTimeMillis());
+            handleAddAll(player, spawner);
+            String spawnerId = spawner.getSpawnerId();
+            Set<UUID> viewers = activeViewers.get(spawnerId);
+            if (viewers != null && !viewers.isEmpty()) {
+                scheduleViewersUpdate(spawner);
+            }
+            return;
+        }
+        if (slotIndex == REMOVE_ALL_SLOT) {
+            lastClickTime.put(playerId, System.currentTimeMillis());
+            handleRemoveAll(player, spawner);
+            String spawnerId = spawner.getSpawnerId();
+            Set<UUID> viewers = activeViewers.get(spawnerId);
+            if (viewers != null && !viewers.isEmpty()) {
+                scheduleViewersUpdate(spawner);
+            }
+            return;
+        }
+
         int changeAmount = determineChangeAmount(slotIndex);
 
         if (changeAmount != 0) {
@@ -157,7 +182,7 @@ public class SpawnerStackerHandler implements Listener {
         if (!(event.getInventory().getHolder(false) instanceof SpawnerStackerHolder holder)) {
             return;
         }
-        
+
         event.setCancelled(true);
     }
 
@@ -310,23 +335,34 @@ public class SpawnerStackerHandler implements Listener {
                 return;
             }
 
+            // Check inventory capacity before removing from stack
+            int inventoryCapacity = countAvailableSpawnerCapacity(player, spawner);
+            if (inventoryCapacity <= 0) {
+                messageService.sendMessage(player, "inventory_full");
+                return;
+            }
+            actualChange = Math.min(actualChange, inventoryCapacity);
+            targetSize = currentSize - actualChange;
+
+            // Create final variables for lambda
+            final int finalActualChange = actualChange;
+            final int finalTargetSize = targetSize;
+
             if(SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
-                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), targetSize, actualChange);
+                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), finalTargetSize, finalActualChange);
                 Bukkit.getPluginManager().callEvent(e);
                 if (e.isCancelled()) return;
             }
 
-            // Update stack size and give spawners to player
-            // setStackSize internally uses dataLock for thread safety
-            spawner.setStackSize(targetSize);
-
-            // Mark spawner as modified for database save
+            // Update stack size first (after capacity check, so it's safe)
+            spawner.setStackSize(finalTargetSize);
             spawnerManager.markSpawnerModified(spawner.getSpawnerId());
 
+            // Give spawners to player after decreasing stack
             if (spawner.isItemSpawner()) {
-                giveItemSpawnersToPlayer(player, actualChange, spawner.getSpawnedItemMaterial());
+                giveItemSpawnersToPlayer(player, finalActualChange, spawner.getSpawnedItemMaterial());
             } else {
-                giveSpawnersToPlayer(player, actualChange, spawner.getEntityType());
+                giveSpawnersToPlayer(player, finalActualChange, spawner.getEntityType());
             }
 
             // Log destack operation
@@ -335,9 +371,9 @@ public class SpawnerStackerHandler implements Listener {
                     builder.player(player.getName(), player.getUniqueId())
                         .location(spawner.getSpawnerLocation())
                         .entityType(spawner.getEntityType())
-                        .metadata("amount_removed", actualChange)
+                        .metadata("amount_removed", finalActualChange)
                         .metadata("old_stack_size", currentSize)
-                        .metadata("new_stack_size", targetSize)
+                        .metadata("new_stack_size", finalTargetSize)
                 );
             }
 
@@ -419,6 +455,159 @@ public class SpawnerStackerHandler implements Listener {
         player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
     }
 
+    private void handleAddAll(Player player, SpawnerData spawner) {
+        int currentSize = spawner.getStackSize();
+        int maxStackSize = spawner.getMaxStackSize();
+        int spaceLeft = maxStackSize - currentSize;
+
+        if (spaceLeft <= 0) {
+            Map<String, String> placeholders = new HashMap<>(2);
+            placeholders.put("max", String.valueOf(maxStackSize));
+            messageService.sendMessage(player, "spawner_stack_full", placeholders);
+            return;
+        }
+
+        // Scan inventory for matching spawners
+        InventoryScanResult scanResult;
+        if (spawner.isItemSpawner()) {
+            scanResult = scanPlayerInventoryForItemSpawner(player, spawner.getSpawnedItemMaterial());
+        } else {
+            scanResult = scanPlayerInventory(player, spawner.getEntityType());
+        }
+
+        if (scanResult.availableSpawners == 0 && scanResult.hasDifferentType) {
+            messageService.sendMessage(player, "spawner_different");
+            return;
+        }
+
+        int actualChange = Math.min(spaceLeft, scanResult.availableSpawners);
+
+        if (SpawnerStackEvent.getHandlerList().getRegisteredListeners().length != 0) {
+            SpawnerStackEvent e = new SpawnerStackEvent(player, spawner.getSpawnerLocation(), spawner.getStackSize(),
+                    spawner.getStackSize() + actualChange, SpawnerStackEvent.StackSource.GUI);
+            Bukkit.getPluginManager().callEvent(e);
+            if (e.isCancelled())
+                return;
+        }
+
+        // Remove spawners from inventory first
+        if (spawner.isItemSpawner()) {
+            removeValidItemSpawnersFromInventory(player, spawner.getSpawnedItemMaterial(), actualChange,
+                    scanResult.spawnerSlots);
+        } else {
+            removeValidSpawnersFromInventory(player, spawner.getEntityType(), actualChange,
+                    scanResult.spawnerSlots);
+        }
+
+        // Update stack size after removing from inventory
+        spawner.setStackSize(currentSize + actualChange);
+        spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+
+        player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
+    }
+
+    private void handleRemoveAll(Player player, SpawnerData spawner) {
+        Location location = spawner.getSpawnerLocation();
+
+        if (!locationLockManager.tryLock(location)) {
+            messageService.sendMessage(player, "action_in_progress");
+            return;
+        }
+
+        try {
+            int currentSize = spawner.getStackSize();
+
+            if (currentSize == 1) {
+                messageService.sendMessage(player, "spawner_cannot_remove_last");
+                return;
+            }
+
+            int actualChange = currentSize - 1;
+
+            // Cap at available inventory capacity
+            int inventoryCapacity = countAvailableSpawnerCapacity(player, spawner);
+            if (inventoryCapacity <= 0) {
+                messageService.sendMessage(player, "inventory_full");
+                return;
+            }
+            actualChange = Math.min(actualChange, inventoryCapacity);
+            int newStackSize = currentSize - actualChange;
+
+            // Create final variables for lambda
+            final int finalActualChange = actualChange;
+            final int finalNewStackSize = newStackSize;
+
+            if (SpawnerRemoveEvent.getHandlerList().getRegisteredListeners().length != 0) {
+                SpawnerRemoveEvent e = new SpawnerRemoveEvent(player, spawner.getSpawnerLocation(), finalNewStackSize,
+                        finalActualChange);
+                Bukkit.getPluginManager().callEvent(e);
+                if (e.isCancelled())
+                    return;
+            }
+
+            // Update stack size first (after capacity check, so it's safe)
+            spawner.setStackSize(finalNewStackSize);
+            spawnerManager.markSpawnerModified(spawner.getSpawnerId());
+
+            // Give spawners to player after decreasing stack
+            if (spawner.isItemSpawner()) {
+                giveItemSpawnersToPlayer(player, finalActualChange, spawner.getSpawnedItemMaterial());
+            } else {
+                giveSpawnersToPlayer(player, finalActualChange, spawner.getEntityType());
+            }
+
+            if (plugin.getSpawnerActionLogger() != null) {
+                plugin.getSpawnerActionLogger().log(
+                        github.nighter.smartspawner.logging.SpawnerEventType.SPAWNER_DESTACK_GUI,
+                        builder -> builder.player(player.getName(), player.getUniqueId())
+                                .location(spawner.getSpawnerLocation())
+                                .entityType(spawner.getEntityType())
+                                .metadata("amount_removed", finalActualChange)
+                                .metadata("old_stack_size", currentSize)
+                                .metadata("new_stack_size", finalNewStackSize));
+            }
+
+            player.playSound(player.getLocation(), STACK_SOUND, SOUND_VOLUME, SOUND_PITCH);
+        } finally {
+            locationLockManager.unlock(location);
+        }
+    }
+
+    /**
+     * Counts how many spawners of the given type the player's inventory can accept.
+     * Considers both empty slots and partial stacks of matching spawners.
+     */
+    private int countAvailableSpawnerCapacity(Player player, SpawnerData spawner) {
+        final int MAX_STACK_SIZE = 64;
+        int capacity = 0;
+        ItemStack[] contents = player.getInventory().getContents();
+
+        for (int i = 0; i < 36; i++) { // Main inventory slots 0-35
+            ItemStack item = contents[i];
+            if (item == null || item.getType() == Material.AIR) {
+                capacity += MAX_STACK_SIZE;
+                continue;
+            }
+
+            if (item.getType() == Material.SPAWNER && !SpawnerTypeChecker.isVanillaSpawner(item)) {
+                Optional<EntityType> itemEntityType = getSpawnerEntityTypeCached(item);
+                boolean matches;
+                if (spawner.isItemSpawner()) {
+                    // For item spawners, match by spawned item material
+                    matches = false; // Item spawners use separate give method; empty slots cover them
+                } else {
+                    matches = itemEntityType.isPresent() && itemEntityType.get() == spawner.getEntityType();
+                }
+
+                if (matches && item.getAmount() < MAX_STACK_SIZE) {
+                    capacity += MAX_STACK_SIZE - item.getAmount();
+                }
+            }
+        }
+
+        return capacity;
+    }
+
     private void scheduleViewersUpdate(SpawnerData spawner) {
         String spawnerId = spawner.getSpawnerId();
         Set<UUID> viewers = activeViewers.get(spawnerId);
@@ -471,6 +660,10 @@ public class SpawnerStackerHandler implements Listener {
             updateActionButton(inv, "add", STACK_AMOUNTS[i], INCREASE_SLOTS[i], basePlaceholders);
         }
 
+        // Update "all" buttons
+        updateAllActionButton(inv, "remove_all", REMOVE_ALL_SLOT, basePlaceholders);
+        updateAllActionButton(inv, "add_all", ADD_ALL_SLOT, basePlaceholders);
+
         // Force client refresh
         player.updateInventory();
     }
@@ -517,6 +710,23 @@ public class SpawnerStackerHandler implements Listener {
         placeholders.put("plural", amount > 1 ? "s" : "");
 
         // Get name and lore from the LanguageManager
+        String name = languageManager.getGuiItemName("button_" + action + ".name", placeholders);
+        String[] lore = languageManager.getGuiItemLore("button_" + action + ".lore", placeholders);
+
+        meta.setDisplayName(name);
+        meta.setLore(Arrays.asList(lore));
+        button.setItemMeta(meta);
+    }
+
+    private void updateAllActionButton(Inventory inventory, String action, int slot,
+            Map<String, String> basePlaceholders) {
+        ItemStack button = inventory.getItem(slot);
+        if (button == null || !button.hasItemMeta())
+            return;
+
+        ItemMeta meta = button.getItemMeta();
+        Map<String, String> placeholders = new HashMap<>(basePlaceholders);
+
         String name = languageManager.getGuiItemName("button_" + action + ".name", placeholders);
         String[] lore = languageManager.getGuiItemLore("button_" + action + ".lore", placeholders);
 

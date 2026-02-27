@@ -1,41 +1,51 @@
-# DonutSMP Storage GUI Layout Configuration
+# Storage GUI Layout Configuration
 # Slot positions: 1-9 corresponds to inventory slots 46-54 (bottom row)
-# Valid materials can be found at: https://jd.papermc.io/paper/1.21.6/org/bukkit/Material.html
+# Valid materials: https://jd.papermc.io/paper/1.21.8/org/bukkit/Material.html
+#
+# Format:
+#   slot_X:                    # X = slot number (1-9)
+#     material: MATERIAL_NAME  # Material to display
+#     enabled: true/false      # Show/hide button
+#     click: "action"          # Action for any click (left/right/shift)
+#     if:                      # Optional: conditional actions
+#       condition_name:
+#         click: "action"      # Actions when condition is met
+#
+# Conditions:
+#   sell_integration: When sell/shop integration is enabled
+#   no_sell_integration: When sell/shop integration is disabled
 
-buttons:
-  # Return to main menu button
-  return:
-    slot: 1
-    material: BARRIER
-    enabled: true
+# Return to main menu
+slot_1:
+  material: BARRIER
+  enabled: true
+  click: "return_main"
 
-  # Previous page navigation button
-  previous_page:
-    slot: 4
-    material: ARROW
-    enabled: true
+# Previous page
+slot_4:
+  material: ARROW
+  enabled: true
+  click: "previous_page"
 
-  # Conditional button: Sell button if shop integration available, Take all button otherwise
-  sell_all:
-    slot: 5
-    material: GOLD_INGOT
-    enabled: true
-    condition: "shop_integration"
+# Multi-purpose button
+slot_5:
+  material: GOLD_INGOT
+  enabled: true
+  if:
+    sell_integration:
+      click: "sell_all"
+    no_sell_integration:
+      material: SPECTRAL_ARROW
+      click: "take_all"
 
-  # Take all items button (fallback for slot 5 when no shop integration)
-  take_all:
-    slot: 5
-    material: SPECTRAL_ARROW
-    enabled: true
-    condition: "no_shop_integration"
+# Next page
+slot_6:
+  material: ARROW
+  enabled: true
+  click: "next_page"
 
-  # Next page navigation button
-  next_page:
-    slot: 6
-    material: ARROW
-    enabled: true
-
-  drop_page:
-    slot: 9
-    material: DROPPER
-    enabled: true
+# Drop page
+slot_9:
+  material: DROPPER
+  enabled: true
+  click: "drop_page"

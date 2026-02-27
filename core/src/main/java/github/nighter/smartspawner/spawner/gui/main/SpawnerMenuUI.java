@@ -60,13 +60,26 @@ public class SpawnerMenuUI {
         this.lootItemFormat = languageManager.getGuiItemName(LOOT_ITEM_FORMAT_KEY, EMPTY_PLACEHOLDERS);
         this.emptyLootMessage = languageManager.getGuiItemName(EMPTY_LOOT_MESSAGE_KEY, EMPTY_PLACEHOLDERS);
 
-        // Cache materials from layout config for performance
+        // OPTIMIZATION: Cache materials from layout config for performance
+        // Find buttons by their action instead of name
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
-        GuiButton storageButton = layout.getButton("storage");
-        GuiButton expButton = layout.getButton("exp");
 
-        this.cachedStorageMaterial = storageButton != null ? storageButton.getMaterial() : Material.CHEST;
-        this.cachedExpMaterial = expButton != null ? expButton.getMaterial() : Material.EXPERIENCE_BOTTLE;
+        Material storageMaterial = Material.CHEST; // default
+        Material expMaterial = Material.EXPERIENCE_BOTTLE; // default
+
+        for (GuiButton button : layout.getAllButtons().values()) {
+            String action = button.getDefaultAction();
+            if (action == null) continue;
+
+            if ("open_storage".equals(action)) {
+                storageMaterial = button.getMaterial();
+            } else if ("collect_exp".equals(action)) {
+                expMaterial = button.getMaterial();
+            }
+        }
+
+        this.cachedStorageMaterial = storageMaterial;
+        this.cachedExpMaterial = expMaterial;
     }
 
     public void clearCache() {
@@ -103,25 +116,49 @@ public class SpawnerMenuUI {
         Inventory menu = createMenu(spawner);
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
 
-        // Populate menu items based on layout configuration
+        // OPTIMIZATION: Populate menu items based on layout configuration
+        // Iterate through ALL buttons in layout and create items based on their actions
         ItemStack[] items = new ItemStack[INVENTORY_SIZE];
         
-        // Add storage button if enabled in layout
-        GuiButton storageButton = layout.getButton("storage");
-        if (storageButton != null) {
-            items[storageButton.getSlot()] = createLootStorageItem(spawner);
-        }
-        
-        // Add spawner info button if enabled in layout - handle conditional buttons
-        GuiButton spawnerInfoButton = getSpawnerInfoButton(layout, player);
-        if (spawnerInfoButton != null) {
-            items[spawnerInfoButton.getSlot()] = createSpawnerInfoItem(player, spawner);
-        }
-        
-        // Add exp button if enabled in layout
-        GuiButton expButton = layout.getButton("exp");
-        if (expButton != null) {
-            items[expButton.getSlot()] = createExpItem(spawner);
+        for (GuiButton button : layout.getAllButtons().values()) {
+            if (!button.isEnabled()) {
+                continue;
+            }
+
+            // Check condition if present
+            if (button.hasCondition() && !evaluateButtonCondition(button, player)) {
+                continue;
+            }
+
+            // OPTIMIZATION: Get action - check all action types not just default
+            // A button might have left_click/right_click but no click
+            String action = getAnyActionFromButton(button);
+            if (action == null || action.isEmpty()) {
+                continue;
+            }
+
+            ItemStack item = null;
+            switch (action) {
+                case "open_storage":
+                    item = createLootStorageItem(spawner);
+                    break;
+                case "open_stacker":
+                case "sell_and_exp":
+                case "none":
+                    // Spawner info button
+                    item = createSpawnerInfoItem(player, spawner);
+                    break;
+                case "collect_exp":
+                    item = createExpItem(spawner);
+                    break;
+                default:
+                    plugin.getLogger().warning("Unknown action in main GUI: " + action);
+                    continue;
+            }
+
+            if (item != null) {
+                items[button.getSlot()] = item;
+            }
         }
 
         // Set all items at once instead of one by one
@@ -323,9 +360,28 @@ public class SpawnerMenuUI {
     }
 
     public ItemStack createSpawnerInfoItem(Player player, SpawnerData spawner) {
-        // Get layout configuration first for cache key calculation
+        // Get layout configuration first
         GuiLayout layout = plugin.getGuiLayoutConfig().getCurrentMainLayout();
-        GuiButton spawnerInfoButton = getSpawnerInfoButton(layout, player);
+
+        // OPTIMIZATION: Find spawner info button by info_button flag first
+        GuiButton spawnerInfoButton = null;
+        for (GuiButton button : layout.getAllButtons().values()) {
+            // Check info_button flag first (most reliable)
+            if (button.isInfoButton()) {
+                spawnerInfoButton = button;
+                break;
+            }
+
+            // Fallback: check by action for backward compatibility
+            String action = getAnyActionFromButton(button);
+            if (action != null && (action.equals("open_stacker") || action.equals("sell_and_exp") || action.equals("none"))) {
+                // Check if button condition matches current state
+                if (!button.hasCondition() || evaluateButtonCondition(button, player)) {
+                    spawnerInfoButton = button;
+                    break;
+                }
+            }
+        }
 
         // Get important data upfront
         EntityType entityType = spawner.getEntityType();
@@ -348,7 +404,7 @@ public class SpawnerMenuUI {
 
         // Define all available placeholders
         Set<String> availablePlaceholders = Set.of(
-            "entity", "ᴇɴᴛɪᴛʏ", "entity_type", "stack_size", "range", "delay", "min_mobs", "max_mobs",
+            "entity", "ᴇɴᴛɪᴛʏ", "stack_size", "range", "delay", "min_mobs", "max_mobs",
             "current_items", "max_items", "percent_storage_decimal", "percent_storage_rounded",
             "current_exp", "max_exp", "raw_current_exp", "raw_max_exp", "percent_exp_decimal", "percent_exp_rounded",
             "total_sell_price", "time"
@@ -377,9 +433,6 @@ public class SpawnerMenuUI {
             if (usedPlaceholders.contains("ᴇɴᴛɪᴛʏ")) {
                 placeholders.put("ᴇɴᴛɪᴛʏ", languageManager.getSmallCaps(entityName));
             }
-        }
-        if (usedPlaceholders.contains("entity_type")) {
-            placeholders.put("entity_type", entityType.toString());
         }
 
         // Stack information
@@ -591,24 +644,50 @@ public class SpawnerMenuUI {
         return usedPlaceholders;
     }
 
-    private GuiButton getSpawnerInfoButton(GuiLayout layout, Player player) {
-        // Check for shop integration permission
-        boolean hasShopPermission = plugin.hasSellIntegration() && player.hasPermission("smartspawner.sellall");
-
-        // Try to get the appropriate conditional button first
-        if (hasShopPermission) {
-            GuiButton shopButton = layout.getButton("spawner_info_with_shop");
-            if (shopButton != null) {
-                return shopButton;
-            }
-        } else {
-            GuiButton noShopButton = layout.getButton("spawner_info_no_shop");
-            if (noShopButton != null) {
-                return noShopButton;
-            }
+    /**
+     * Evaluate button condition based on player/server state
+     * OPTIMIZATION: Centralized condition evaluation
+     */
+    private boolean evaluateButtonCondition(GuiButton button, org.bukkit.entity.Player player) {
+        String condition = button.getCondition();
+        if (condition == null || condition.isEmpty()) {
+            return true;
         }
 
-        // Fallback to the generic spawner_info button if conditional ones don't exist
-        return layout.getButton("spawner_info");
+        switch (condition) {
+            case "sell_integration":
+                return plugin.hasSellIntegration();
+            case "no_sell_integration":
+                return !plugin.hasSellIntegration();
+            default:
+                plugin.getLogger().warning("Unknown button condition: " + condition);
+                return true;
+        }
+    }
+
+    /**
+     * Get any action from button - checks click, left_click, right_click
+     * OPTIMIZATION: Return first found action for item creation
+     */
+    private String getAnyActionFromButton(GuiButton button) {
+        // Check in priority order: click -> left_click -> right_click
+        String action = button.getDefaultAction(); // checks "click" first
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        // Check left_click
+        action = button.getAction("left_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        // Check right_click
+        action = button.getAction("right_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        return null;
     }
 }

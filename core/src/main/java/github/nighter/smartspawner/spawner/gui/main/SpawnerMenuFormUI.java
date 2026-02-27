@@ -317,7 +317,6 @@ public class SpawnerMenuFormUI {
         placeholders.put("ᴇɴᴛɪᴛʏ", entityNameSmallCaps);
         placeholders.put("entity", entityName);
         placeholders.put("amount", String.valueOf(spawner.getStackSize()));
-        placeholders.put("entity_type", spawner.getEntityType().toString());
 
         // Stack information
         placeholders.put("stack_size", String.valueOf(spawner.getStackSize()));

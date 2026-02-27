@@ -82,6 +82,26 @@ button_add:
     - ''
     - '&#2cc483⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ᴀᴅᴅ ᴛᴏ ꜱᴛᴀᴄᴋ'
 
+button_remove_all:
+  name: '&#ff5252ʀᴇᴍᴏᴠᴇ ᴀʟʟ'
+  lore:
+    - ''
+    - '&#e63939◈ &#ff7070ᴀᴄᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ʀᴇᴍᴏᴠᴇ ᴀʟʟ ꜱᴘᴀᴡɴᴇʀꜱ'
+    - '  &#f8f8ff•  ᴄᴜʀʀᴇɴᴛ: &#ff5252{stack_size}'
+    - ''
+    - '&#e63939⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ꜰʀᴏᴍ ꜱᴛᴀᴄᴋ'
+
+button_add_all:
+  name: '&#37eb9aᴀᴅᴅ ᴀʟʟ'
+  lore:
+    - ''
+    - '&#2cc483◈ &#48e89bᴀᴄᴛɪᴏɴ:'
+    - '  &#f8f8ff•  ᴀᴅᴅ ᴀʟʟ ꜱᴘᴀᴡɴᴇʀꜱ ꜰʀᴏᴍ ɪɴᴠᴇɴᴛᴏʀʏ'
+    - '  &#f8f8ff•  ᴄᴜʀʀᴇɴᴛ: &#37eb9a{stack_size}'
+    - ''
+    - '&#2cc483⊳ &#f8f8ffᴄʟɪᴄᴋ ᴛᴏ ᴀᴅᴅ ᴀʟʟ ᴛᴏ ꜱᴛᴀᴄᴋ'
+
 # ---------------------------------------------------
 #            Sell Confirmation GUI
 # ---------------------------------------------------
@@ -125,6 +145,12 @@ button_sell_info:
 # ---------------------------------------------------
 #             Spawner Storage GUI
 # ---------------------------------------------------
+# Available placeholders for gui_title_storage:
+# {current_page}     - Current page number
+# {total_pages}      - Total number of pages
+# {entity}           - Formatted entity name (e.g., "Zombie")
+# {ᴇɴᴛɪᴛʏ}           - Entity name in small caps (e.g., "ᴢᴏᴍʙɪᴇ")
+# {amount}           - Number of spawners stacked
 gui_title_storage: "&#545454ꜱᴘᴀᴡɴᴇʀ ꜱᴛᴏʀᴀɢᴇ - [{current_page}/{total_pages}]"
 
 navigation_button_previous:
@@ -141,6 +167,11 @@ sell_button:
   name: '&#00F986ꜱᴇʟʟ ᴀʟʟ: +${total_sell_price}'
   lore:
     - '&fClick to sell all mob drops'
+
+sell_and_exp_button:
+  name: '&aꜱᴇʟʟ & ᴇxᴘ: +${total_sell_price}'
+  lore:
+    - '&fClick to sell items and collect experience'
 
 return_button:
   name: '&#FC0000ʀᴇᴛᴜʀɴ'

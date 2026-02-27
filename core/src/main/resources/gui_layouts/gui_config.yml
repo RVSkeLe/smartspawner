@@ -6,3 +6,8 @@
 # When disabled: Right-clicking a spawner opens the main GUI first (default behavior)
 skip_main_gui: false
 
+# Skip sell confirmation GUI when selling items
+# When enabled: Clicking sell will immediately sell all items without confirmation
+# When disabled: Clicking sell will show a confirmation GUI first (default behavior)
+skip_sell_confirmation: false
+

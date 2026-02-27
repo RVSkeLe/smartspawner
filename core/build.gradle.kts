@@ -22,7 +22,7 @@ dependencies {
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") {
         exclude(group = "*")
     }
-    compileOnly("com.palmergames.bukkit.towny:towny:0.102.0.6")
+    compileOnly("com.palmergames.bukkit.towny:towny:0.102.0.7")
     compileOnly("com.bgsoftware:SuperiorSkyblockAPI:2025.2.1")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("su.nightexpress.coinsengine:CoinsEngine:2.6.0")
@@ -38,7 +38,7 @@ dependencies {
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.9")
     compileOnly("pl.minecodes.plots:plugin-api:4.6.2")
     compileOnly("fr.maxlego08.shop:zshop-api:3.3.2")
-    compileOnly("fr.maxlego08.menu:zmenu-api:1.1.0.9")
+    compileOnly("fr.maxlego08.menu:zmenu-api:1.1.1.0")
 
     implementation("com.github.GriefPrevention:GriefPrevention:18.0.0")
     implementation("com.github.IncrediblePlugins:LandsAPI:7.24.1")

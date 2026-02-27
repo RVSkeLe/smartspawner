@@ -6,7 +6,7 @@ import github.nighter.smartspawner.hooks.rpg.AuraSkillsIntegration;
 import github.nighter.smartspawner.language.LanguageManager;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.stacker.SpawnerStackerUI;
-import github.nighter.smartspawner.spawner.gui.storage.ui.SpawnerStorageUI;
+import github.nighter.smartspawner.spawner.gui.storage.SpawnerStorageUI;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.sell.SpawnerSellManager;
@@ -127,9 +127,9 @@ public class SpawnerMenuAction implements Listener {
         }
 
         var button = buttonOpt.get();
-        String action = button.getAction(clickType);
-        
-        if (action == null) {
+        String action = button.getActionWithFallback(clickType);
+
+        if (action == null || action.isEmpty()) {
             return false;
         }
 

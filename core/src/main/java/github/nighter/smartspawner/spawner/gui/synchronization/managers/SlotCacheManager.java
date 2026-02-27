@@ -36,31 +36,70 @@ public class SlotCacheManager {
             return;
         }
 
-        // Initialize storage slot
-        GuiButton storageButton = layout.getButton("storage");
-        cachedStorageSlot = storageButton != null ? storageButton.getSlot() : -1;
+        // OPTIMIZATION: Find buttons by ACTION and INFO_BUTTON flag
+        int storageSlot = -1;
+        int expSlot = -1;
+        int spawnerInfoSlot = -1;
 
-        // Initialize exp slot
-        GuiButton expButton = layout.getButton("exp");
-        cachedExpSlot = expButton != null ? expButton.getSlot() : -1;
+        for (GuiButton button : layout.getAllButtons().values()) {
+            if (!button.isEnabled()) {
+                continue;
+            }
 
-        // Initialize spawner info slot using the same logic as SpawnerMenuUI
-        GuiButton spawnerInfoButton = null;
+            // Check for spawner info button first (marked with info_button: true)
+            if (button.isInfoButton()) {
+                spawnerInfoSlot = button.getSlot();
+                continue; // Found info button, continue to find others
+            }
 
-        // Check for shop integration to determine which button to use
-        if (plugin.hasSellIntegration()) {
-            spawnerInfoButton = layout.getButton("spawner_info_with_shop");
+            // Get any action from button
+            String action = getAnyActionFromButton(button);
+            if (action == null) continue;
+
+            // Find other button slots by their actions
+            switch (action) {
+                case "open_storage":
+                    storageSlot = button.getSlot();
+                    break;
+                case "collect_exp":
+                    expSlot = button.getSlot();
+                    break;
+            }
         }
 
-        if (spawnerInfoButton == null) {
-            spawnerInfoButton = layout.getButton("spawner_info_no_shop");
+        cachedStorageSlot = storageSlot;
+        cachedExpSlot = expSlot;
+        cachedSpawnerInfoSlot = spawnerInfoSlot;
+    }
+
+    /**
+     * Get any action from button - checks click, left_click, right_click
+     * OPTIMIZATION: Return first found action
+     */
+    private String getAnyActionFromButton(GuiButton button) {
+        // Check click type actions in priority order
+        var actions = button.getActions();
+        if (actions == null || actions.isEmpty()) {
+            return null;
         }
 
-        if (spawnerInfoButton == null) {
-            spawnerInfoButton = layout.getButton("spawner_info");
+        // Check in priority: click -> left_click -> right_click
+        String action = actions.get("click");
+        if (action != null && !action.isEmpty()) {
+            return action;
         }
 
-        cachedSpawnerInfoSlot = spawnerInfoButton != null ? spawnerInfoButton.getSlot() : -1;
+        action = actions.get("left_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        action = actions.get("right_click");
+        if (action != null && !action.isEmpty()) {
+            return action;
+        }
+
+        return null;
     }
 
     /**
