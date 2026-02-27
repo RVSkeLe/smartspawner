@@ -5,6 +5,7 @@ import github.nighter.smartspawner.utils.BlockPos;
 import github.nighter.smartspawner.Scheduler;
 import org.bukkit.Chunk;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -14,6 +15,8 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.event.world.WorldUnloadEvent;
 
 public class HopperTracker implements Listener {
 
@@ -34,14 +37,18 @@ public class HopperTracker implements Listener {
         registry.add(new BlockPos(hopper.getLocation()));
     }
 
-    public void scanLoadedChunks() {
+    public void scanLoadedWorlds() {
         for (var world : plugin.getServer().getWorlds()) {
-            for (Chunk loadedChunk : world.getLoadedChunks()) {
-                int x = loadedChunk.getX();
-                int z = loadedChunk.getZ();
+            scanLoadedChunksInWorld(world);
+        }
+    }
 
-                Scheduler.runChunkTask(world, x, z, () -> scanChunkInternal(world, x, z));
-            }
+    public void scanLoadedChunksInWorld(World world) {
+        for (Chunk loadedChunk : world.getLoadedChunks()) {
+            int x = loadedChunk.getX();
+            int z = loadedChunk.getZ();
+
+            Scheduler.runChunkTask(world, x, z, () -> scanChunkInternal(world, x, z));
         }
     }
 
@@ -57,6 +64,20 @@ public class HopperTracker implements Listener {
 
             tryAdd(state.getBlock());
         }
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent e) {
+        if (!plugin.getHopperConfig().isHopperEnabled()) return;
+
+        scanLoadedChunksInWorld(e.getWorld());
+    }
+
+    @EventHandler
+    public void onWorldUnload(WorldUnloadEvent e) {
+        if (!plugin.getHopperConfig().isHopperEnabled()) return;
+
+        registry.removeWorld(e.getWorld());
     }
 
     @EventHandler

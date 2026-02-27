@@ -2,6 +2,7 @@ package github.nighter.smartspawner.extras;
 
 import github.nighter.smartspawner.utils.BlockPos;
 import github.nighter.smartspawner.utils.ChunkUtil;
+import org.bukkit.World;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +51,14 @@ public final class HopperRegistry {
         if (worldMap.isEmpty()) {
             data.remove(worldId);
         }
+    }
+
+    public void removeWorld(World world) {
+        removeWorld(world.getUID());
+    }
+
+    public void removeWorld(UUID worldId) {
+        data.remove(worldId);
     }
 
     /**

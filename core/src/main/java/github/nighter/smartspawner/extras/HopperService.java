@@ -27,7 +27,7 @@ public class HopperService {
         this.registry = new HopperRegistry();
         this.transfer = new HopperTransfer(plugin);
         this.tracker = new HopperTracker(plugin, registry);
-        this.tracker.scanLoadedChunks();
+        this.tracker.scanLoadedWorlds();
 
         long delay = plugin.getTimeFromConfig("hopper.check_delay", "3s");
 
