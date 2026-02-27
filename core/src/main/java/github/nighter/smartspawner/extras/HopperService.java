@@ -7,10 +7,7 @@ import github.nighter.smartspawner.utils.BlockPos;
 import github.nighter.smartspawner.utils.ChunkUtil;
 import lombok.Getter;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 
 public class HopperService {
 
