@@ -2,6 +2,7 @@ package github.nighter.smartspawner.spawner.interactions.destroy;
 
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.api.events.SpawnerPlayerBreakEvent;
+import github.nighter.smartspawner.config.Config;
 import github.nighter.smartspawner.extras.HopperService;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.hooks.protections.CheckBreakBlock;
@@ -168,7 +169,7 @@ public class SpawnerBreakListener implements Listener {
 
             EntityType entityType = creatureSpawner.getSpawnedType();
             ItemStack spawnerItem;
-            if (plugin.getConfig().getBoolean("natural_spawner.convert_to_smart_spawner", false)) {
+            if (shouldConvertNaturalSpawner(entityType)) {
                 spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType);
             } else {
                 spawnerItem = spawnerItemFactory.createVanillaSpawnerItem(entityType);
@@ -192,6 +193,18 @@ public class SpawnerBreakListener implements Listener {
         } finally {
             locationLockManager.unlock(location);
         }
+    }
+
+    private boolean shouldConvertNaturalSpawner(EntityType entityType) {
+        if (!Config.get().shouldConvertNaturalSpawners()) {
+            return false;
+        }
+
+        return switch (Config.get().getSpawnerConverterFilterMode()) {
+            case Config.SpawnerConverterFilter.ALL -> true;
+            case Config.SpawnerConverterFilter.WHITELIST -> Config.get().getEntityTypeFilter().contains(entityType);
+            case Config.SpawnerConverterFilter.BLACKLIST -> !Config.get().getEntityTypeFilter().contains(entityType);
+        };
     }
 
     private boolean validateBreakConditions(Player player, ItemStack tool, SpawnerData spawner) {
