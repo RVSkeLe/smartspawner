@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.lootgen;
 
 import github.nighter.smartspawner.SmartSpawner;
+import github.nighter.smartspawner.config.Config;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
@@ -12,19 +13,18 @@ import org.bukkit.*;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpawnerLootGenerator {
     private final SmartSpawner plugin;
     private final SpawnerGuiViewManager spawnerGuiViewManager;
     private final SpawnerManager spawnerManager;
-    private final Random random;
 
     public SpawnerLootGenerator(SmartSpawner plugin) {
         this.plugin = plugin;
         this.spawnerGuiViewManager = plugin.getSpawnerGuiViewManager();
         this.spawnerManager = plugin.getSpawnerManager();
-        this.random = new Random();
     }
 
     public void spawnLootToSpawner(SpawnerData spawner) {
@@ -62,11 +62,11 @@ public class SpawnerLootGenerator {
             final int maxMobs;
             final AtomicInteger usedSlots;
             final AtomicInteger maxSlots;
-            
+
             try {
                 // Timing is now managed by SpawnerRangeChecker (timer) and SpawnerGuiViewManager (spawn trigger)
                 // No need for time check here since spawn is only called when timer expires
-                
+
                 // Get exact inventory slot usage
                 usedSlots = new AtomicInteger(spawner.getVirtualInventory().getUsedSlots());
                 maxSlots = new AtomicInteger(spawner.getMaxSpawnerLootSlots());
@@ -184,9 +184,8 @@ public class SpawnerLootGenerator {
 
     public LootResult generateLoot(int minMobs, int maxMobs, SpawnerData spawner) {
 
-        int mobCount = random.nextInt(maxMobs - minMobs + 1) + minMobs;
-        long totalExperienceLong = (long) spawner.getEntityExperienceValue() * mobCount;
-        long totalExperience = Math.min(totalExperienceLong, Long.MAX_VALUE);
+        int mobCount = ThreadLocalRandom.current().nextInt(maxMobs - minMobs + 1) + minMobs;
+        long totalExperience = (long) spawner.getEntityExperienceValue() * mobCount;
 
         // Get valid items from the spawner's EntityLootConfig
         List<LootItem> validItems =  spawner.getValidLootItems();
@@ -201,29 +200,21 @@ public class SpawnerLootGenerator {
         // Process mobs in batch rather than individually
         for (LootItem lootItem : validItems) {
             // Calculate the probability for the entire mob batch at once
-            int successfulDrops = 0;
+            int totalAmount;
 
-            // Calculate binomial distribution - how many mobs will drop this item
-            for (int i = 0; i < mobCount; i++) {
-                if (random.nextDouble() * 100 <= lootItem.chance()) {
-                    successfulDrops++;
-                }
+            if (Config.get().isOptimizedLootgen() && shouldApproximate(lootItem.chance(), mobCount)) {
+                // O(1) binomial approximation
+                totalAmount = generateApproximatedLoot(lootItem, mobCount);
+            } else {
+                // O(n) binomial distribution
+                totalAmount = generateExactLoot(lootItem, mobCount);
             }
 
-            if (successfulDrops > 0) {
+            if (totalAmount > 0) {
                 // Create item just once per loot type
-                ItemStack prototype = lootItem.createItemStack(random);
+                ItemStack prototype = lootItem.createItemStack(ThreadLocalRandom.current());
                 if (prototype != null) {
-                    // Total amount across all mobs
-                    int totalAmount = 0;
-                    for (int i = 0; i < successfulDrops; i++) {
-                        totalAmount += lootItem.generateAmount(random);
-                    }
-
-                    if (totalAmount > 0) {
-                        // Add to consolidated map
-                        consolidatedLoot.merge(prototype, totalAmount, (a, b) -> a + b);
-                    }
+                    consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
                 }
             }
         }
@@ -246,6 +237,41 @@ public class SpawnerLootGenerator {
         }
 
         return new LootResult(finalLoot, totalExperience);
+    }
+
+    // Determines whether to use expected-value approximation
+    private boolean shouldApproximate(double chance, int mobCount) {
+        // simple heuristic: use expected if at least one item can be generated
+        if (chance <= 0D) return false;
+        return mobCount > 97.5D / chance;
+    }
+
+    // O(n) simulation: exact per-mob drop calculation
+    private int generateExactLoot(LootItem lootItem, int mobCount) {
+        int successfulDrops = 0;
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        double p = lootItem.chance() / 100.0;
+        for (int i = 0; i < mobCount; i++) {
+            if (random.nextDouble() < p) {
+                successfulDrops++;
+            }
+        }
+        int totalAmount = 0;
+        for (int i = 0; i < successfulDrops; i++) {
+            totalAmount += lootItem.generateAmount(random);
+        }
+        return totalAmount;
+    }
+
+    // O(1) expected-value calculation with small jitter
+    private int generateApproximatedLoot(LootItem lootItem, int mobCount) {
+        double p = lootItem.chance() / 100.0;
+        double expectedDrops = mobCount * p;
+        double avgAmount = lootItem.getAverageAmount();
+        double jitter = p != 1.0
+                ? 0.95 + ThreadLocalRandom.current().nextDouble() * 0.10
+                : 1.0;
+        return (int) Math.round(expectedDrops * avgAmount * jitter);
     }
 
     private List<ItemStack> limitItemsToAvailableSlots(List<ItemStack> items, SpawnerData spawner) {
@@ -373,11 +399,11 @@ public class SpawnerLootGenerator {
             spawner.updateHologramData();
         }
     }
-    
+
     /**
      * Pre-generates loot asynchronously for improved UX.
      * Loot is calculated in background before timer expires, then added instantly when ready.
-     * 
+     *
      * <p>This method:
      * <ul>
      *   <li>Checks spawner capacity before generation</li>
@@ -385,7 +411,7 @@ public class SpawnerLootGenerator {
      *   <li>Invokes callback with generated items and experience</li>
      *   <li>Handles thread-safety with proper locking</li>
      * </ul>
-     * 
+     *
      * @param spawner The spawner to pre-generate loot for
      * @param callback Callback invoked with generated loot (items, experience)
      */
@@ -410,13 +436,13 @@ public class SpawnerLootGenerator {
             final int minMobs;
             final int maxMobs;
             final boolean itemStorageFull;
-            
+
             try {
                 int usedSlots = spawner.getVirtualInventory().getUsedSlots();
                 int maxSlots = spawner.getMaxSpawnerLootSlots();
                 itemStorageFull = usedSlots >= maxSlots;
                 boolean atCapacity = itemStorageFull && spawner.getSpawnerExp() >= spawner.getMaxStoredExp();
-                
+
                 if (atCapacity) {
                     callback.onLootGenerated(Collections.emptyList(), 0);
                     return;
@@ -447,15 +473,15 @@ public class SpawnerLootGenerator {
     }
 
     private LootResult generateExperienceOnlyLoot(int minMobs, int maxMobs, SpawnerData spawner) {
-        int mobCount = random.nextInt(maxMobs - minMobs + 1) + minMobs;
+        int mobCount = ThreadLocalRandom.current().nextInt(maxMobs - minMobs + 1) + minMobs;
         long totalExperienceLong = (long) spawner.getEntityExperienceValue() * mobCount;
         long totalExperience = Math.min(totalExperienceLong, Long.MAX_VALUE);
         return new LootResult(Collections.emptyList(), totalExperience);
     }
-    
+
     /**
      * Adds pre-generated loot to spawner instantly when timer expires.
-     * 
+     *
      * <p>This method:
      * <ul>
      *   <li>Validates pre-generated loot is not empty</li>
@@ -464,9 +490,9 @@ public class SpawnerLootGenerator {
      *   <li>Updates lastSpawnTime to maintain cycle timing</li>
      *   <li>Triggers GUI updates and marks spawner for persistence</li>
      * </ul>
-     * 
+     *
      * <p><b>Thread Safety:</b> All Bukkit API calls are scheduled on main thread via Scheduler.runLocationTask
-     * 
+     *
      * @param spawner The spawner to add loot to
      * @param items Pre-generated items list
      * @param experience Pre-generated experience amount
@@ -523,7 +549,7 @@ public class SpawnerLootGenerator {
 
                 Scheduler.runTaskAsync(() -> {
                     boolean changed = false;
-                    
+
                     if (experience > 0 && spawner.getSpawnerExp() < spawner.getMaxStoredExp()) {
                         long currentExp = spawner.getSpawnerExp();
                         long maxExp = spawner.getMaxStoredExp();
@@ -585,7 +611,7 @@ public class SpawnerLootGenerator {
             }
         });
     }
-    
+
     /**
      * Callback interface for asynchronous loot pre-generation.
      * Invoked when loot generation completes with the generated items and experience.
@@ -594,7 +620,7 @@ public class SpawnerLootGenerator {
     public interface LootGenerationCallback {
         /**
          * Called when loot generation completes.
-         * 
+         *
          * @param items Generated items list (never null, may be empty)
          * @param experience Generated experience amount
          */
