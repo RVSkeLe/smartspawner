@@ -1,5 +1,7 @@
 package github.nighter.smartspawner.spawner.properties;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
@@ -12,7 +14,7 @@ public class VirtualInventory {
     private final Map<ItemSignature, Long> consolidatedItems;
     @Getter
     private int maxSlots;
-    private final Map<Integer, ItemStack> displayInventoryCache;
+    private final Int2ObjectOpenHashMap<ItemStack> displayInventoryCache;
     private boolean displayCacheDirty;
     private int usedSlotsCache;
     private long totalItemsCache;
@@ -34,7 +36,7 @@ public class VirtualInventory {
     public VirtualInventory(int maxSlots) {
         this.maxSlots = maxSlots;
         this.consolidatedItems = new ConcurrentHashMap<>();
-        this.displayInventoryCache = new HashMap<>(maxSlots); // Pre-size the map
+        this.displayInventoryCache = new Int2ObjectOpenHashMap<>(); // DO NOT pre-size the map, DONT!
         this.displayCacheDirty = true;
         this.metricsCacheDirty = true;
         this.usedSlotsCache = 0;
@@ -218,7 +220,7 @@ public class VirtualInventory {
         // Return cached result if available
         if (!displayCacheDirty) {
             // Return a shallow copy to prevent modification of the cache
-            return Collections.unmodifiableMap(displayInventoryCache);
+            return Int2ObjectMaps.unmodifiable(displayInventoryCache);
         }
 
         // Clear the cache for a fresh rebuild but reuse the existing map
@@ -284,7 +286,7 @@ public class VirtualInventory {
         usedSlotsCache = displayInventoryCache.size();
 
         // Return unmodifiable map to prevent external changes
-        return Collections.unmodifiableMap(displayInventoryCache);
+        return Int2ObjectMaps.unmodifiable(displayInventoryCache);
     }
 
     public long getTotalItems() {
