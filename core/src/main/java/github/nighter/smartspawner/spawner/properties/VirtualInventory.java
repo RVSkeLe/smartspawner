@@ -5,8 +5,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,114 +13,15 @@ public class VirtualInventory {
     private final Map<ItemSignature, Long> consolidatedItems;
     @Getter
     private int maxSlots;
-    private final Int2ObjectOpenHashMap<ItemStack> displayInventoryCache;
-    private boolean displayCacheDirty;
-    private int usedSlotsCache;
-    private long totalItemsCache;
-    private boolean metricsCacheDirty;
     // Cache sorted entries to avoid resorting when display isn't changing
     private List<Map.Entry<ItemSignature, Long>> sortedEntriesCache;
     private org.bukkit.Material preferredSortMaterial;
 
-    // Add an LRU cache for expensive item operations
-    private static final int ITEM_CACHE_SIZE = 128;
-
     public VirtualInventory(int maxSlots) {
         this.maxSlots = maxSlots;
         this.consolidatedItems = new ConcurrentHashMap<>();
-        this.displayInventoryCache = new Int2ObjectOpenHashMap<>(); // DO NOT pre-size the map, DONT!
-        this.displayCacheDirty = true;
-        this.metricsCacheDirty = true;
-        this.usedSlotsCache = 0;
-        this.totalItemsCache = 0;
         this.sortedEntriesCache = null;
         this.preferredSortMaterial = null;
-    }
-
-    public static class ItemSignature {
-        private final ItemStack template;
-        private final int hashCode;
-        @Getter
-        private final String materialName;
-
-        public ItemSignature(ItemStack item) {
-            this.template = item.clone();
-            this.template.setAmount(1);
-            this.materialName = item.getType().name();
-            this.hashCode = calculateHashCode();
-        }
-
-        // Replace the current calculateHashCode() method with:
-        private int calculateHashCode() {
-            // Use a faster hash algorithm and cache more item properties
-            int result = 31 * template.getType().ordinal(); // Using ordinal() instead of name() hashing
-            result = 31 * result + getItemDamage(template);
-
-            // Only access ItemMeta when needed
-            if (template.hasItemMeta()) {
-                ItemMeta meta = template.getItemMeta();
-                // Extract only the essential meta properties that determine similarity
-                result = 31 * result + (meta.hasDisplayName() ? meta.displayName().hashCode() : 0);
-                result = 31 * result + (meta.hasLore() ? meta.lore().hashCode() : 0);
-                result = 31 * result + (meta.hasEnchants() ? meta.getEnchants().hashCode() : 0);
-            }
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof ItemSignature)) return false;
-            ItemSignature that = (ItemSignature) o;
-
-            // First compare cheap properties
-                if (template.getType() != that.template.getType() ||
-                    getItemDamage(template) != getItemDamage(that.template)) {
-                return false;
-            }
-
-            // Only check ItemMeta if types match
-            boolean thisHasMeta = template.hasItemMeta();
-            boolean thatHasMeta = that.template.hasItemMeta();
-
-            if (thisHasMeta != thatHasMeta) {
-                return false;
-            }
-
-            // If both have no meta, they're similar enough
-            if (!thisHasMeta) {
-                return true;
-            }
-
-            // For complex items, fall back to isSimilar but only as a last resort
-            return template.isSimilar(that.template);
-        }
-
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        public ItemStack getTemplate() {
-            return template.clone();
-        }
-
-        // Non-cloning method for internal use
-        public ItemStack getTemplateRef() {
-            return template;
-        }
-
-        private int getItemDamage(ItemStack item) {
-            if (!item.hasItemMeta()) {
-                return 0;
-            }
-            ItemMeta meta = item.getItemMeta();
-            if (meta instanceof Damageable) {
-                return ((Damageable) meta).getDamage();
-            }
-            return 0;
-        }
-
     }
 
     public static ItemSignature getSignature(ItemStack item) {
@@ -148,8 +47,6 @@ public class VirtualInventory {
             for (Map.Entry<ItemSignature, Long> entry : itemBatch.entrySet()) {
                 consolidatedItems.merge(entry.getKey(), entry.getValue(), (a, b) -> a + b);
             }
-            displayCacheDirty = true;
-            metricsCacheDirty = true;
             sortedEntriesCache = null;
         }
     }
@@ -192,8 +89,6 @@ public class VirtualInventory {
         }
 
         if (updated) {
-            displayCacheDirty = true;
-            metricsCacheDirty = true;
             sortedEntriesCache = null; // Invalidate sorted entries cache
         }
 
@@ -214,69 +109,26 @@ public class VirtualInventory {
         return buildDisplaySection(startSlot, maxResults);
     }
 
-    // Optimized getDisplayInventory method
-    public Int2ObjectMap<ItemStack> getDisplayInventory() {
-        // Return cached result if available
-        if (!displayCacheDirty) {
-            // Return a shallow copy to prevent modification of the cache
-            return Int2ObjectMaps.unmodifiable(displayInventoryCache);
-        }
-
-        displayInventoryCache.clear();
-        displayInventoryCache.putAll(buildDisplaySection(0, maxSlots));
-
-        // Update cache state
-        displayCacheDirty = false;
-        usedSlotsCache = displayInventoryCache.size();
-
-        // Return unmodifiable map to prevent external changes
-        return Int2ObjectMaps.unmodifiable(displayInventoryCache);
-    }
-
-    public long getTotalItems() {
-        if (metricsCacheDirty) {
-            updateMetricsCache();
-        }
-        return totalItemsCache;
-    }
-
     public Map<ItemSignature, Long> getConsolidatedItems() {
         return new HashMap<>(consolidatedItems);
     }
 
     public int getUsedSlots() {
-        // If cache is dirty but we haven't regenerated the display inventory yet,
-        // calculate a quick estimate instead of rebuilding the whole display
-        if (displayCacheDirty) {
-            if (consolidatedItems.isEmpty()) {
-                return 0;
-            }
-
-            // Quick estimate - not perfectly accurate but avoids full rebuilds
-            int estimatedSlots = 0;
-            for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
-                long amount = entry.getValue();
-                int maxStackSize = entry.getKey().getTemplateRef().getMaxStackSize();
-                estimatedSlots += (int) Math.ceil((double) amount / maxStackSize);
-                if (estimatedSlots >= maxSlots) {
-                    return maxSlots; // Cap at max slots
-                }
-            }
-            return estimatedSlots;
+        if (consolidatedItems.isEmpty()) {
+            return 0;
         }
 
-        return usedSlotsCache;
-    }
-
-    private void updateMetricsCache() {
-        totalItemsCache = consolidatedItems.values().stream()
-                .mapToLong(Long::longValue)
-                .sum();
-        metricsCacheDirty = false;
-    }
-
-    public boolean isDirty() {
-        return displayCacheDirty;
+        // Quick estimate - not perfectly accurate but avoids full rebuilds
+        int estimatedSlots = 0;
+        for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
+            long amount = entry.getValue();
+            int maxStackSize = entry.getKey().getMaxStackSize();
+            estimatedSlots += (int) Math.ceil((double) amount / maxStackSize);
+            if (estimatedSlots >= maxSlots) {
+                return maxSlots; // Cap at max slots
+            }
+        }
+        return estimatedSlots;
     }
 
     /**
@@ -294,7 +146,6 @@ public class VirtualInventory {
         
         // Only proceed if we have items to sort
         if (consolidatedItems.isEmpty()) {
-            this.displayCacheDirty = true;
             return;
         }
         
@@ -318,35 +169,6 @@ public class VirtualInventory {
             this.sortedEntriesCache = consolidatedItems.entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().getMaterialName()))
                 .collect(java.util.stream.Collectors.toList());
-        }
-        
-        // Mark display cache as dirty to force regeneration
-        this.displayCacheDirty = true;
-    }
-
-    /**
-     * Resizes the virtual inventory to a new maximum slot count.
-     * If the new size is smaller and items exceed the new capacity,
-     * items will be truncated based on the current sort order.
-     *
-     * @param newMaxSlots The new maximum number of slots
-     */
-    public void resize(int newMaxSlots) {
-        if (newMaxSlots == this.maxSlots) {
-            return; // No change needed
-        }
-
-        this.maxSlots = newMaxSlots;
-
-        // Mark caches as dirty since slot count changed
-        this.displayCacheDirty = true;
-
-        // If downsizing, we may need to remove items that exceed capacity
-        if (newMaxSlots < usedSlotsCache) {
-            // Let the display inventory rebuild handle the truncation naturally
-            // Items beyond maxSlots will simply not be displayed
-            // Note: This doesn't remove items from consolidatedItems,
-            // but they won't be accessible in the display
         }
     }
 

@@ -3,6 +3,7 @@ package github.nighter.smartspawner.spawner.lootgen;
 import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.config.Config;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.data.SpawnerManager;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
@@ -284,7 +285,7 @@ public class SpawnerLootGenerator {
         }
 
         // Create a simulation inventory
-        Map<VirtualInventory.ItemSignature, Long> simulatedInventory = new HashMap<>(currentInventory.getConsolidatedItems());
+        Map<ItemSignature, Long> simulatedInventory = new HashMap<>(currentInventory.getConsolidatedItems());
         List<ItemStack> acceptedItems = new ArrayList<>();
 
         // Sort items by priority (you can change this sorting strategy)
@@ -294,9 +295,9 @@ public class SpawnerLootGenerator {
             if (item == null || item.getAmount() <= 0) continue;
 
             // Add to simulation and check slot count
-            Map<VirtualInventory.ItemSignature, Long> tempSimulation = new HashMap<>(simulatedInventory);
+            Map<ItemSignature, Long> tempSimulation = new HashMap<>(simulatedInventory);
             // Use cached signature to avoid excessive cloning
-            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+            ItemSignature sig = VirtualInventory.getSignature(item);
             tempSimulation.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
 
             // Calculate slots needed
@@ -335,7 +336,7 @@ public class SpawnerLootGenerator {
         return acceptedItems;
     }
 
-    private int calculateSlots(Map<VirtualInventory.ItemSignature, Long> items) {
+    private int calculateSlots(Map<ItemSignature, Long> items) {
         // Use a more efficient calculation approach
         return items.entrySet().stream()
                 .mapToInt(entry -> {
@@ -349,7 +350,7 @@ public class SpawnerLootGenerator {
 
     private int calculateRequiredSlots(List<ItemStack> items, VirtualInventory inventory) {
         // Create a temporary map to simulate how items would stack
-        Map<VirtualInventory.ItemSignature, Long> simulatedItems = new HashMap<>();
+        Map<ItemSignature, Long> simulatedItems = new HashMap<>();
 
         // First, get existing items if we need to account for them
         if (inventory != null) {
@@ -361,7 +362,7 @@ public class SpawnerLootGenerator {
             if (item == null || item.getAmount() <= 0) continue;
 
             // Use cached signature to avoid excessive cloning
-            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+            ItemSignature sig = VirtualInventory.getSignature(item);
             simulatedItems.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
         }
 

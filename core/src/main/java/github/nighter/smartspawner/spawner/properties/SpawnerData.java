@@ -192,9 +192,7 @@ public class SpawnerData {
 
     public void recalculateAfterConfigReload() {
         calculateStackBasedValues();
-        if (virtualInventory != null && virtualInventory.getMaxSlots() != maxSpawnerLootSlots) {
-            recreateVirtualInventory();
-        }
+        
         // Mark sell value as dirty after config reload since prices may have changed
         this.sellValueDirty = true;
         updateHologramData();
@@ -214,9 +212,7 @@ public class SpawnerData {
      */
     public void recalculateAfterAPIModification() {
         calculateStackBasedValues();
-        if (virtualInventory != null && virtualInventory.getMaxSlots() != maxSpawnerLootSlots) {
-            recreateVirtualInventory();
-        }
+        
         updateHologramData();
 
         // Invalidate GUI cache after API modifications
@@ -321,9 +317,6 @@ public class SpawnerData {
         this.stackSize = newStackSize;
         calculateStackBasedValues();
 
-        // Resize the existing virtual inventory instead of creating a new one
-        virtualInventory.resize(this.maxSpawnerLootSlots);
-
         // Reset lastSpawnTime to prevent exploit where players break spawners to trigger immediate loot
         this.lastSpawnTime = System.currentTimeMillis();
         updateHologramData();
@@ -335,11 +328,6 @@ public class SpawnerData {
         if (plugin.getSpawnerMenuFormUI() != null) {
             plugin.getSpawnerMenuFormUI().invalidateSpawnerCache(this.spawnerId);
         }
-    }
-
-    private void recreateVirtualInventory() {
-        if (virtualInventory == null) return;
-        virtualInventory.resize(maxSpawnerLootSlots);
     }
 
     public void setSpawnerExp(long exp) {
@@ -555,14 +543,14 @@ public class SpawnerData {
      * @param itemsAdded Map of item signatures to quantities added
      * @param priceCache Price cache from loot config
      */
-    public void incrementSellValue(Map<VirtualInventory.ItemSignature, Long> itemsAdded,
+    public void incrementSellValue(Map<ItemSignature, Long> itemsAdded,
                                    Map<String, Double> priceCache) {
         if (itemsAdded == null || itemsAdded.isEmpty()) {
             return;
         }
 
         double addedValue = 0.0;
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : itemsAdded.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : itemsAdded.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
             ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
@@ -587,16 +575,16 @@ public class SpawnerData {
         }
 
         // Consolidate removed items
-        Map<VirtualInventory.ItemSignature, Long> consolidated = new java.util.HashMap<>();
+        Map<ItemSignature, Long> consolidated = new java.util.HashMap<>();
         for (ItemStack item : itemsRemoved) {
             if (item == null || item.getAmount() <= 0) continue;
             // Use cached signature to avoid excessive cloning
-            VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+            ItemSignature sig = VirtualInventory.getSignature(item);
             consolidated.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
         }
 
         double removedValue = 0.0;
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidated.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : consolidated.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
             ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
@@ -624,10 +612,10 @@ public class SpawnerData {
         Map<String, Double> priceCache = createPriceCache();
 
         // Calculate from current inventory
-        Map<VirtualInventory.ItemSignature, Long> items = virtualInventory.getConsolidatedItems();
+        Map<ItemSignature, Long> items = virtualInventory.getConsolidatedItems();
         double totalValue = 0.0;
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
             ItemStack template = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
@@ -735,11 +723,11 @@ public class SpawnerData {
         inventoryLock.lock();
         try {
             // Consolidate items being added for efficient price lookup
-            Map<VirtualInventory.ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
+            Map<ItemSignature, Long> itemsToAdd = new java.util.HashMap<>();
             for (ItemStack item : items) {
                 if (item == null || item.getAmount() <= 0) continue;
                 // Use cached signature to avoid excessive cloning
-                VirtualInventory.ItemSignature sig = VirtualInventory.getSignature(item);
+                ItemSignature sig = VirtualInventory.getSignature(item);
                 itemsToAdd.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
             }
 

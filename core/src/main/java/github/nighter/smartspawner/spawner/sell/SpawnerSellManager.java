@@ -5,6 +5,7 @@ import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.api.events.SpawnerSellEvent;
 import github.nighter.smartspawner.language.MessageService;
 import github.nighter.smartspawner.spawner.gui.synchronization.SpawnerGuiViewManager;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 
@@ -83,7 +84,7 @@ public class SpawnerSellManager {
         spawnerGuiViewManager.closeAllViewersInventory(spawner);
 
         // Lightweight snapshot – safe because isSelling prevents concurrent inventory changes
-        final Map<VirtualInventory.ItemSignature, Long> itemSnapshot = virtualInv.getConsolidatedItems();
+        final Map<ItemSignature, Long> itemSnapshot = virtualInv.getConsolidatedItems();
         final double accumulatedValue = spawner.getAccumulatedSellValue();
         final Location spawnerLocation = spawner.getSpawnerLocation();
 
@@ -181,12 +182,12 @@ public class SpawnerSellManager {
      * Calculates the total sell value and constructs the list of {@link ItemStack}s to remove.
      * Pure computation – no Bukkit API calls, safe to run on an async thread.
      */
-    private SellResult calculateSellValue(Map<VirtualInventory.ItemSignature, Long> consolidatedItems,
+    private SellResult calculateSellValue(Map<ItemSignature, Long> consolidatedItems,
                                           double totalValue) {
         long totalItemsSold = 0;
         ArrayList<ItemStack> itemsToRemove = new ArrayList<>();
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : consolidatedItems.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
             ItemStack templateRef = entry.getKey().getTemplateRef();
             long amount = entry.getValue();
             int maxStackSize = templateRef.getMaxStackSize();
