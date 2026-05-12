@@ -13,6 +13,8 @@ import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.Scheduler.Task;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.EntityType;
@@ -234,7 +236,7 @@ public class SpawnerStorageUI {
         }
 
         // Track both changes and slots that need to be emptied
-        Map<Integer, ItemStack> updates = new HashMap<>();
+        Int2ObjectMap<ItemStack> updates = new Int2ObjectOpenHashMap<>();
         Set<Integer> slotsToEmpty = new HashSet<>();
 
         // Clear storage area slots first
@@ -261,8 +263,8 @@ public class SpawnerStorageUI {
             }
         }
 
-        for (Map.Entry<Integer, ItemStack> entry : updates.entrySet()) {
-            inventory.setItem(entry.getKey(), entry.getValue());
+        for (Int2ObjectMap.Entry<ItemStack> entry : updates.int2ObjectEntrySet()) {
+            inventory.setItem(entry.getIntKey(), entry.getValue());
         }
 
         // Update hologram if enabled
@@ -289,7 +291,7 @@ public class SpawnerStorageUI {
         try {
             // Get display items directly from VirtualInventory (source of truth)
             VirtualInventory virtualInv = spawner.getVirtualInventory();
-            Map<Integer, ItemStack> displayItems = virtualInv.getDisplayInventory();
+            Int2ObjectMap<ItemStack> displayItems = virtualInv.getDisplayInventory();
 
             if (displayItems.isEmpty()) {
                 return;
@@ -299,8 +301,8 @@ public class SpawnerStorageUI {
             int startIndex = (page - 1) * StoragePageHolder.MAX_ITEMS_PER_PAGE;
 
             // Add items for this page
-            for (Map.Entry<Integer, ItemStack> entry : displayItems.entrySet()) {
-                int globalIndex = entry.getKey();
+            for (Int2ObjectMap.Entry<ItemStack> entry : displayItems.int2ObjectEntrySet()) {
+                int globalIndex = entry.getIntKey();
 
                 // Check if item belongs on this page
                 if (globalIndex >= startIndex && globalIndex < startIndex + StoragePageHolder.MAX_ITEMS_PER_PAGE) {

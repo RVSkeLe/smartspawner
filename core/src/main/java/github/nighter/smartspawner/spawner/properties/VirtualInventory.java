@@ -1,5 +1,6 @@
 package github.nighter.smartspawner.spawner.properties;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
@@ -216,7 +217,7 @@ public class VirtualInventory {
     }
 
     // Optimized getDisplayInventory method
-    public Map<Integer, ItemStack> getDisplayInventory() {
+    public Int2ObjectMap<ItemStack> getDisplayInventory() {
         // Return cached result if available
         if (!displayCacheDirty) {
             // Return a shallow copy to prevent modification of the cache
@@ -229,7 +230,7 @@ public class VirtualInventory {
         if (consolidatedItems.isEmpty()) {
             displayCacheDirty = false;
             usedSlotsCache = 0;
-            return Collections.emptyMap();
+            return Int2ObjectMaps.emptyMap();
         }
 
         // Get and sort the items - only use cached sort result if available
