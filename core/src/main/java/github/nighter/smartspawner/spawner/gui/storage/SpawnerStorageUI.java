@@ -7,12 +7,14 @@ import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
+import github.nighter.smartspawner.spawner.gui.storage.button.SortButton;
 import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.Scheduler.Task;
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
@@ -355,7 +357,16 @@ public class SpawnerStorageUI {
                     item = staticButtons.get("takeAll");
                     break;
                 case "sort_items":
-                    item = createSortButton(spawner, button.getMaterial());
+                    item = SortButton.getOrBuildSortButton(
+                            spawner,
+                            button.getMaterial(),
+                            languageManager,
+                            data -> createButton(
+                                    data.material(),
+                                    data.name(),
+                                    data.lore()
+                            )
+                    );
                     break;
                 case "drop_page":
                     item = staticButtons.get("dropPage");
@@ -483,48 +494,6 @@ public class SpawnerStorageUI {
 
         String name = languageManager.getGuiItemName("collect_exp_button.name", placeholders);
         List<String> lore = languageManager.getGuiItemLoreAsList("collect_exp_button.lore");
-        return createButton(material, name, lore);
-    }
-
-    private ItemStack createSortButton(SpawnerData spawner, Material material) {
-        Map<String, String> placeholders = new HashMap<>();
-
-        // Get current sort item
-        Material currentSort = spawner.getPreferredSortItem();
-
-        // Get format strings from configuration
-        String selectedItemFormat = languageManager.getGuiItemName("sort_items_button.selected_item");
-        String unselectedItemFormat = languageManager.getGuiItemName("sort_items_button.unselected_item");
-        String noneText = languageManager.getGuiItemName("sort_items_button.no_item");
-
-        // Get available items from spawner drops
-        StringBuilder availableItems = new StringBuilder();
-        if (spawner.getLootConfig() != null && spawner.getLootConfig().getAllItems() != null) {
-            boolean first = true;
-            var sortedLoot = spawner.getLootConfig().getAllItems().stream()
-                .sorted(Comparator.comparing(item -> item.material().name()))
-                .toList();
-
-            for (var lootItem : sortedLoot) {
-                if (!first) availableItems.append("\n");
-                String itemName = languageManager.getVanillaItemName(lootItem.material());
-                String format = currentSort == lootItem.material() ? selectedItemFormat : unselectedItemFormat;
-                
-                // Replace {item_name} placeholder in format string
-                String formattedItem = format.replace("{item_name}", itemName);
-                availableItems.append(formattedItem);
-                first = false;
-            }
-        }
-
-        if (availableItems.isEmpty()) {
-            availableItems.append(noneText);
-        }
-
-        placeholders.put("available_items", availableItems.toString());
-
-        String name = languageManager.getGuiItemName("sort_items_button.name", placeholders);
-        List<String> lore = languageManager.getGuiItemLoreWithMultilinePlaceholders("sort_items_button.lore", placeholders);
         return createButton(material, name, lore);
     }
 
