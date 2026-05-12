@@ -216,6 +216,20 @@ public class VirtualInventory {
         return true;
     }
 
+    public Int2ObjectMap<ItemStack> getDisplayPage(int page, int pageSize) {
+        if (pageSize <= 0) {
+            return Int2ObjectMaps.emptyMap();
+        }
+
+        int safePage = Math.max(1, page);
+        int startSlot = (safePage - 1) * pageSize;
+        return buildDisplaySection(startSlot, pageSize);
+    }
+
+    public Int2ObjectMap<ItemStack> getDisplayRange(int startSlot, int maxResults) {
+        return buildDisplaySection(startSlot, maxResults);
+    }
+
     // Optimized getDisplayInventory method
     public Int2ObjectMap<ItemStack> getDisplayInventory() {
         // Return cached result if available
@@ -224,63 +238,8 @@ public class VirtualInventory {
             return Int2ObjectMaps.unmodifiable(displayInventoryCache);
         }
 
-        // Clear the cache for a fresh rebuild but reuse the existing map
         displayInventoryCache.clear();
-
-        if (consolidatedItems.isEmpty()) {
-            displayCacheDirty = false;
-            usedSlotsCache = 0;
-            return Int2ObjectMaps.emptyMap();
-        }
-
-        // Get and sort the items - only use cached sort result if available
-        if (sortedEntriesCache == null) {
-            sortedEntriesCache = new ArrayList<>(consolidatedItems.entrySet());
-            // Apply preferred sort if set, otherwise sort alphabetically
-            if (preferredSortMaterial != null) {
-                sortedEntriesCache.sort((e1, e2) -> {
-                    // Use getTemplateRef() to avoid cloning - we only need to read the type
-                    boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredSortMaterial;
-                    boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredSortMaterial;
-
-                    if (e1Preferred && !e2Preferred) return -1;
-                    if (!e1Preferred && e2Preferred) return 1;
-                    
-                    // Both preferred or both not preferred, sort by material name
-                    return e1.getKey().getMaterialName().compareTo(e2.getKey().getMaterialName());
-                });
-            } else {
-                // Use optimized comparator based on cached material name
-                sortedEntriesCache.sort(Comparator.comparing(e -> e.getKey().getMaterialName()));
-            }
-        }
-
-        // Process items directly to the display inventory
-        int currentSlot = 0;
-
-        for (Map.Entry<ItemSignature, Long> entry : sortedEntriesCache) {
-            if (currentSlot >= maxSlots) break;
-
-            ItemSignature sig = entry.getKey();
-            long totalAmount = entry.getValue();
-            ItemStack templateItem = sig.getTemplateRef();
-            int maxStackSize = templateItem.getMaxStackSize();
-
-            // Create as many stacks as needed for this item type
-            while (totalAmount > 0 && currentSlot < maxSlots) {
-                int stackSize = (int) Math.min(totalAmount, maxStackSize);
-
-                // Create the display item only once per slot
-                ItemStack displayItem = templateItem.clone();
-                displayItem.setAmount(stackSize);
-
-                // Store in cache
-                displayInventoryCache.put(currentSlot, displayItem);
-
-                totalAmount -= stackSize;
-                currentSlot++;
-            }
-        }
+        displayInventoryCache.putAll(buildDisplaySection(0, maxSlots));
 
         // Update cache state
         displayCacheDirty = false;
@@ -405,5 +364,91 @@ public class VirtualInventory {
             // Note: This doesn't remove items from consolidatedItems,
             // but they won't be accessible in the display
         }
+    }
+
+    private Int2ObjectMap<ItemStack> buildDisplaySection(int startSlot, int maxResults) {
+        if (maxResults <= 0 || startSlot >= maxSlots) {
+            return Int2ObjectMaps.emptyMap();
+        }
+
+        if (consolidatedItems.isEmpty()) {
+            return Int2ObjectMaps.emptyMap();
+        }
+
+        int safeStart = Math.max(0, startSlot);
+        int sectionLimit = Math.min(maxResults, maxSlots - safeStart);
+        if (sectionLimit <= 0) {
+            return Int2ObjectMaps.emptyMap();
+        }
+
+        Int2ObjectOpenHashMap<ItemStack> section = new Int2ObjectOpenHashMap<>(Math.min(sectionLimit, 45));
+        List<Map.Entry<ItemSignature, Long>> sortedEntries = getSortedEntries();
+
+        int currentGlobalSlot = 0;
+        int relativeSlot = 0;
+
+        for (Map.Entry<ItemSignature, Long> entry : sortedEntries) {
+            if (relativeSlot >= sectionLimit || currentGlobalSlot >= maxSlots) {
+                break;
+            }
+
+            ItemSignature sig = entry.getKey();
+            ItemStack templateItem = sig.getTemplateRef();
+            int maxStackSize = templateItem.getMaxStackSize();
+            if (maxStackSize <= 0) {
+                continue;
+            }
+
+            long totalAmount = entry.getValue();
+            int stacksForEntry = (int) Math.min(
+                    Integer.MAX_VALUE,
+                    (totalAmount + maxStackSize - 1L) / maxStackSize
+            );
+
+            if (currentGlobalSlot + stacksForEntry <= safeStart) {
+                currentGlobalSlot += stacksForEntry;
+                continue;
+            }
+
+            int stacksToSkip = Math.max(0, safeStart - currentGlobalSlot);
+            long remainingAmount = totalAmount - ((long) stacksToSkip * maxStackSize);
+            currentGlobalSlot += stacksToSkip;
+
+            while (remainingAmount > 0 && relativeSlot < sectionLimit && currentGlobalSlot < maxSlots) {
+                ItemStack displayItem = templateItem.clone();
+                displayItem.setAmount((int) Math.min(remainingAmount, maxStackSize));
+                section.put(relativeSlot++, displayItem);
+
+                remainingAmount -= maxStackSize;
+                currentGlobalSlot++;
+            }
+        }
+
+        return Int2ObjectMaps.unmodifiable(section);
+    }
+
+    private List<Map.Entry<ItemSignature, Long>> getSortedEntries() {
+        if (sortedEntriesCache == null) {
+            sortedEntriesCache = new ArrayList<>(consolidatedItems.entrySet());
+            sortEntries(sortedEntriesCache);
+        }
+        return sortedEntriesCache;
+    }
+
+    private void sortEntries(List<Map.Entry<ItemSignature, Long>> entries) {
+        if (preferredSortMaterial != null) {
+            entries.sort((e1, e2) -> {
+                boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredSortMaterial;
+                boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredSortMaterial;
+
+                if (e1Preferred && !e2Preferred) return -1;
+                if (!e1Preferred && e2Preferred) return 1;
+
+                return e1.getKey().getMaterialName().compareTo(e2.getKey().getMaterialName());
+            });
+            return;
+        }
+
+        entries.sort(Comparator.comparing(e -> e.getKey().getMaterialName()));
     }
 }

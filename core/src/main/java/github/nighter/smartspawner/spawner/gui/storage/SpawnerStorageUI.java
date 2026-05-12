@@ -289,27 +289,18 @@ public class SpawnerStorageUI {
     private void addPageItems(Map<Integer, ItemStack> updates, Set<Integer> slotsToEmpty,
                               SpawnerData spawner, int page) {
         try {
-            // Get display items directly from VirtualInventory (source of truth)
+            // Read only the requested page instead of materializing the full logical inventory.
             VirtualInventory virtualInv = spawner.getVirtualInventory();
-            Int2ObjectMap<ItemStack> displayItems = virtualInv.getDisplayInventory();
+            Int2ObjectMap<ItemStack> displayItems = virtualInv.getDisplayPage(page, StoragePageHolder.MAX_ITEMS_PER_PAGE);
 
             if (displayItems.isEmpty()) {
                 return;
             }
 
-            // Calculate start index for current page
-            int startIndex = (page - 1) * StoragePageHolder.MAX_ITEMS_PER_PAGE;
-
-            // Add items for this page
             for (Int2ObjectMap.Entry<ItemStack> entry : displayItems.int2ObjectEntrySet()) {
-                int globalIndex = entry.getIntKey();
-
-                // Check if item belongs on this page
-                if (globalIndex >= startIndex && globalIndex < startIndex + StoragePageHolder.MAX_ITEMS_PER_PAGE) {
-                    int displaySlot = globalIndex - startIndex;
-                    updates.put(displaySlot, entry.getValue());
-                    slotsToEmpty.remove(displaySlot);
-                }
+                int displaySlot = entry.getIntKey();
+                updates.put(displaySlot, entry.getValue());
+                slotsToEmpty.remove(displaySlot);
             }
         } finally {
             spawner.getInventoryLock().unlock();
