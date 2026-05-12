@@ -341,7 +341,7 @@ public class SpawnerLootGenerator {
         return items.entrySet().stream()
                 .mapToInt(entry -> {
                     long amount = entry.getValue();
-                    int maxStackSize = entry.getKey().getTemplateRef().getMaxStackSize();
+                    int maxStackSize = entry.getKey().getMaxStackSize();
                     // Use integer division with ceiling function
                     return (int) ((amount + maxStackSize - 1) / maxStackSize);
                 })
@@ -363,7 +363,7 @@ public class SpawnerLootGenerator {
 
             // Use cached signature to avoid excessive cloning
             ItemSignature sig = VirtualInventory.getSignature(item);
-            simulatedItems.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
+            simulatedItems.merge(sig, (long) item.getAmount(), Long::sum);
         }
 
         // Calculate exact slots needed

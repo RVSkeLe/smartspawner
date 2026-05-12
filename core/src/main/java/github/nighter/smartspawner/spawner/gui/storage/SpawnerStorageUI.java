@@ -16,6 +16,7 @@ import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.Scheduler.Task;
 import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.ItemLore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
@@ -289,8 +290,7 @@ public class SpawnerStorageUI {
         }
     }
 
-    private void addPageItems(Map<Integer, ItemStack> updates, Set<Integer> slotsToEmpty,
-                              SpawnerData spawner, int page) {
+    private void addPageItems(Map<Integer, ItemStack> updates, Set<Integer> slotsToEmpty, SpawnerData spawner, int page) {
         try {
             // Read only the requested page instead of materializing the full logical inventory.
             VirtualInventory virtualInv = spawner.getVirtualInventory();
@@ -431,6 +431,20 @@ public class SpawnerStorageUI {
             }
             item.setItemMeta(meta);
         }
+
+        // Hide tooltip for BUNDLE material (prevents showing bundle contents)
+        if (material == Material.BUNDLE) {
+            github.nighter.smartspawner.nms.VersionInitializer.hideTooltip(item);
+        }
+
+        return item;
+    }
+
+    private ItemStack createButtonModern(Material material, String name, List<Component> lore) {
+        ItemStack item = ItemStack.of(material);
+
+        item.setData(DataComponentTypes.ITEM_NAME, Component.text("Next Page"));
+        item.setData(DataComponentTypes.LORE, ItemLore.lore(lore));
 
         // Hide tooltip for BUNDLE material (prevents showing bundle contents)
         if (material == Material.BUNDLE) {
