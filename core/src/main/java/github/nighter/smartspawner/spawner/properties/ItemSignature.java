@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.properties;
 
 import lombok.Getter;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -8,15 +9,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class ItemSignature {
     private final ItemStack template;
     private final int hashCode;
-    @Getter
-    private final String materialName;
-    @Getter
-    private final int maxStackSize; // Cache purposes
+    @Getter private final Material material;
+    @Getter private final int maxStackSize; // Cache purposes
 
     public ItemSignature(ItemStack item) {
         this.template = item.clone();
         this.template.setAmount(1);
-        this.materialName = item.getType().name();
+        this.material = template.getType();
         this.hashCode = calculateHashCode();
         this.maxStackSize = item.getMaxStackSize();
     }
@@ -24,7 +23,7 @@ public class ItemSignature {
     // Replace the current calculateHashCode() method with:
     private int calculateHashCode() {
         // Use a faster hash algorithm and cache more item properties
-        int result = 31 * template.getType().ordinal(); // Using ordinal() instead of name() hashing
+        int result = 31 * this.material.ordinal(); // Using ordinal() instead of name() hashing
         result = 31 * result + getItemDamage(template);
 
         // Only access ItemMeta when needed
@@ -44,8 +43,7 @@ public class ItemSignature {
         if (!(o instanceof ItemSignature that)) return false;
 
         // First compare cheap properties
-        if (template.getType() != that.template.getType() ||
-                getItemDamage(template) != getItemDamage(that.template)) {
+        if (material != that.material || getItemDamage(template) != getItemDamage(that.template)) {
             return false;
         }
 
@@ -78,6 +76,10 @@ public class ItemSignature {
     // Non-cloning method for internal use
     public ItemStack getTemplateRef() {
         return template;
+    }
+
+    public String getMaterialName() {
+        return material.name();
     }
 
     private int getItemDamage(ItemStack item) {

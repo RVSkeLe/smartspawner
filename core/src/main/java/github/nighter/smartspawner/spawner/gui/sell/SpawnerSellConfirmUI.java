@@ -204,7 +204,7 @@ public class SpawnerSellConfirmUI {
     private List<Component> buildSellInfoLootComponents(SpawnerData spawner, Map<ItemSignature, Long> storedItems) {
         Map<Material, Long> materialAmountMap = new HashMap<>();
         for (Map.Entry<ItemSignature, Long> entry : storedItems.entrySet()) {
-            Material material = entry.getKey().getTemplateRef().getType();
+            Material material = entry.getKey().getMaterial();
             materialAmountMap.merge(material, entry.getValue(), Long::sum);
         }
 
@@ -231,7 +231,7 @@ public class SpawnerSellConfirmUI {
             List<Map.Entry<ItemSignature, Long>> sortedItems = new ArrayList<>(storedItems.entrySet());
             sortedItems.sort(Comparator.comparing(e -> e.getKey().getMaterialName()));
             for (Map.Entry<ItemSignature, Long> entry : sortedItems) {
-                Material material = entry.getKey().getTemplateRef().getType();
+                Material material = entry.getKey().getMaterial();
                 long amount = entry.getValue();
                 String formattedAmount = languageManager.formatNumber(amount);
                 components.add(languageManager.buildTranslatableGuiLootLine(

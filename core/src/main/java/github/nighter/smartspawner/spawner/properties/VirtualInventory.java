@@ -154,8 +154,8 @@ public class VirtualInventory {
             this.sortedEntriesCache = consolidatedItems.entrySet().stream()
                 .sorted((e1, e2) -> {
                     // Use getTemplateRef() to avoid cloning - we only need to read the type
-                    boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredMaterial;
-                    boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredMaterial;
+                    boolean e1Preferred = e1.getKey().getMaterial() == preferredMaterial;
+                    boolean e2Preferred = e2.getKey().getMaterial() == preferredMaterial;
 
                     if (e1Preferred && !e2Preferred) return -1;
                     if (!e1Preferred && e2Preferred) return 1;
@@ -199,8 +199,7 @@ public class VirtualInventory {
             }
 
             ItemSignature sig = entry.getKey();
-            ItemStack templateItem = sig.getTemplateRef();
-            int maxStackSize = templateItem.getMaxStackSize();
+            int maxStackSize = sig.getMaxStackSize();
             if (maxStackSize <= 0) {
                 continue;
             }
@@ -220,6 +219,7 @@ public class VirtualInventory {
             long remainingAmount = totalAmount - ((long) stacksToSkip * maxStackSize);
             currentGlobalSlot += stacksToSkip;
 
+            ItemStack templateItem = sig.getTemplateRef();
             while (remainingAmount > 0 && relativeSlot < sectionLimit && currentGlobalSlot < maxSlots) {
                 ItemStack displayItem = templateItem.clone();
                 displayItem.setAmount((int) Math.min(remainingAmount, maxStackSize));
@@ -244,8 +244,8 @@ public class VirtualInventory {
     private void sortEntries(List<Map.Entry<ItemSignature, Long>> entries) {
         if (preferredSortMaterial != null) {
             entries.sort((e1, e2) -> {
-                boolean e1Preferred = e1.getKey().getTemplateRef().getType() == preferredSortMaterial;
-                boolean e2Preferred = e2.getKey().getTemplateRef().getType() == preferredSortMaterial;
+                boolean e1Preferred = e1.getKey().getMaterial() == preferredSortMaterial;
+                boolean e2Preferred = e2.getKey().getMaterial() == preferredSortMaterial;
 
                 if (e1Preferred && !e2Preferred) return -1;
                 if (!e1Preferred && e2Preferred) return 1;

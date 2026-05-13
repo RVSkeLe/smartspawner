@@ -188,9 +188,10 @@ public class SpawnerSellManager {
         ArrayList<ItemStack> itemsToRemove = new ArrayList<>();
 
         for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
-            ItemStack templateRef = entry.getKey().getTemplateRef();
+            ItemSignature signature = entry.getKey();
+            ItemStack templateRef = signature.getTemplateRef();
             long amount = entry.getValue();
-            int maxStackSize = templateRef.getMaxStackSize();
+            int maxStackSize = signature.getMaxStackSize();
 
             totalItemsSold += amount;
 

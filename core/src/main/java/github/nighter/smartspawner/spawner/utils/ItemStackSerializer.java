@@ -43,8 +43,9 @@ public class ItemStackSerializer {
 
         for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            Material material = template.getType();
+            ItemSignature signature = entry.getKey();
+            ItemStack template = signature.getTemplateRef();
+            Material material = signature.getMaterial();
             ItemGroup group = groupedItems.computeIfAbsent(material, ItemGroup::new);
 
             if (material == Material.TIPPED_ARROW) {
