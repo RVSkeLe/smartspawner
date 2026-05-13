@@ -1,6 +1,7 @@
 package github.nighter.smartspawner.spawner.gui.storage.button;
 
 import github.nighter.smartspawner.language.LanguageManager;
+import github.nighter.smartspawner.utils.LRUCache;
 import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
@@ -8,12 +9,12 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public final class SortButton {
 
-    private static final Map<SortButtonCacheKey, ItemStack> SORT_BUTTON_CACHE = new ConcurrentHashMap<>();
+    private static final int SORT_BUTTON_CACHE_SIZE = 256;
+    private static final LRUCache<SortButtonCacheKey, ItemStack> SORT_BUTTON_CACHE = new LRUCache<>(SORT_BUTTON_CACHE_SIZE);
 
     private static final EnumMap<Material, String> MATERIAL_NAME_CACHE = new EnumMap<>(Material.class);
 
@@ -26,7 +27,7 @@ public final class SortButton {
 
         EntityLootConfig lootConfig = spawner.getLootConfig();
 
-        return SORT_BUTTON_CACHE.computeIfAbsent(
+        return SORT_BUTTON_CACHE.get(
                 new SortButtonCacheKey(
                         lootConfig,
                         spawner.getPreferredSortItem(),
