@@ -21,7 +21,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
-import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -30,7 +29,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class SpawnerStorageUI {
@@ -44,18 +42,18 @@ public class SpawnerStorageUI {
     // Precomputed buttons to avoid repeated creation
     private final Map<String, ItemStack> staticButtons;
 
-    // Lightweight caches with better eviction strategies
-    private final Map<String, ItemStack> navigationButtonCache;
-    private final Map<String, ItemStack> pageIndicatorCache;
+    // Navigation buttons
+    private ItemStack previousNavigationButtonBase;
+    private ItemStack nextNavigationButtonBase;
 
-    // Cache expiry time reduced for more responsive updates
-    private static final int MAX_CACHE_SIZE = 100;
+    private List<String> previousNavigationLore;
+    private List<String> nextNavigationLore;
+
+    private String previousNavigationFirstLine;
+    private String nextNavigationFirstLine;
     
     // Cache for title format to avoid repeated language lookups
     private String cachedStorageTitleFormat = null;
-
-    // Cleanup task to remove stale entries from caches
-    private Task cleanupTask;
 
     public SpawnerStorageUI(SmartSpawner plugin) {
         this.plugin = plugin;
@@ -64,11 +62,9 @@ public class SpawnerStorageUI {
 
         // Initialize caches with appropriate initial capacity
         this.staticButtons = new HashMap<>(8);
-        this.navigationButtonCache = new ConcurrentHashMap<>(16);
-        this.pageIndicatorCache = new ConcurrentHashMap<>(16);
 
         initializeStaticButtons();
-        startCleanupTask();
+        initializeNavigationButtons();
     }
 
     public void reload() {
@@ -76,13 +72,14 @@ public class SpawnerStorageUI {
         this.layoutConfig = plugin.getGuiLayoutConfig();
 
         // Clear caches to force reloading of buttons
-        navigationButtonCache.clear();
-        pageIndicatorCache.clear();
         staticButtons.clear();
         cachedStorageTitleFormat = null;
 
         // Reinitialize static buttons
         initializeStaticButtons();
+
+        // Reinitialize navigation buttons
+        initializeNavigationButtons();
     }
 
     private void initializeStaticButtons() {
@@ -310,6 +307,46 @@ public class SpawnerStorageUI {
         }
     }
 
+    private void initializeNavigationButtons() {
+        GuiLayout layout = layoutConfig.getCurrentStorageLayout();
+
+        for (GuiButton button : layout.getAllButtons().values()) {
+            String action = getAnyActionFromButton(button);
+
+            if (action == null) {
+                continue;
+            }
+
+            switch (action) {
+                case "previous_page" -> {
+                    previousNavigationLore =
+                            languageManager.getGuiItemLoreAsList("navigation_button_previous.lore");
+
+                    previousNavigationFirstLine = previousNavigationLore.getFirst();
+
+                    previousNavigationButtonBase = createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("navigation_button_previous.name"),
+                            previousNavigationLore
+                    );
+                }
+
+                case "next_page" -> {
+                    nextNavigationLore =
+                            languageManager.getGuiItemLoreAsList("navigation_button_next.lore");
+
+                    nextNavigationFirstLine = nextNavigationLore.getFirst();
+
+                    nextNavigationButtonBase = createButton(
+                            button.getMaterial(),
+                            languageManager.getGuiItemName("navigation_button_next.name"),
+                            nextNavigationLore
+                    );
+                }
+            }
+        }
+    }
+
     private void addNavigationButtons(Map<Integer, ItemStack> updates, SpawnerData spawner, int page, int totalPages) {
         if (totalPages == -1) {
             totalPages = calculateTotalPages(spawner);
@@ -342,16 +379,13 @@ public class SpawnerStorageUI {
             switch (action) {
                 case "previous_page":
                     if (page > 1) {
-                        String cacheKey = "prev-" + (page - 1);
-                        item = navigationButtonCache.computeIfAbsent(
-                                cacheKey, k -> createNavigationButton("previous", page - 1, button.getMaterial()));
+                        item = createNavigationButton(true, page - 1);
                     }
                     break;
+
                 case "next_page":
                     if (page < totalPages) {
-                        String cacheKey = "next-" + (page + 1);
-                        item = navigationButtonCache.computeIfAbsent(
-                                cacheKey, k -> createNavigationButton("next", page + 1, button.getMaterial()));
+                        item = createNavigationButton(false, page + 1);
                     }
                     break;
                 case "take_all":
@@ -440,37 +474,31 @@ public class SpawnerStorageUI {
         return item;
     }
 
-    private ItemStack createButtonModern(Material material, String name, List<Component> lore) {
-        ItemStack item = ItemStack.of(material);
+    private ItemStack createNavigationButton(boolean previous, int targetPage) {
+        ItemStack item = (previous
+                ? previousNavigationButtonBase
+                : nextNavigationButtonBase).clone();
 
-        item.setData(DataComponentTypes.ITEM_NAME, Component.text("Next Page"));
-        item.setData(DataComponentTypes.LORE, ItemLore.lore(lore));
+        ItemMeta meta = item.getItemMeta();
 
-        // Hide tooltip for BUNDLE material (prevents showing bundle contents)
-        if (material == Material.BUNDLE) {
-            github.nighter.smartspawner.nms.VersionInitializer.hideTooltip(item);
+        if (meta != null) {
+            List<String> baseLore = previous
+                    ? previousNavigationLore
+                    : nextNavigationLore;
+
+            List<String> lore = new ArrayList<>(baseLore);
+
+            lore.set(0,
+                    (previous
+                            ? previousNavigationFirstLine
+                            : nextNavigationFirstLine).replace("{target_page}", Integer.toString(targetPage))
+            );
+
+            meta.setLore(lore);
+            item.setItemMeta(meta);
         }
 
         return item;
-    }
-
-    private ItemStack createNavigationButton(String type, int targetPage, Material material) {
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("target_page", String.valueOf(targetPage));
-
-        String buttonName;
-        String buttonKey;
-
-        if (type.equals("previous")) {
-            buttonKey = "navigation_button_previous";
-        } else {
-            buttonKey = "navigation_button_next";
-        }
-
-        buttonName = languageManager.getGuiItemName(buttonKey + ".name", placeholders);
-        String[] buttonLore = languageManager.getGuiItemLore(buttonKey + ".lore", placeholders);
-
-        return createButton(material, buttonName, Arrays.asList(buttonLore));
     }
 
     private ItemStack createSellButton(SpawnerData spawner, Material material) {
@@ -609,46 +637,11 @@ public class SpawnerStorageUI {
         return components;
     }
 
-    private void startCleanupTask() {
-        cleanupTask = Scheduler.runTaskTimer(this::cleanupCaches, 20L * 30, 20L * 30); // Run every 30 seconds
-    }
-
-    public void cancelTasks() {
-        if (cleanupTask != null) {
-            cleanupTask.cancel();
-            cleanupTask = null;
-        }
-    }
-
-    private void cleanupCaches() {
-        // LRU-like cleanup for navigation buttons
-        if (navigationButtonCache.size() > MAX_CACHE_SIZE) {
-            int toRemove = navigationButtonCache.size() - (MAX_CACHE_SIZE / 2);
-            List<String> keysToRemove = new ArrayList<>(navigationButtonCache.keySet());
-            for (int i = 0; i < Math.min(toRemove, keysToRemove.size()); i++) {
-                navigationButtonCache.remove(keysToRemove.get(i));
-            }
-        }
-
-        // LRU-like cleanup for page indicators
-        if (pageIndicatorCache.size() > MAX_CACHE_SIZE) {
-            int toRemove = pageIndicatorCache.size() - (MAX_CACHE_SIZE / 2);
-            List<String> keysToRemove = new ArrayList<>(pageIndicatorCache.keySet());
-            for (int i = 0; i < Math.min(toRemove, keysToRemove.size()); i++) {
-                pageIndicatorCache.remove(keysToRemove.get(i));
-            }
-        }
-    }
-
     public void cleanup() {
-        navigationButtonCache.clear();
-        pageIndicatorCache.clear();
         cachedStorageTitleFormat = null;
-
-        // Cancel scheduled tasks
-        cancelTasks();
 
         // Re-initialize static buttons (just in case language has changed)
         initializeStaticButtons();
+        initializeNavigationButtons();
     }
 }
