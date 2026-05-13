@@ -11,8 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class VirtualInventory {
     private final Map<ItemSignature, Long> consolidatedItems;
-    @Getter
-    private int maxSlots;
+    @Getter private int maxSlots;
     // Cache sorted entries to avoid resorting when display isn't changing
     private List<Map.Entry<ItemSignature, Long>> sortedEntriesCache;
     private org.bukkit.Material preferredSortMaterial;
@@ -28,69 +27,105 @@ public class VirtualInventory {
         return new ItemSignature(item);
     }
 
-    // Add items in bulk with minimal operations
-    public void addItems(List<ItemStack> items) {
-        if (items.isEmpty()) return;
+    /*
+     * FAST PATH
+     * Used for loading already-consolidated storage data.
+     */
+    public void addItem(ItemStack item, long amount) {
+        if (item == null || amount <= 0) {
+            return;
+        }
 
-        // Pre-allocate space for batch processing
+        ItemSignature signature = getSignature(item);
+
+        consolidatedItems.merge(signature, amount, Long::sum);
+
+        sortedEntriesCache = null;
+    }
+
+    /*
+     * Bulk insert for physical item stacks.
+     */
+    public void addItems(List<ItemStack> items) {
+        if (items.isEmpty()) {
+            return;
+        }
+
         Map<ItemSignature, Long> itemBatch = new HashMap<>(items.size());
 
-        // Consolidate all items first
         for (ItemStack item : items) {
-            if (item == null || item.getAmount() <= 0) continue;
-            ItemSignature sig = getSignature(item); // Use cached signature
-            itemBatch.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
+            if (item == null) {
+                continue;
+            }
+
+            int amount = item.getAmount();
+
+            if (amount <= 0) {
+                continue;
+            }
+
+            ItemSignature signature = getSignature(item);
+
+            itemBatch.merge(signature, (long) amount, Long::sum);
         }
 
-        // Apply all changes in one operation
-        if (!itemBatch.isEmpty()) {
-            for (Map.Entry<ItemSignature, Long> entry : itemBatch.entrySet()) {
-                consolidatedItems.merge(entry.getKey(), entry.getValue(), (a, b) -> a + b);
-            }
-            sortedEntriesCache = null;
+        if (itemBatch.isEmpty()) {
+            return;
         }
+
+        for (Map.Entry<ItemSignature, Long> entry : itemBatch.entrySet()) {
+            consolidatedItems.merge(entry.getKey(), entry.getValue(), Long::sum);
+        }
+
+        sortedEntriesCache = null;
     }
-    // Remove items in bulk with minimal operations
+
     public boolean removeItems(List<ItemStack> items) {
-        if (items.isEmpty()) return true;
+        if (items.isEmpty()) {
+            return true;
+        }
 
         Map<ItemSignature, Long> toRemove = new HashMap<>();
 
-        // Calculate total amounts to remove in a single pass
         for (ItemStack item : items) {
-            if (item == null || item.getAmount() <= 0) continue;
-            // Use cached signature to avoid excessive cloning
-            ItemSignature sig = getSignature(item);
-            toRemove.merge(sig, (long) item.getAmount(), (a, b) -> a + b);
+            if (item == null) {
+                continue;
+            }
+
+            int amount = item.getAmount();
+
+            if (amount <= 0) {
+                continue;
+            }
+
+            ItemSignature signature = getSignature(item);
+
+            toRemove.merge(signature, (long) amount, Long::sum);
         }
 
-        if (toRemove.isEmpty()) return true;
+        if (toRemove.isEmpty()) {
+            return true;
+        }
 
-        // Verify we have enough of each item
         for (Map.Entry<ItemSignature, Long> entry : toRemove.entrySet()) {
-            Long currentAmount = consolidatedItems.getOrDefault(entry.getKey(), 0L);
+            long currentAmount = consolidatedItems.getOrDefault(entry.getKey(), 0L);
+
             if (currentAmount < entry.getValue()) {
                 return false;
             }
         }
 
-        // Perform removals all at once
-        boolean updated = false;
         for (Map.Entry<ItemSignature, Long> entry : toRemove.entrySet()) {
-            ItemSignature sig = entry.getKey();
+            ItemSignature signature = entry.getKey();
             long amountToRemove = entry.getValue();
 
-            consolidatedItems.computeIfPresent(sig, (key, current) -> {
-                long newAmount = current - amountToRemove;
-                return newAmount <= 0 ? null : newAmount;
+            consolidatedItems.computeIfPresent(signature, (key, current) -> {
+                long remaining = current - amountToRemove;
+                return remaining <= 0 ? null : remaining;
             });
-
-            updated = true;
         }
 
-        if (updated) {
-            sortedEntriesCache = null; // Invalidate sorted entries cache
-        }
+        sortedEntriesCache = null;
 
         return true;
     }
