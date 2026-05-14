@@ -140,7 +140,11 @@ public class SpawnerSellManager {
         // Fire the cancellable API event
         if (SpawnerSellEvent.getHandlerList().getRegisteredListeners().length != 0) {
             SpawnerSellEvent event = new SpawnerSellEvent(
-                    player, spawner.getSpawnerLocation(), sellResult.getItemsToRemove(), amount, spawner.getEntityType());
+                    player,
+                    spawner.getSpawnerLocation(),
+                    toApiItemStacks(sellResult.getItemsToRemove()),
+                    amount,
+                    spawner.getEntityType());
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) return;
             if (event.getMoneyAmount() >= 0) amount = event.getMoneyAmount();
@@ -179,34 +183,38 @@ public class SpawnerSellManager {
     }
 
     /**
-     * Calculates the total sell value and constructs the list of {@link ItemStack}s to remove.
+     * Calculates the total sell value and records the consolidated item signatures to remove.
      * Pure computation – no Bukkit API calls, safe to run on an async thread.
      */
-    private SellResult calculateSellValue(Map<ItemSignature, Long> consolidatedItems,
-                                          double totalValue) {
+    private SellResult calculateSellValue(Map<ItemSignature, Long> consolidatedItems, double totalValue) {
         long totalItemsSold = 0;
-        ArrayList<ItemStack> itemsToRemove = new ArrayList<>();
 
         for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
-            ItemSignature signature = entry.getKey();
-            ItemStack templateRef = signature.getTemplateRef();
-            long amount = entry.getValue();
-            int maxStackSize = signature.getMaxStackSize();
-
-            totalItemsSold += amount;
-
-            int stacksNeeded = (int) Math.ceil((double) amount / maxStackSize);
-            itemsToRemove.ensureCapacity(itemsToRemove.size() + stacksNeeded);
-
-            long remaining = amount;
-            while (remaining > 0) {
-                ItemStack stack = templateRef.clone();
-                stack.setAmount((int) Math.min(remaining, maxStackSize));
-                itemsToRemove.add(stack);
-                remaining -= stack.getAmount();
-            }
+            totalItemsSold += entry.getValue();
         }
 
-        return new SellResult(totalValue, totalItemsSold, itemsToRemove);
+        return new SellResult(totalValue, totalItemsSold, consolidatedItems);
+    }
+
+    private List<ItemStack> toApiItemStacks(Map<ItemSignature, Long> items) {
+        if (items == null || items.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<ItemStack> apiItems = new ArrayList<>(items.size());
+
+        for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
+            ItemSignature signature = entry.getKey();
+            Long amount = entry.getValue();
+            if (signature == null || amount == null || amount <= 0) {
+                continue;
+            }
+
+            ItemStack stack = signature.getTemplate();
+            stack.setAmount((int) Math.min(amount, Integer.MAX_VALUE));
+            apiItems.add(stack);
+        }
+
+        return apiItems;
     }
 }

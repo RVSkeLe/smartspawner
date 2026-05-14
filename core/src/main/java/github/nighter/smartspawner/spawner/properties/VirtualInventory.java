@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
@@ -14,7 +15,7 @@ public class VirtualInventory {
     @Getter private int maxSlots;
     // Cache sorted entries to avoid resorting when display isn't changing
     private List<Map.Entry<ItemSignature, Long>> sortedEntriesCache;
-    private org.bukkit.Material preferredSortMaterial;
+    private Material preferredSortMaterial;
 
     public VirtualInventory(int maxSlots) {
         this.maxSlots = maxSlots;
@@ -25,6 +26,10 @@ public class VirtualInventory {
 
     public static ItemSignature getSignature(ItemStack item) {
         return new ItemSignature(item);
+    }
+
+    public void setMaxSlots(int maxSlots) {
+        this.maxSlots = Math.max(0, maxSlots);
     }
 
     /*
@@ -44,63 +49,58 @@ public class VirtualInventory {
     }
 
     /*
-     * Bulk insert for physical item stacks.
+     * Bulk insert for already-consolidated storage data.
      */
-    public void addItems(List<ItemStack> items) {
-        if (items.isEmpty()) {
+    public void addItems(Map<ItemSignature, ? extends Number> items) {
+        if (items == null || items.isEmpty()) {
             return;
         }
 
-        Map<ItemSignature, Long> itemBatch = new HashMap<>(items.size());
+        boolean changed = false;
 
-        for (ItemStack item : items) {
-            if (item == null) {
+        for (Map.Entry<ItemSignature, ? extends Number> entry : items.entrySet()) {
+            ItemSignature signature = entry.getKey();
+            Number amountValue = entry.getValue();
+
+            if (signature == null || amountValue == null) {
                 continue;
             }
 
-            int amount = item.getAmount();
-
+            long amount = amountValue.longValue();
             if (amount <= 0) {
                 continue;
             }
 
-            ItemSignature signature = getSignature(item);
-
-            itemBatch.merge(signature, (long) amount, Long::sum);
+            consolidatedItems.merge(signature, amount, Long::sum);
+            changed = true;
         }
 
-        if (itemBatch.isEmpty()) {
-            return;
+        if (changed) {
+            sortedEntriesCache = null;
         }
-
-        for (Map.Entry<ItemSignature, Long> entry : itemBatch.entrySet()) {
-            consolidatedItems.merge(entry.getKey(), entry.getValue(), Long::sum);
-        }
-
-        sortedEntriesCache = null;
     }
 
-    public boolean removeItems(List<ItemStack> items) {
-        if (items.isEmpty()) {
+    public boolean removeItems(Map<ItemSignature, ? extends Number> items) {
+        if (items == null || items.isEmpty()) {
             return true;
         }
 
-        Map<ItemSignature, Long> toRemove = new HashMap<>();
+        Map<ItemSignature, Long> toRemove = new HashMap<>(items.size());
 
-        for (ItemStack item : items) {
-            if (item == null) {
+        for (Map.Entry<ItemSignature, ? extends Number> entry : items.entrySet()) {
+            ItemSignature signature = entry.getKey();
+            Number amountValue = entry.getValue();
+
+            if (signature == null || amountValue == null) {
                 continue;
             }
 
-            int amount = item.getAmount();
-
+            long amount = amountValue.longValue();
             if (amount <= 0) {
                 continue;
             }
 
-            ItemSignature signature = getSignature(item);
-
-            toRemove.merge(signature, (long) amount, Long::sum);
+            toRemove.merge(signature, amount, Long::sum);
         }
 
         if (toRemove.isEmpty()) {
@@ -108,19 +108,14 @@ public class VirtualInventory {
         }
 
         for (Map.Entry<ItemSignature, Long> entry : toRemove.entrySet()) {
-            long currentAmount = consolidatedItems.getOrDefault(entry.getKey(), 0L);
-
-            if (currentAmount < entry.getValue()) {
+            if (consolidatedItems.getOrDefault(entry.getKey(), 0L) < entry.getValue()) {
                 return false;
             }
         }
 
         for (Map.Entry<ItemSignature, Long> entry : toRemove.entrySet()) {
-            ItemSignature signature = entry.getKey();
-            long amountToRemove = entry.getValue();
-
-            consolidatedItems.computeIfPresent(signature, (key, current) -> {
-                long remaining = current - amountToRemove;
+            consolidatedItems.computeIfPresent(entry.getKey(), (key, current) -> {
+                long remaining = current - entry.getValue();
                 return remaining <= 0 ? null : remaining;
             });
         }
