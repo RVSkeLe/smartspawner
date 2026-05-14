@@ -7,6 +7,7 @@ import github.nighter.smartspawner.spawner.config.SpawnerMobHeadTexture;
 import github.nighter.smartspawner.spawner.gui.layout.GuiButton;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayout;
 import github.nighter.smartspawner.spawner.gui.layout.GuiLayoutConfig;
+import github.nighter.smartspawner.spawner.gui.storage.button.NavigationButtonCache;
 import github.nighter.smartspawner.spawner.gui.storage.button.SortButton;
 import github.nighter.smartspawner.spawner.lootgen.loot.EntityLootConfig;
 import github.nighter.smartspawner.spawner.lootgen.loot.LootItem;
@@ -14,9 +15,6 @@ import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.Scheduler;
-import github.nighter.smartspawner.Scheduler.Task;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.ItemLore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lombok.Getter;
@@ -42,15 +40,7 @@ public class SpawnerStorageUI {
     // Precomputed buttons to avoid repeated creation
     private final Map<String, ItemStack> staticButtons;
 
-    // Navigation buttons
-    private ItemStack previousNavigationButtonBase;
-    private ItemStack nextNavigationButtonBase;
-
-    private List<String> previousNavigationLore;
-    private List<String> nextNavigationLore;
-
-    private String previousNavigationFirstLine;
-    private String nextNavigationFirstLine;
+    private final NavigationButtonCache navigationButtons;
     
     // Cache for title format to avoid repeated language lookups
     private String cachedStorageTitleFormat = null;
@@ -62,6 +52,7 @@ public class SpawnerStorageUI {
 
         // Initialize caches with appropriate initial capacity
         this.staticButtons = new HashMap<>(8);
+        this.navigationButtons = new NavigationButtonCache(data -> createButton(data.material(), data.name(), data.lore()));
 
         initializeStaticButtons();
         initializeNavigationButtons();
@@ -308,43 +299,7 @@ public class SpawnerStorageUI {
     }
 
     private void initializeNavigationButtons() {
-        GuiLayout layout = layoutConfig.getCurrentStorageLayout();
-
-        for (GuiButton button : layout.getAllButtons().values()) {
-            String action = getAnyActionFromButton(button);
-
-            if (action == null) {
-                continue;
-            }
-
-            switch (action) {
-                case "previous_page" -> {
-                    previousNavigationLore =
-                            languageManager.getGuiItemLoreAsList("navigation_button_previous.lore");
-
-                    previousNavigationFirstLine = previousNavigationLore.getFirst();
-
-                    previousNavigationButtonBase = createButton(
-                            button.getMaterial(),
-                            languageManager.getGuiItemName("navigation_button_previous.name"),
-                            previousNavigationLore
-                    );
-                }
-
-                case "next_page" -> {
-                    nextNavigationLore =
-                            languageManager.getGuiItemLoreAsList("navigation_button_next.lore");
-
-                    nextNavigationFirstLine = nextNavigationLore.getFirst();
-
-                    nextNavigationButtonBase = createButton(
-                            button.getMaterial(),
-                            languageManager.getGuiItemName("navigation_button_next.name"),
-                            nextNavigationLore
-                    );
-                }
-            }
-        }
+        navigationButtons.reload(layoutConfig.getCurrentStorageLayout(), languageManager);
     }
 
     private void addNavigationButtons(Map<Integer, ItemStack> updates, SpawnerData spawner, int page, int totalPages) {
@@ -379,13 +334,13 @@ public class SpawnerStorageUI {
             switch (action) {
                 case "previous_page":
                     if (page > 1) {
-                        item = createNavigationButton(true, page - 1);
+                        item = navigationButtons.getPreviousButton(page - 1);
                     }
                     break;
 
                 case "next_page":
                     if (page < totalPages) {
-                        item = createNavigationButton(false, page + 1);
+                        item = navigationButtons.getNextButton(page + 1);
                     }
                     break;
                 case "take_all":
@@ -469,33 +424,6 @@ public class SpawnerStorageUI {
         // Hide tooltip for BUNDLE material (prevents showing bundle contents)
         if (material == Material.BUNDLE) {
             github.nighter.smartspawner.nms.VersionInitializer.hideTooltip(item);
-        }
-
-        return item;
-    }
-
-    private ItemStack createNavigationButton(boolean previous, int targetPage) {
-        ItemStack item = (previous
-                ? previousNavigationButtonBase
-                : nextNavigationButtonBase).clone();
-
-        ItemMeta meta = item.getItemMeta();
-
-        if (meta != null) {
-            List<String> baseLore = previous
-                    ? previousNavigationLore
-                    : nextNavigationLore;
-
-            List<String> lore = new ArrayList<>(baseLore);
-
-            lore.set(0,
-                    (previous
-                            ? previousNavigationFirstLine
-                            : nextNavigationFirstLine).replace("{target_page}", Integer.toString(targetPage))
-            );
-
-            meta.setLore(lore);
-            item.setItemMeta(meta);
         }
 
         return item;
