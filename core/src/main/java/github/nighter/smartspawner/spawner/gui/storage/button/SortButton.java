@@ -18,8 +18,6 @@ public final class SortButton {
 
     private static final EnumMap<Material, String> MATERIAL_NAME_CACHE = new EnumMap<>(Material.class);
 
-    private record SortButtonCacheKey(EntityLootConfig lootConfig, Material selectedMaterial, Material buttonMaterial) {}
-
     private SortButton() {}
 
     public static ItemStack getOrBuildSortButton(SpawnerData spawner, Material buttonMaterial,
@@ -35,8 +33,8 @@ public final class SortButton {
                 ),
                 key -> buildSortButton(
                         lootConfig,
-                        key.selectedMaterial(),
-                        key.buttonMaterial(),
+                        key.selectedMaterial,
+                        key.buttonMaterial,
                         languageManager,
                         buttonFactory
                 )
@@ -52,19 +50,13 @@ public final class SortButton {
 
         String availableItemsString;
 
-        if (lootConfig != null
-                && lootConfig.getAllItems() != null
-                && !lootConfig.getAllItems().isEmpty()) {
+        if (lootConfig != null && lootConfig.getAllItems() != null && !lootConfig.getAllItems().isEmpty()) {
 
-            List<LootItem> sortedLoot =
-                    new ArrayList<>(lootConfig.getAllItems());
+            List<LootItem> sortedLoot = new ArrayList<>(lootConfig.getAllItems());
 
-            sortedLoot.sort(
-                    Comparator.comparing(item -> item.material().name())
-            );
+            sortedLoot.sort(Comparator.comparing(item -> item.material().name()));
 
-            StringBuilder availableItems =
-                    new StringBuilder(sortedLoot.size() * 32);
+            StringBuilder availableItems = new StringBuilder(sortedLoot.size() * 32);
 
             boolean first = true;
 
@@ -80,14 +72,11 @@ public final class SortButton {
                         languageManager::getVanillaItemName
                 );
 
-                String format =
-                        currentSort == lootMaterial
+                String format = currentSort == lootMaterial
                                 ? selectedItemFormat
                                 : unselectedItemFormat;
 
-                availableItems.append(
-                        format.replace("{item_name}", itemName)
-                );
+                availableItems.append(format.replace("{item_name}", itemName));
 
                 first = false;
             }
@@ -101,8 +90,7 @@ public final class SortButton {
         placeholders.put("available_items", availableItemsString);
 
         return buttonFactory.apply(
-                new ButtonData(
-                        buttonMaterial,
+                new ButtonData(buttonMaterial,
                         languageManager.getGuiItemName("sort_items_button.name", placeholders),
                         languageManager.getGuiItemLoreWithMultilinePlaceholders("sort_items_button.lore", placeholders)
                 )
@@ -110,4 +98,38 @@ public final class SortButton {
     }
 
     public record ButtonData(Material material, String name, List<String> lore) {}
+
+    private static final class SortButtonCacheKey {
+        private final EntityLootConfig lootConfig;
+        private final Material selectedMaterial;
+        private final Material buttonMaterial;
+        private final int hashCode;
+
+        private SortButtonCacheKey(EntityLootConfig lootConfig, Material selectedMaterial, Material buttonMaterial) {
+            this.lootConfig = lootConfig;
+            this.selectedMaterial = selectedMaterial;
+            this.buttonMaterial = buttonMaterial;
+
+            int hash = System.identityHashCode(lootConfig);
+            hash = 31 * hash + (selectedMaterial != null ? selectedMaterial.ordinal() : -1);
+            hash = 31 * hash + buttonMaterial.ordinal();
+
+            this.hashCode = hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof SortButtonCacheKey other)) return false;
+
+            return lootConfig == other.lootConfig
+                    && selectedMaterial == other.selectedMaterial
+                    && buttonMaterial == other.buttonMaterial;
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+    }
 }
