@@ -9,22 +9,25 @@ import org.bukkit.inventory.meta.ItemMeta;
 public class ItemSignature {
     private final ItemStack template;
     private final int hashCode;
+    // Cache purposes
     @Getter private final Material material;
-    @Getter private final int maxStackSize; // Cache purposes
+    @Getter private final int maxStackSize;
+    @Getter private final int damage;
 
     public ItemSignature(ItemStack item) {
         this.template = item.clone();
         this.template.setAmount(1);
         this.material = template.getType();
-        this.hashCode = calculateHashCode();
         this.maxStackSize = item.getMaxStackSize();
+        this.damage = getItemDamage(template);
+        this.hashCode = calculateHashCode();
     }
 
     // Replace the current calculateHashCode() method with:
     private int calculateHashCode() {
         // Use a faster hash algorithm and cache more item properties
         int result = 31 * this.material.ordinal(); // Using ordinal() instead of name() hashing
-        result = 31 * result + getItemDamage(template);
+        result = 31 * result + this.damage;
 
         // Only access ItemMeta when needed
         if (template.hasItemMeta()) {
@@ -43,7 +46,7 @@ public class ItemSignature {
         if (!(o instanceof ItemSignature that)) return false;
 
         // First compare cheap properties
-        if (material != that.material || getItemDamage(template) != getItemDamage(that.template)) {
+        if (material != that.material || this.damage != that.damage) {
             return false;
         }
 
