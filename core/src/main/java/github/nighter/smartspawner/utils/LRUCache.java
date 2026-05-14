@@ -66,11 +66,10 @@ public class LRUCache<K, V> {
      * @param key The key whose associated value is to be returned or computed
      * @param mappingFunction The function used to create a value when the key is absent
      * @return The existing or newly computed value associated with the key
-     * @throws NullPointerException if {@code key} or {@code mappingFunction} is null
+     * @throws NullPointerException if {@code key} is null
      */
     public synchronized V get(K key, Function<K, V> mappingFunction) {
         Preconditions.checkNotNull(key);
-        Preconditions.checkNotNull(mappingFunction);
 
         return cache.computeIfAbsent(key, mappingFunction);
     }
