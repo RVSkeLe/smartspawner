@@ -1,146 +1,112 @@
 package github.nighter.smartspawner.utils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
- * A lightweight LRU-style cache backed by Guava's {@link Cache}.
+ * A simple LRU (Least Recently Used) cache implementation
+ * that automatically removes the least recently accessed entries
+ * when the cache reaches its capacity.
  *
- * <p>This cache automatically evicts least-recently-used entries
- * when the configured maximum size is exceeded.</p>
- *
- * <p>The preferred access pattern is {@link #get(Object, Function)},
- * which provides atomic lazy-loading behavior similar to
- * {@code computeIfAbsent}.</p>
- *
- * @param <K> key type
- * @param <V> value type
+ * @param <K> The type of keys maintained by this cache
+ * @param <V> The type of values maintained by this cache
  */
-public final class LRUCache<K, V> {
-
-    private final Cache<K, V> cache;
-    private final int capacity;
+public class LRUCache<K, V> {
+    private final LinkedHashMap<K, V> cache;
+    private int capacity;
 
     /**
-     * Creates a new cache with the specified maximum capacity.
+     * Constructs an LRU cache with the specified capacity
      *
-     * @param capacity maximum number of entries allowed in the cache
-     * @throws IllegalArgumentException if capacity is less than or equal to zero
+     * @param capacity The maximum number of entries in the cache
      */
     public LRUCache(int capacity) {
-        if (capacity <= 0) {
-            throw new IllegalArgumentException("Capacity must be > 0");
-        }
-
         this.capacity = capacity;
-        this.cache = createCache(capacity);
+        this.cache = new LinkedHashMap<K, V>(capacity, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > LRUCache.this.capacity;
+            }
+        };
     }
 
     /**
-     * Creates the underlying Guava cache instance.
+     * Returns the value associated with the specified key,
+     * or null if no mapping exists for the key
      *
-     * @param capacity maximum cache size
-     * @return configured cache instance
+     * @param key The key whose associated value is to be returned
+     * @return The value associated with the key, or null if no mapping exists
      */
-    private Cache<K, V> createCache(int capacity) {
-        return CacheBuilder.newBuilder()
-                .maximumSize(capacity)
-                .build();
+    public synchronized V get(K key) {
+        return cache.get(key);
     }
 
     /**
-     * Retrieves a cached value if present.
+     * Associates the specified value with the specified key in this cache
      *
-     * @param key cache key
-     * @return cached value, or {@code null} if absent
-     * @deprecated Prefer {@link #get(Object, Function)} for atomic lazy loading
+     * @param key The key with which the specified value is to be associated
+     * @param value The value to be associated with the specified key
+     * @return The previous value associated with the key, or null if no mapping existed
      */
-    @Deprecated
-    public V get(K key) {
-        return cache.getIfPresent(key);
+    public synchronized V put(K key, V value) {
+        return cache.put(key, value);
     }
 
     /**
-     * Stores a value in the cache.
+     * Returns the value associated with the specified key, computing and
+     * caching it with the supplied mapping function when no mapping exists.
      *
-     * @param key cache key
-     * @param value value to cache
-     * @return previously cached value, or {@code null} if absent
-     * @deprecated Prefer {@link #get(Object, Function)} for atomic lazy loading
+     * <p>Accessing an existing entry updates its recency, and adding a new
+     * entry may evict the least recently used entry if the cache exceeds its
+     * configured capacity.</p>
+     *
+     * @param key The key whose associated value is to be returned or computed
+     * @param mappingFunction The function used to create a value when the key is absent
+     * @return The existing or newly computed value associated with the key
+     * @throws NullPointerException if {@code key} or {@code mappingFunction} is null
      */
-    @Deprecated
-    public V put(K key, V value) {
-        V previous = cache.getIfPresent(key);
-        cache.put(key, value);
-        return previous;
-    }
-
-    /**
-     * Retrieves a cached value, computing and caching it atomically
-     * if it is not already present.
-     *
-     * <p>The mapping function is only invoked when the key is absent.</p>
-     *
-     * @param key cache key
-     * @param mappingFunction value supplier for cache misses
-     * @return cached or newly computed value
-     * @throws RuntimeException if the mapping function throws an exception
-     */
-    public V get(K key, Function<K, V> mappingFunction) {
+    public synchronized V get(K key, Function<K, V> mappingFunction) {
         Preconditions.checkNotNull(key);
         Preconditions.checkNotNull(mappingFunction);
 
-        try {
-            return cache.get(key, () -> mappingFunction.apply(key));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return cache.computeIfAbsent(key, mappingFunction);
     }
 
     /**
-     * Removes all entries from the cache.
+     * Removes all entries from the cache
      */
-    public void clear() {
-        cache.invalidateAll();
+    public synchronized void clear() {
+        cache.clear();
     }
 
     /**
-     * Returns the approximate number of entries currently stored.
+     * Returns the number of key-value mappings in this cache
      *
-     * @return estimated cache size
+     * @return The number of key-value mappings in this cache
      */
-    public int size() {
-        return Math.toIntExact(cache.size());
+    public synchronized int size() {
+        return cache.size();
     }
 
     /**
-     * Returns the configured maximum capacity of the cache.
+     * Returns the capacity of this cache
      *
-     * @return maximum cache size
+     * @return The capacity of this cache
      */
-    public int capacity() {
+    public synchronized int capacity() {
         return capacity;
     }
 
     /**
-     * Removes a specific entry from the cache.
+     * Resize the cache capacity
      *
-     * @param key cache key to invalidate
+     * @param newCapacity The new capacity for the cache
      */
-    public void remove(K key) {
-        cache.invalidate(key);
-    }
-
-    /**
-     * Checks whether a key currently exists in the cache.
-     *
-     * @param key cache key
-     * @return {@code true} if the key is cached
-     */
-    public boolean containsKey(K key) {
-        return cache.getIfPresent(key) != null;
+    public synchronized void resize(int newCapacity) {
+        this.capacity = newCapacity;
+        // The LinkedHashMap will automatically adjust its size on the next put operation
     }
 }
