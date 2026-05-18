@@ -11,9 +11,11 @@ public class Config {
     private static volatile Config instance;
 
     private final boolean optimizedLootgen;
+    private final int approximationThreshold;
 
     private Config(FileConfiguration config) {
-        this.optimizedLootgen = config.getBoolean("loot_generation.optimized_generation");
+        this.optimizedLootgen = config.getBoolean("loot_generation.optimized_generation", false);
+        this.approximationThreshold = config.getInt("loot_generation.approximation_threshold", 1000);
     }
 
     public static Config get() {

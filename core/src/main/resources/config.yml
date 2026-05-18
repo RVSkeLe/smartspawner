@@ -173,6 +173,25 @@ loot_generation:
   # Recommended: true
   optimized_generation: false
 
+  # Controls when SmartSpawner switches from exact simulation
+  # to expected-value approximation.
+  #
+  # Lower values:
+  # - Use approximation more aggressively
+  # - Better performance
+  # - Less statistically accurate for rare drops
+  #
+  # Higher values:
+  # - Preserve exact binomial simulation longer
+  # - More accurate loot distributions
+  # - Slightly higher CPU usage depending on the amount of stacked spawners
+  #
+  # Internally, approximation is used when:
+  #   mobCount > (97.5 / chance) * approximation_threshold
+  #
+  # Recommended: 1000-10000
+  approximation_threshold: 1000
+
 #---------------------------------------------------
 #              Bedrock Player Support
 #---------------------------------------------------

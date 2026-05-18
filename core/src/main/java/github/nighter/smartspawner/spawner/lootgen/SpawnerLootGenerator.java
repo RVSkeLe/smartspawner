@@ -242,9 +242,9 @@ public class SpawnerLootGenerator {
 
     // Determines whether to use expected-value approximation
     private boolean shouldApproximate(double chance, int mobCount) {
-        // simple heuristic: use expected if at least one item can be generated
+        // simple heuristic: use expected if at least threshold items can be generated
         if (chance <= 0D) return false;
-        return mobCount > 97.5D / chance;
+        return mobCount > (97.5D / chance) * Config.get().getApproximationThreshold();
     }
 
     // O(n) simulation: exact per-mob drop calculation
