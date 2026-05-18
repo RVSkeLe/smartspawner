@@ -5,6 +5,7 @@ import github.nighter.smartspawner.Scheduler;
 import github.nighter.smartspawner.commands.list.gui.CrossServerSpawnerData;
 import github.nighter.smartspawner.spawner.data.storage.SpawnerStorage;
 import github.nighter.smartspawner.spawner.data.storage.StorageMode;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import github.nighter.smartspawner.spawner.properties.SpawnerData;
 import github.nighter.smartspawner.spawner.properties.VirtualInventory;
 import github.nighter.smartspawner.spawner.utils.ItemStackSerializer;
@@ -595,7 +596,7 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
             return null;
         }
 
-        Map<VirtualInventory.ItemSignature, Long> items = virtualInv.getConsolidatedItems();
+        Map<ItemSignature, Long> items = virtualInv.getConsolidatedItems();
         if (items.isEmpty()) {
             return null;
         }
