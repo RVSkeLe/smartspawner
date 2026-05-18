@@ -455,7 +455,7 @@ public class SpawnerData {
     }
 
     private boolean isLootItemValid(LootItem item) {
-        ItemStack example = item.createItemStack(new Random());
+        ItemStack example = item.createItemStack();
         return example != null && !filteredItems.contains(example.getType());
     }
 
@@ -662,7 +662,7 @@ public class SpawnerData {
                 price = lootItem.sellPrice();
             }
             if (price > 0.0) {
-                ItemStack template = lootItem.createItemStack(new java.util.Random());
+                ItemStack template = lootItem.createItemStack();
                 if (template != null) {
                     String key = createItemKey(template);
                     cache.put(key, price);

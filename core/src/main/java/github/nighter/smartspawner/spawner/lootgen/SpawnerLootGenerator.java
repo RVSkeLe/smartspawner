@@ -213,7 +213,7 @@ public class SpawnerLootGenerator {
 
             if (totalAmount > 0) {
                 // Create item just once per loot type
-                ItemStack prototype = lootItem.createItemStack(ThreadLocalRandom.current());
+                ItemStack prototype = lootItem.createItemStack();
                 if (prototype != null) {
                     consolidatedLoot.merge(prototype, totalAmount, Integer::sum);
                 }
