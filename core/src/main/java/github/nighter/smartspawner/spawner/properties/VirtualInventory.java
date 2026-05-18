@@ -21,16 +21,6 @@ public class VirtualInventory {
     private List<Map.Entry<ItemSignature, Long>> sortedEntriesCache;
     private org.bukkit.Material preferredSortMaterial;
 
-    // Add an LRU cache for expensive item operations
-    private static final int ITEM_CACHE_SIZE = 128;
-    private static final Map<ItemStack, ItemSignature> signatureCache =
-            Collections.synchronizedMap(new LinkedHashMap<ItemStack, ItemSignature>(ITEM_CACHE_SIZE, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<ItemStack, ItemSignature> eldest) {
-                    return size() > ITEM_CACHE_SIZE;
-                }
-            });
-
     public VirtualInventory(int maxSlots) {
         this.maxSlots = maxSlots;
         this.consolidatedItems = new ConcurrentHashMap<>();
@@ -130,16 +120,7 @@ public class VirtualInventory {
     }
 
     public static ItemSignature getSignature(ItemStack item) {
-        // First try to get from cache
-        ItemSignature cachedSig = signatureCache.get(item);
-        if (cachedSig != null) {
-            return cachedSig;
-        }
-
-        // Create new signature and cache it
-        ItemSignature newSig = new ItemSignature(item);
-        signatureCache.put(item.clone(), newSig);
-        return newSig;
+        return new ItemSignature(item);
     }
 
     // Add items in bulk with minimal operations
