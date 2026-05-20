@@ -171,7 +171,7 @@ loot_generation:
   # and fast approximation automatically.
   #
   # Recommended: true
-  approximate_loot: false
+  approximate_loot: true
 
   # Controls when approximation mode starts.
   #
