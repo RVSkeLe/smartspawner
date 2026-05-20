@@ -159,53 +159,26 @@ hopper:
 #---------------------------------------------------
 #              Loot Generation Settings
 #---------------------------------------------------
-# Configuration for internal loot generation algorithms
+# Internal loot generation configuration
 #
-# Both settings can be changed without restarting the server
-# by reloading the plugin using the appropriate command.
+# These settings can be reloaded without restarting.
+# Please check the docs for more details.
 loot_generation:
 
-  # Enables the hybrid loot generation system.
+  # Enables hybrid loot generation.
   #
-  # When enabled, SmartSpawner dynamically switches between:
-  # - Exact O(N) binomial simulation for smaller mob counts
-  # - Fast O(1) expected-value approximation for very large mob counts
-  #
-  # The approximation system applies a small randomized variance
-  # (±5%) to avoid perfectly deterministic results while remaining
-  # significantly faster for massive amounts of stacked spawners.
-  #
-  # This greatly improves performance significantly while preserving
-  # accurate low-chance drop behavior.
+  # The plugin will switch between exact simulation
+  # and fast approximation automatically.
   #
   # Recommended: true
   approximate_loot: false
 
-  # Controls when SmartSpawner switches from exact simulation
-  # to approximation mode.
+  # Controls when approximation mode starts.
   #
-  # Lower values:
-  # - Use approximation more aggressively
-  # - Lower CPU usage
-  # - Reduced statistical accuracy for rare drops
+  # Lower values = better performance
+  # Higher values = better accuracy
   #
-  # Higher values:
-  # - Preserve exact simulation longer
-  # - More accurate loot distributions
-  # - Higher CPU usage with very large stack sizes
-  #
-  # Internally, approximation is enabled when:
-  #
-  #   mobCount > (97.5 / dropChancePercent) * approximation_threshold
-  #
-  # Examples:
-  # - 1% drop chance with threshold 1000  -> ~97,500 mobs
-  # - 0.1% drop chance with threshold 1000 -> ~975,000 mobs
-  #
-  # Recommended:
-  # - 10-100      -> aggressive optimization
-  # - 100-1000    -> balanced behavior
-  # - 1000+       -> prioritize statistical accuracy
+  # Recommended: 1000-10000
   approximation_threshold: 1000
 
 #---------------------------------------------------
