@@ -206,6 +206,57 @@ hopper:
 - `check_delay`: Frequency of collection checks.
 - `stack_per_transfer`: Stacks transferred per operation.
 
+## Loot Generation Settings
+
+```yaml
+loot_generation:
+  # Enables hybrid loot generation.
+  #
+  # The plugin will switch between exact simulation
+  # and fast approximation automatically.
+  #
+  # Recommended: true
+  approximate_loot: true
+
+  # Controls when approximation mode starts.
+  #
+  # Lower values = better performance
+  # Higher values = better accuracy
+  #
+  # Recommended: 1000-10000
+  approximation_threshold: 1000
+```
+
+Controls how SmartSpawner generates loot for stacked spawners.
+
+- `approximate_loot`: Enables the hybrid loot generation system.  
+  SmartSpawner automatically switches between exact binomial simulation and a fast approximation algorithm for very large mob counts.
+
+- `approximation_threshold`: Multiplier that controls how aggressively approximation mode is used.  
+  Lower values improve performance, while higher values preserve statistical accuracy for rare drops.
+
+When approximation mode is enabled, the plugin skips expensive per-mob drop simulation and instead calculates loot
+using the average loot amount with a small randomized variance (±5%). This drastically reduces CPU usage for extremely large stacked spawners
+while still producing realistic loot distributions over time.
+
+Approximation mode is enabled when:
+`mobCount > (97.5 / dropChancePercent) * approximationThreshold`
+
+### Recommended Values
+
+| Threshold  | Behavior                          |
+|------------|-----------------------------------|
+| `10-100`   | Aggressive optimization           |
+| `100-1000` | Balanced performance and accuracy |
+| `1000+`    | Maximum statistical accuracy      |
+
+### Examples
+
+| Drop Chance | Threshold | Approximate Activation Point |
+|-------------|-----------|------------------------------|
+| `1%`        | `1000`    | `~97,500 mobs`               |
+| `0.1%`      | `1000`    | `~975,000 mobs`              |
+
 ## Bedrock Player Support
 
 ```yaml
