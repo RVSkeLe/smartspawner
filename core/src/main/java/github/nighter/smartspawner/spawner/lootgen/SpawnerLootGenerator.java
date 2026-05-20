@@ -203,7 +203,7 @@ public class SpawnerLootGenerator {
             // Calculate the probability for the entire mob batch at once
             int totalAmount;
 
-            if (Config.get().isOptimizedLootgen() && shouldApproximate(lootItem.chance(), mobCount)) {
+            if (Config.get().isApproximateLoot() && shouldApproximate(lootItem.chance(), mobCount)) {
                 // O(1) binomial approximation
                 totalAmount = generateApproximatedLoot(lootItem, mobCount);
             } else {

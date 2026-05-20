@@ -160,36 +160,52 @@ hopper:
 #              Loot Generation Settings
 #---------------------------------------------------
 # Configuration for internal loot generation algorithms
+#
+# Both settings can be changed without restarting the server
+# by reloading the plugin using the appropriate command.
 loot_generation:
-  # Enables the optimized hybrid loot generation system
+
+  # Enables the hybrid loot generation system.
   #
   # When enabled, SmartSpawner dynamically switches between:
-  # - Exact O(n) simulation for rare drops or small mob batches (binomial distribution)
-  # - Fast O(1) expected-value approximation for large mob batches (binomial approximation)
+  # - Exact O(N) binomial simulation for smaller mob counts
+  # - Fast O(1) expected-value approximation for very large mob counts
   #
-  # This significantly improves performance with millions of stacked spawners
-  # while preserving realistic loot distribution and rare drop accuracy.
+  # The approximation system applies a small randomized variance
+  # (±5%) to avoid perfectly deterministic results while remaining
+  # significantly faster for massive amounts of stacked spawners.
+  #
+  # This greatly improves performance significantly while preserving
+  # accurate low-chance drop behavior.
   #
   # Recommended: true
-  optimized_generation: false
+  approximate_loot: false
 
   # Controls when SmartSpawner switches from exact simulation
-  # to expected-value approximation.
+  # to approximation mode.
   #
   # Lower values:
   # - Use approximation more aggressively
-  # - Better performance
-  # - Less statistically accurate for rare drops
+  # - Lower CPU usage
+  # - Reduced statistical accuracy for rare drops
   #
   # Higher values:
-  # - Preserve exact binomial simulation longer
+  # - Preserve exact simulation longer
   # - More accurate loot distributions
-  # - Slightly higher CPU usage depending on the amount of stacked spawners
+  # - Higher CPU usage with very large stack sizes
   #
-  # Internally, approximation is used when:
-  #   mobCount > (97.5 / chance) * approximation_threshold
+  # Internally, approximation is enabled when:
   #
-  # Recommended: 1000-10000
+  #   mobCount > (97.5 / dropChancePercent) * approximation_threshold
+  #
+  # Examples:
+  # - 1% drop chance with threshold 1000  -> ~97,500 mobs
+  # - 0.1% drop chance with threshold 1000 -> ~975,000 mobs
+  #
+  # Recommended:
+  # - 10-100      -> aggressive optimization
+  # - 100-1000    -> balanced behavior
+  # - 1000+       -> prioritize statistical accuracy
   approximation_threshold: 1000
 
 #---------------------------------------------------
