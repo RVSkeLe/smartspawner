@@ -78,19 +78,19 @@ public class ItemPriceManager {
             // Validate price source mode configuration
             validatePriceSourceMode();
         } else {
-            plugin.getLogger().info("Storage selling is disabled. No sell integration will be available.");
+            plugin.getLogger().info("Sell integration is disabled. No sell integration will be available.");
         }
     }
 
     private void loadConfiguration() {
         FileConfiguration config = plugin.getConfig();
 
-        this.economyEnabled = config.getBoolean("storage_selling.enabled", true);
-        this.defaultPrice = config.getDouble("storage_selling.custom_prices.default_price", 1.0);
-        this.customPricesEnabled = config.getBoolean("storage_selling.custom_prices.enabled", true);
-        this.shopIntegrationEnabled = config.getBoolean("storage_selling.shop_integration.enabled", true);
+        this.economyEnabled = config.getBoolean("sell_integration.enabled", true);
+        this.defaultPrice = config.getDouble("sell_integration.custom_prices.default_price", 1.0);
+        this.customPricesEnabled = config.getBoolean("sell_integration.custom_prices.enabled", true);
+        this.shopIntegrationEnabled = config.getBoolean("sell_integration.shop_integration.enabled", true);
 
-        String modeString = config.getString("storage_selling.price_source_mode", "SHOP_PRIORITY");
+        String modeString = config.getString("sell_integration.price_source_mode", "SHOP_PRIORITY");
         try {
             this.priceSourceMode = PriceSourceMode.valueOf(modeString.toUpperCase());
         } catch (IllegalArgumentException e) {

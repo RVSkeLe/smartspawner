@@ -93,7 +93,7 @@ natural_spawner:
 #            Storage Selling Settings
 #---------------------------------------------------
 # Sell integration for items stored inside Smart Spawner storage
-storage_selling:
+sell_integration:
 
   # Enable or disable selling items from spawner storage
   enabled: true
@@ -335,7 +335,7 @@ database:
 #
 # These settings can be reloaded without restarting.
 # Please check the docs for more details.
-performance:
+loot_generation:
 
   # true:
   #   Uses exact loot simulation for small batches, then switches to

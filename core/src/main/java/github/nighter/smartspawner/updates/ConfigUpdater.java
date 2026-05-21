@@ -38,14 +38,14 @@ public class ConfigUpdater {
                 Map.entry("database.standalone.pool.idle-timeout",           "database.sql.pool.idle-timeout"),
                 Map.entry("database.standalone.pool.keepalive-time",         "database.sql.pool.keepalive-time"),
                 Map.entry("database.standalone.pool.leak-detection-threshold", "database.sql.pool.leak-detection-threshold"),
-                Map.entry("custom_economy.enabled", "storage_selling.enabled"),
-                Map.entry("custom_economy.currency", "storage_selling.currency"),
-                Map.entry("custom_economy.coinsengine_currency", "storage_selling.coinsengine_currency"),
-                Map.entry("custom_economy.price_source_mode", "storage_selling.price_source_mode"),
-                Map.entry("custom_economy.shop_integration.enabled", "storage_selling.shop_integration.enabled"),
-                Map.entry("custom_economy.shop_integration.preferred_plugin", "storage_selling.shop_integration.preferred_plugin"),
-                Map.entry("custom_economy.custom_prices.enabled", "storage_selling.custom_prices.enabled"),
-                Map.entry("custom_economy.custom_prices.default_price", "storage_selling.custom_prices.default_price")
+                Map.entry("custom_economy.enabled", "sell_integration.enabled"),
+                Map.entry("custom_economy.currency", "sell_integration.currency"),
+                Map.entry("custom_economy.coinsengine_currency", "sell_integration.coinsengine_currency"),
+                Map.entry("custom_economy.price_source_mode", "sell_integration.price_source_mode"),
+                Map.entry("custom_economy.shop_integration.enabled", "sell_integration.shop_integration.enabled"),
+                Map.entry("custom_economy.shop_integration.preferred_plugin", "sell_integration.shop_integration.preferred_plugin"),
+                Map.entry("custom_economy.custom_prices.enabled", "sell_integration.custom_prices.enabled"),
+                Map.entry("custom_economy.custom_prices.default_price", "sell_integration.custom_prices.default_price")
         );
 
         for (Map.Entry<String, String> rename : renames) {

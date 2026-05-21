@@ -103,7 +103,7 @@ natural_spawner:
 ## Storage Selling Settings
 
 ```yaml
-storage_selling:
+sell_integration:
   enabled: true
   currency: VAULT
   coinsengine_currency: coins
@@ -295,7 +295,7 @@ database:
 ## Performance Settings
 
 ```yaml
-performance:
+loot_generation:
   approximate_loot: true
   approximation_threshold: 1000
 ```

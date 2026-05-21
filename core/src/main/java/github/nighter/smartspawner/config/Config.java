@@ -14,8 +14,8 @@ public class Config {
     private final int approximationThreshold;
 
     private Config(FileConfiguration config) {
-        this.approximateLoot = config.getBoolean("performance.approximate_loot", false);
-        this.approximationThreshold = config.getInt("performance.approximation_threshold", 1000);
+        this.approximateLoot = config.getBoolean("loot_generation.approximate_loot", false);
+        this.approximationThreshold = config.getInt("loot_generation.approximation_threshold", 1000);
     }
 
     public static Config get() {
