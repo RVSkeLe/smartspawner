@@ -335,27 +335,28 @@ database:
 #
 # These settings can be reloaded without restarting.
 # Please check the docs for more details.
-loot_generation:
+performance:
+  loot_generation:
 
-  # true:
-  #   Uses exact loot simulation for small batches, then switches to
-  #   a fast average-based calculation for very large batches.
-  #   Recommended for most servers because it keeps large stacks smooth.
-  #
-  # false:
-  #   Always rolls loot exactly, one mob at a time.
-  #   This is the closest behavior to vanilla randomness, but very large
-  #   stacks can cost more CPU during loot generation.
-  approximate_loot: true
+    # true:
+    #   Uses exact loot simulation for small batches, then switches to
+    #   a fast average-based calculation for very large batches.
+    #   Recommended for most servers because it keeps large stacks smooth.
+    #
+    # false:
+    #   Always rolls loot exactly, one mob at a time.
+    #   This is the closest behavior to vanilla randomness, but very large
+    #   stacks can cost more CPU during loot generation.
+    approximate_loot: true
 
-  # Controls how late the plugin switches to approximation mode.
-  #
-  # Lower values:
-  #   Switch earlier, use less CPU, and trade a little precision on huge drops.
-  #
-  # Higher values:
-  #   Stay exact for longer, which preserves randomness more closely but costs
-  #   more CPU when a spawner stack generates loot for many mobs at once.
-  #
-  # Recommended: 1000-10000
-  approximation_threshold: 1000
+    # Controls how late the plugin switches to approximation mode.
+    #
+    # Lower values:
+    #   Switch earlier, use less CPU, and trade a little precision on huge drops.
+    #
+    # Higher values:
+    #   Stay exact for longer, which preserves randomness more closely but costs
+    #   more CPU when a spawner stack generates loot for many mobs at once.
+    #
+    # Recommended: 1000-10000
+    approximation_threshold: 1000

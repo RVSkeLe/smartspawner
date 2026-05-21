@@ -295,9 +295,10 @@ database:
 ## Performance Settings
 
 ```yaml
-loot_generation:
-  approximate_loot: true
-  approximation_threshold: 1000
+performance:
+  loot_generation:
+    approximate_loot: true
+    approximation_threshold: 1000
 ```
 
 These settings control how SmartSpawner calculates drops for large stacked spawners.
