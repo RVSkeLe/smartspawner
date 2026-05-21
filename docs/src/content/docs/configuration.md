@@ -123,7 +123,7 @@ These settings configure the sell integration used by Smart Spawner storage.
 - `coinsengine_currency`: CoinsEngine currency name. Only used when `currency` is `COINSENGINE`.
 - `price_source_mode`: Selects where sell prices come from.
 - `shop_integration.enabled`: Enables shop plugin price lookup.
-- `shop_integration.preferred_plugin`: `auto`, `EconomyShopGUI`, `EconomyShopGUI-Premium`, `ShopGUIPlus`, `zShop`, or `ExcellentShop`.
+- `shop_integration.preferred_plugin`: `auto`, `EconomyShopGUI`, `EconomyShopGUI-Premium`, `ShopGUIPlus`, or `zShop`.
 - `custom_prices.enabled`: Enables custom prices from the configured price file.
 - Custom prices are loaded from `item_prices.yml`.
 - `custom_prices.default_price`: Fallback price for items without a custom price. Set to `0.0` to prevent selling unconfigured items.
