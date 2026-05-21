@@ -187,6 +187,17 @@ button_sell_confirm_with_exp:
     - ''
     - '&#2ecc71⊳ &#f8f8ffɴʜấᴘ để xáᴄ ɴʜậɴ'
 
+# Available placeholders for button_sell_info:
+# {entity} - Formatted entity or item name
+# {ᴇɴᴛɪᴛʏ} - Entity or item name in small caps
+# {current_items} - Used storage slots
+# {max_items} - Maximum storage slots
+# {current_exp} - Stored experience
+# {total_sell_price} - Total sell value
+# {percent_storage_decimal} - Storage usage with 1 decimal (e.g., "87.5")
+# {percent_storage_rounded} - Storage usage rounded to whole number (e.g., "88")
+# {loot_items} - Expands to the generated loot item lines
+# Placeholders for button_sell_info.loot_items: {amount}, {item_name}, {chance}
 button_sell_info:
   name: '&#3498dbꜱᴘᴀᴡɴᴇʀ {ᴇɴᴛɪᴛʏ}'
   lore:

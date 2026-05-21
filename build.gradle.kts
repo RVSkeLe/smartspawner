@@ -10,7 +10,7 @@ allprojects {
     apply(plugin = "maven-publish")
 
     group = "github.nighter"
-    version = "1.6.6"
+    version = "1.6.7"
 
     repositories {
         mavenCentral()
@@ -82,20 +82,21 @@ subprojects {
     }
 }
 
-val targetJavaVersion = 21
-java {
-    val javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
+val targetJavaVersion = 25
+allprojects {
+    java {
+        val javaVersion = JavaVersion.toVersion(targetJavaVersion)
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+        if (JavaVersion.current() < javaVersion) {
+            toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
+        }
+    }
+
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible) {
+            options.release.set(targetJavaVersion)
+        }
     }
 }
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible) {
-        options.release.set(targetJavaVersion)
-    }
-}
-

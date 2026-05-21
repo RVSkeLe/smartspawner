@@ -18,6 +18,8 @@ import java.util.logging.Level;
 
 @RequiredArgsConstructor
 public class ItemPriceManager {
+    private static final String PRICE_FILE_NAME = "item_prices.yml";
+
     private final SmartSpawner plugin;
     private final Map<String, Double> itemPrices = new ConcurrentHashMap<>();
     private File priceFile;
@@ -31,7 +33,6 @@ public class ItemPriceManager {
     private double defaultPrice;
     private PriceSourceMode priceSourceMode;
     private boolean economyEnabled;
-    private String priceFileName;
     public boolean customPricesEnabled;
     public boolean shopIntegrationEnabled;
 
@@ -49,21 +50,10 @@ public class ItemPriceManager {
 
         loadConfiguration(); // Load configuration first to get the file name
 
-        priceFile = new File(plugin.getDataFolder(), priceFileName);
+        priceFile = new File(plugin.getDataFolder(), PRICE_FILE_NAME);
 
         if (!priceFile.exists()) {
-            // Try to save the resource with the default name first, then rename if needed
-            String defaultFileName = "item_prices.yml";
-            if (!priceFileName.equals(defaultFileName)) {
-                // Save with default name first
-                plugin.saveResource(defaultFileName, false);
-                File defaultFile = new File(plugin.getDataFolder(), defaultFileName);
-                if (defaultFile.exists()) {
-                    defaultFile.renameTo(priceFile);
-                }
-            } else {
-                plugin.saveResource(priceFileName, false);
-            }
+            plugin.saveResource(PRICE_FILE_NAME, false);
         }
 
         priceConfig = YamlConfiguration.loadConfiguration(priceFile);
@@ -88,24 +78,19 @@ public class ItemPriceManager {
             // Validate price source mode configuration
             validatePriceSourceMode();
         } else {
-            plugin.getLogger().info("Custom economy is disabled. No sell integration will be available.");
+            plugin.getLogger().info("Storage selling is disabled. No sell integration will be available.");
         }
     }
 
     private void loadConfiguration() {
         FileConfiguration config = plugin.getConfig();
 
-        this.economyEnabled = config.getBoolean("custom_economy.enabled", true);
-        this.priceFileName = config.getString("custom_economy.price_file_name", "item_prices.yml");
-        if (!this.priceFileName.endsWith(".yml") && !this.priceFileName.endsWith(".yaml")) {
-            this.priceFileName += ".yml";
-        }
+        this.economyEnabled = config.getBoolean("storage_selling.enabled", true);
+        this.defaultPrice = config.getDouble("storage_selling.custom_prices.default_price", 1.0);
+        this.customPricesEnabled = config.getBoolean("storage_selling.custom_prices.enabled", true);
+        this.shopIntegrationEnabled = config.getBoolean("storage_selling.shop_integration.enabled", true);
 
-        this.defaultPrice = config.getDouble("custom_economy.custom_prices.default_price", 1.0);
-        this.customPricesEnabled = config.getBoolean("custom_economy.custom_prices.enabled", true);
-        this.shopIntegrationEnabled = config.getBoolean("custom_economy.shop_integration.enabled", true);
-
-        String modeString = config.getString("custom_economy.price_source_mode", "SHOP_PRIORITY");
+        String modeString = config.getString("storage_selling.price_source_mode", "SHOP_PRIORITY");
         try {
             this.priceSourceMode = PriceSourceMode.valueOf(modeString.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -201,7 +186,7 @@ public class ItemPriceManager {
         // Only reload components if economy is enabled
         if (economyEnabled) {
             // Update price file path in case it changed
-            priceFile = new File(plugin.getDataFolder(), priceFileName);
+            priceFile = new File(plugin.getDataFolder(), PRICE_FILE_NAME);
 
             // Reload currency manager
             if (currencyManager != null) {
@@ -239,7 +224,7 @@ public class ItemPriceManager {
             }
             shopIntegrationManager = null;
             itemPrices.clear();
-            plugin.getLogger().info("Custom economy disabled - all sell integration cleaned up.");
+            plugin.getLogger().info("Storage selling disabled - all sell integration cleaned up.");
         }
     }
 

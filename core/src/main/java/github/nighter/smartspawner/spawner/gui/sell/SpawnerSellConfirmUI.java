@@ -242,7 +242,7 @@ public class SpawnerSellConfirmUI {
 
     private Map<String, String> createPlaceholders(SpawnerData spawner, boolean collectExp) {
         // OPTIMIZATION: Calculate initial capacity to avoid HashMap resizing
-        Map<String, String> placeholders = new HashMap<>(8);
+        Map<String, String> placeholders = new HashMap<>(12);
 
         // OPTIMIZATION: Get entity name once and cache
         String entityName;
@@ -269,10 +269,15 @@ public class SpawnerSellConfirmUI {
         // OPTIMIZATION: Get all values in single pass
         double totalSellPrice = spawner.getAccumulatedSellValue();
         int currentItems = spawner.getVirtualInventory().getUsedSlots();
+        int maxItems = spawner.getMaxSpawnerLootSlots();
+        double percentStorageDecimal = maxItems > 0 ? ((double) currentItems / maxItems) * 100 : 0;
         long currentExp = spawner.getSpawnerExp();
 
         placeholders.put("total_sell_price", languageManager.formatNumber(totalSellPrice));
         placeholders.put("current_items", Integer.toString(currentItems));
+        placeholders.put("max_items", Integer.toString(maxItems));
+        placeholders.put("percent_storage_decimal", String.format("%.1f", percentStorageDecimal));
+        placeholders.put("percent_storage_rounded", String.valueOf((int) Math.round(percentStorageDecimal)));
         placeholders.put("current_exp", languageManager.formatNumber(currentExp));
 
         return placeholders;

@@ -9,7 +9,7 @@ Before installing SmartSpawner, ensure your server meets these requirements:
 |-------------|---------------|
 | **Minecraft Version** | 1.21 - 1.21.11 |
 | **Server Software** | [Paper](https://papermc.io/downloads/paper), [Folia](https://papermc.io/downloads/folia), [Purpur](https://purpurmc.org/) or compatible forks |
-| **Java Version** | Java 21+ (latest LTS recommended) |
+| **Java Version** | Java 25+ |
 
 ## Download SmartSpawner
 
@@ -83,4 +83,4 @@ If you encounter issues:
 
 ---
 
-*Last update: March 12, 2026 15:53:43*
+*Last update: May 21, 2026*

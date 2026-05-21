@@ -39,8 +39,8 @@ public class CurrencyManager {
     }
 
     private void loadConfiguration() {
-        this.configuredCurrencyType = plugin.getConfig().getString("custom_economy.currency", "VAULT");
-        this.configuredCoinsEngineCurrency = plugin.getConfig().getString("custom_economy.coinsengine_currency", "coins");
+        this.configuredCurrencyType = plugin.getConfig().getString("storage_selling.currency", "VAULT");
+        this.configuredCoinsEngineCurrency = plugin.getConfig().getString("storage_selling.coinsengine_currency", "coins");
     }
 
     private void setupCurrency() {

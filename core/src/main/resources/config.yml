@@ -90,12 +90,12 @@ natural_spawner:
   protect_from_explosions: false
 
 #---------------------------------------------------
-#                Economy Settings
+#            Storage Selling Settings
 #---------------------------------------------------
-# Economy Configuration for selling items from spawners inventory
-custom_economy:
+# Sell integration for items stored inside Smart Spawner storage
+storage_selling:
 
-  # Enable or disable selling items from spawners
+  # Enable or disable selling items from spawner storage
   enabled: true
 
   # Supported types: VAULT, COINSENGINE (more will be added in the future)
@@ -140,8 +140,6 @@ custom_economy:
   # Custom sell price configuration
   custom_prices:
     enabled: true
-    # Path to custom item prices file
-    price_file_name: "item_prices.yml"
 
     # Default price for items without specific custom prices
     # Set to 0.0 to disable selling items without custom prices
@@ -155,31 +153,6 @@ hopper:
   enabled: false
   check_delay: 3s       # Time between collection checks (see time format guide above)
   stack_per_transfer: 5 # Number of item stacks transferred in one operation (max 5)
-
-#---------------------------------------------------
-#              Loot Generation Settings
-#---------------------------------------------------
-# Internal loot generation configuration
-#
-# These settings can be reloaded without restarting.
-# Please check the docs for more details.
-loot_generation:
-
-  # Enables hybrid loot generation.
-  #
-  # The plugin will switch between exact simulation
-  # and fast approximation automatically.
-  #
-  # Recommended: true
-  approximate_loot: true
-
-  # Controls when approximation mode starts.
-  #
-  # Lower values = better performance
-  # Higher values = better accuracy
-  #
-  # Recommended: 1000-10000
-  approximation_threshold: 1000
 
 #---------------------------------------------------
 #              Bedrock Player Support
@@ -354,3 +327,35 @@ database:
       # Time (ms) before logging a potential connection leak warning
       # Useful for debugging connection issues (0 = disabled)
       leak-detection-threshold: 0
+
+#---------------------------------------------------
+#              Performance Settings
+#---------------------------------------------------
+# Internal performance tuning for large stacked spawners.
+#
+# These settings can be reloaded without restarting.
+# Please check the docs for more details.
+performance:
+
+  # true:
+  #   Uses exact loot simulation for small batches, then switches to
+  #   a fast average-based calculation for very large batches.
+  #   Recommended for most servers because it keeps large stacks smooth.
+  #
+  # false:
+  #   Always rolls loot exactly, one mob at a time.
+  #   This is the closest behavior to vanilla randomness, but very large
+  #   stacks can cost more CPU during loot generation.
+  approximate_loot: true
+
+  # Controls how late the plugin switches to approximation mode.
+  #
+  # Lower values:
+  #   Switch earlier, use less CPU, and trade a little precision on huge drops.
+  #
+  # Higher values:
+  #   Stay exact for longer, which preserves randomness more closely but costs
+  #   more CPU when a spawner stack generates loot for many mobs at once.
+  #
+  # Recommended: 1000-10000
+  approximation_threshold: 1000
