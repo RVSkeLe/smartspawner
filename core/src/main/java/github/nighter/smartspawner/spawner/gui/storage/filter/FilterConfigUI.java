@@ -137,7 +137,7 @@ public class FilterConfigUI implements Listener {
 
         // Categorize items based on filter status
         for (LootItem lootItem : allLootItems) {
-            ItemStack displayItem = lootItem.createItemStack(new Random());
+            ItemStack displayItem = lootItem.createItemStack();
             if (displayItem == null) continue;
 
             Material itemType = displayItem.getType();

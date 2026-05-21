@@ -1,6 +1,6 @@
 package github.nighter.smartspawner.spawner.utils;
 
-import github.nighter.smartspawner.spawner.properties.VirtualInventory;
+import github.nighter.smartspawner.spawner.properties.ItemSignature;
 import lombok.Getter;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -38,10 +38,10 @@ public class ItemStackSerializer {
         }
     }
 
-    public static List<String> serializeInventory(Map<VirtualInventory.ItemSignature, Long> items) {
+    public static List<String> serializeInventory(Map<ItemSignature, Long> items) {
         Map<Material, ItemGroup> groupedItems = new HashMap<>();
 
-        for (Map.Entry<VirtualInventory.ItemSignature, Long> entry : items.entrySet()) {
+        for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
             // Use getTemplateRef() to avoid cloning - we only need to read properties
             ItemStack template = entry.getKey().getTemplateRef();
             Material material = template.getType();

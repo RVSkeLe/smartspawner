@@ -8,11 +8,12 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionType;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public record LootItem(Material material, int minAmount, int maxAmount, double chance, Integer minDurability,
                        Integer maxDurability, PotionType potionType, double sellPrice) {
 
-    public ItemStack createItemStack(Random random) {
+    public ItemStack createItemStack() {
         if (material == null) {
             return null; // Material not available in this version
         }
@@ -23,7 +24,7 @@ public record LootItem(Material material, int minAmount, int maxAmount, double c
         if (minDurability != null && maxDurability != null) {
             ItemMeta meta = item.getItemMeta();
             if (meta instanceof Damageable) {
-                int durability = random.nextInt(maxDurability - minDurability + 1) + minDurability;
+                int durability = ThreadLocalRandom.current().nextInt(maxDurability - minDurability + 1) + minDurability;
                 ((Damageable) meta).setDamage(durability);
                 item.setItemMeta(meta);
             }
@@ -43,6 +44,10 @@ public record LootItem(Material material, int minAmount, int maxAmount, double c
 
     public int generateAmount(Random random) {
         return random.nextInt(maxAmount - minAmount + 1) + minAmount;
+    }
+
+    public double getAverageAmount() {
+        return (this.maxAmount + this.minAmount) / 2.0;
     }
 
     public boolean isAvailable() {

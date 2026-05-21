@@ -157,6 +157,31 @@ hopper:
   stack_per_transfer: 5 # Number of item stacks transferred in one operation (max 5)
 
 #---------------------------------------------------
+#              Loot Generation Settings
+#---------------------------------------------------
+# Internal loot generation configuration
+#
+# These settings can be reloaded without restarting.
+# Please check the docs for more details.
+loot_generation:
+
+  # Enables hybrid loot generation.
+  #
+  # The plugin will switch between exact simulation
+  # and fast approximation automatically.
+  #
+  # Recommended: true
+  approximate_loot: true
+
+  # Controls when approximation mode starts.
+  #
+  # Lower values = better performance
+  # Higher values = better accuracy
+  #
+  # Recommended: 1000-10000
+  approximation_threshold: 1000
+
+#---------------------------------------------------
 #              Bedrock Player Support
 #---------------------------------------------------
 # Configuration for Bedrock Edition player support via Floodgate
