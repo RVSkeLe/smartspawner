@@ -10,6 +10,26 @@ no_permission:
   sound: block.note_block.pling
 
 # ──────────────────────────────────────────────────────
+#                        /ss set
+# ──────────────────────────────────────────────────────
+set:
+  usage:
+    message: "&#ff5252Usage: &#f8f8ff/ss set <stack_size|range|delay> <value> [world x y z]"
+    sound: block.note_block.hat
+  invalid:
+    message: "&#ff5252Invalid value or SmartSpawner location."
+    sound: block.note_block.pling
+  stack_size_exceeds_max:
+    message: "&#ff5252Stack size &#f8f8ff{value} &#ff5252exceeds this spawner's max stack size: &#f8f8ff{max}"
+    sound: block.note_block.pling
+  location_required:
+    message: "&#ff5252Console must provide a location: &#f8f8ff/ss set <stack_size|range|delay> <value> <world> <x> <y> <z>"
+    sound: block.note_block.pling
+  success:
+    message: "&#37eb9aSet &#f8f8ff{property} &#37eb9afrom &#f8f8ff{old_value} &#37eb9ato &#f8f8ff{new_value} &#37eb9aat &#f8f8ff{world} {x} {y} {z}&#37eb9a."
+    sound: entity.experience_orb.pickup
+
+# ──────────────────────────────────────────────────────
 #                        /ss near
 # ──────────────────────────────────────────────────────
 near:
@@ -133,11 +153,3 @@ reload_command_success:
 reload_command_error:
   message: "&#e05252ꜰᴀɪʟᴇᴅ ᴛᴏ ʀᴇʟᴏᴀᴅ ꜱᴍᴀʀᴛꜱᴘᴀᴡɴᴇʀ, ᴘʟᴇᴀꜱᴇ ᴄʜᴇᴄᴋ ᴄᴏɴꜱᴏʟᴇ ꜰᴏʀ ᴅᴇᴛᴀɪʟ!"
   sound: block.note_block.pling
-
-# ──────────────────────────────────────────────────────
-#                   spawner management
-# ──────────────────────────────────────────────────────
-management:
-  removed:
-    message: "&#e6e6faꜱᴘᴀᴡɴᴇʀ &#ff5252ʀᴇᴍᴏᴠᴇᴅ &#e6e6faꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ!"
-    sound: entity.item.break

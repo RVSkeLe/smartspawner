@@ -10,6 +10,7 @@ import github.nighter.smartspawner.commands.list.ListSubCommand;
 import github.nighter.smartspawner.commands.near.NearSubCommand;
 import github.nighter.smartspawner.commands.prices.PricesSubCommand;
 import github.nighter.smartspawner.commands.reload.ReloadSubCommand;
+import github.nighter.smartspawner.commands.set.SetSubCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,8 @@ public class MainCommand {
                 new HologramSubCommand(plugin),
                 new PricesSubCommand(plugin),
                 new ClearSubCommand(plugin),
-                new NearSubCommand(plugin, plugin.getSpawnerHighlightManager())
+                new NearSubCommand(plugin, plugin.getSpawnerHighlightManager()),
+                new SetSubCommand(plugin)
         );
     }
 

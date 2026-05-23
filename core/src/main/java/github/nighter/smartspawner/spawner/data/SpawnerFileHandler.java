@@ -378,7 +378,7 @@ public class SpawnerFileHandler implements SpawnerStorage {
                         spawner.setSpawnerActive(Boolean.parseBoolean(settings[1]));
                         spawner.setSpawnerRange(Integer.parseInt(settings[2]));
                         spawner.getSpawnerStop().set(Boolean.parseBoolean(settings[3]));
-                        spawner.setSpawnDelayFromConfig();
+                        spawner.setSpawnDelay(parseClampedLong(settings[4], 1L, Long.MAX_VALUE));
                         spawner.setMaxSpawnerLootSlots(Integer.parseInt(settings[5]));
                         spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                         spawner.setMinMobs(Integer.parseInt(settings[7]));
@@ -396,7 +396,7 @@ public class SpawnerFileHandler implements SpawnerStorage {
                     spawner.setSpawnerActive(Boolean.parseBoolean(settings[1]));
                     spawner.setSpawnerRange(Integer.parseInt(settings[2]));
                     spawner.getSpawnerStop().set(Boolean.parseBoolean(settings[3]));
-                    spawner.setSpawnDelayFromConfig();
+                    spawner.setSpawnDelay(parseClampedLong(settings[4], 1L, Long.MAX_VALUE));
                     spawner.setMaxSpawnerLootSlots(Integer.parseInt(settings[5]));
                     spawner.setMaxStoredExp(Integer.parseInt(settings[6]));
                     spawner.setMinMobs(Integer.parseInt(settings[7]));

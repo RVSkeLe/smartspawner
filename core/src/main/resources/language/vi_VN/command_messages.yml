@@ -10,6 +10,26 @@ no_permission:
   sound: block.note_block.pling
 
 # ──────────────────────────────────────────────────────
+#                        /ss set
+# ──────────────────────────────────────────────────────
+set:
+  usage:
+    message: "&#ff5252Cách dùng: &#f8f8ff/ss set <stack_size|range|delay> <giá_trị> [world x y z]"
+    sound: block.note_block.hat
+  invalid:
+    message: "&#ff5252Giá trị hoặc vị trí SmartSpawner không hợp lệ."
+    sound: block.note_block.pling
+  stack_size_exceeds_max:
+    message: "&#ff5252Stack size &#f8f8ff{value} &#ff5252vượt quá max stack size của spawner này: &#f8f8ff{max}"
+    sound: block.note_block.pling
+  location_required:
+    message: "&#ff5252Console phải nhập vị trí: &#f8f8ff/ss set <stack_size|range|delay> <giá_trị> <world> <x> <y> <z>"
+    sound: block.note_block.pling
+  success:
+    message: "&#37eb9aĐã set &#f8f8ff{property} &#37eb9atừ &#f8f8ff{old_value} &#37eb9athành &#f8f8ff{new_value} &#37eb9atại &#f8f8ff{world} {x} {y} {z}&#37eb9a."
+    sound: entity.experience_orb.pickup
+
+# ──────────────────────────────────────────────────────
 #                        /ss near
 # ──────────────────────────────────────────────────────
 near:
@@ -136,10 +156,3 @@ reload_command_success:
 reload_command_error:
   message: "&#e05252ᴋʜôɴɢ ᴛʜể ᴛảɪ ʟạɪ SᴍᴀʀᴛSᴘᴀᴡɴᴇʀ, ᴠᴜɪ ʟòɴɢ ᴋɪểᴍ ᴛʀᴀ ᴄᴏɴsᴏʟᴇ để ʙɪếᴛ ᴄʜɪ ᴛɪếᴛ!"
   sound: block.note_block.pling
-# ──────────────────────────────────────────────────────
-#                   spawner management
-# ──────────────────────────────────────────────────────
-management:
-  removed:
-    message: "&#e6e6faLồɴɢ sᴘᴀᴡɴ #&#ab7afd{id} &#ff5252đã xóᴀ &#e6e6faᴛʜàɴʜ ᴄôɴɢ!"
-    sound: entity.item.break

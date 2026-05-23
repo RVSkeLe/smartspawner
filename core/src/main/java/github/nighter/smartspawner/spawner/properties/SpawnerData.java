@@ -239,6 +239,8 @@ public class SpawnerData {
 
     public void setSpawnDelay(long baseSpawnerDelay) {
         this.spawnDelay = baseSpawnerDelay > 0 ? baseSpawnerDelay : 500;
+        long ticksWithBuffer = this.spawnDelay > Long.MAX_VALUE - 20L ? Long.MAX_VALUE : this.spawnDelay + 20L;
+        this.cachedSpawnDelay = ticksWithBuffer > Long.MAX_VALUE / 50L ? Long.MAX_VALUE : ticksWithBuffer * 50L;
         if (baseSpawnerDelay <= 0) {
             plugin.getLogger().warning("Invalid spawner delay value. Setting to default: 500 ticks (25s)");
         }
@@ -343,7 +345,7 @@ public class SpawnerData {
     }
 
     public void setSpawnerExp(long exp) {
-        this.spawnerExp = Math.min(Math.max(0L, exp), maxStoredExp);
+        this.spawnerExp = Math.clamp(exp, 0L, maxStoredExp);
         updateHologramData();
 
         // Invalidate GUI cache when experience changes
