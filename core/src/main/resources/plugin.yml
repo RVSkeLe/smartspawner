@@ -16,7 +16,7 @@ softdepend:
   - zShop
 
   # Utility/Economy Plugins
-  - CoinsEngine
+  - ExcellentEconomy
   - Vault
 
   # Protection/Region Plugins

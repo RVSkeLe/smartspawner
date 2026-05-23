@@ -106,7 +106,7 @@ natural_spawner:
 sell_integration:
   enabled: true
   currency: VAULT
-  coinsengine_currency: coins
+  excellenteconomy_currency: coins
   price_source_mode: SHOP_PRIORITY
   shop_integration:
     enabled: true
@@ -119,8 +119,8 @@ sell_integration:
 These settings configure the sell integration used by Smart Spawner storage.
 
 - `enabled`: Enables selling items from spawner storage.
-- `currency`: Economy backend. Supported values are `VAULT` and `COINSENGINE`.
-- `coinsengine_currency`: CoinsEngine currency name. Only used when `currency` is `COINSENGINE`.
+- `currency`: Economy backend. Supported values are `VAULT` and `EXCELLENTECONOMY`.
+- `excellenteconomy_currency`: ExcellentEconomy currency name. Only used when `currency` is `EXCELLENTECONOMY`.
 - `price_source_mode`: Selects where sell prices come from.
 - `shop_integration.enabled`: Enables shop plugin price lookup.
 - `shop_integration.preferred_plugin`: `auto`, `EconomyShopGUI`, `EconomyShopGUI-Premium`, `ShopGUIPlus`, or `zShop`.
@@ -195,7 +195,6 @@ logging:
   enabled: true
   json_format: false
   console_output: false
-  log_directory: "logs"
   max_log_files: 10
   max_log_size_mb: 10
   log_all_events: false
@@ -220,7 +219,6 @@ logging:
 - `enabled`: Enables file logging for spawner actions.
 - `json_format`: If `false`, logs are human-readable. If `true`, logs are JSON.
 - `console_output`: Also prints log entries to the console.
-- `log_directory`: Folder where log files are stored, relative to the plugin folder.
 - `max_log_files`: Number of rotated log files to keep.
 - `max_log_size_mb`: Maximum size of each log file before rotation.
 - `log_all_events`: If `true`, logs every supported event and ignores `logged_events`.

@@ -44,7 +44,7 @@ dependencies:
       join-classpath: true
 
     # Economy Plugins
-    CoinsEngine:
+    ExcellentEconomy:
       load: BEFORE
       required: false
       join-classpath: true
