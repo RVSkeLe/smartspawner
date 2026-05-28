@@ -188,9 +188,9 @@ public class SpawnerSellManager {
         ArrayList<ItemStack> itemsToRemove = new ArrayList<>();
 
         for (Map.Entry<ItemSignature, Long> entry : consolidatedItems.entrySet()) {
-            ItemStack templateRef = entry.getKey().getTemplateRef();
+            ItemSignature signature = entry.getKey();
             long amount = entry.getValue();
-            int maxStackSize = templateRef.getMaxStackSize();
+            int maxStackSize = signature.getMaxStackSize();
 
             totalItemsSold += amount;
 
@@ -199,7 +199,7 @@ public class SpawnerSellManager {
 
             long remaining = amount;
             while (remaining > 0) {
-                ItemStack stack = templateRef.clone();
+                ItemStack stack = signature.getTemplate();
                 stack.setAmount((int) Math.min(remaining, maxStackSize));
                 itemsToRemove.add(stack);
                 remaining -= stack.getAmount();

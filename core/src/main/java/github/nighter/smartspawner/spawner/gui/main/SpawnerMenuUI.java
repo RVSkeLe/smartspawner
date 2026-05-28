@@ -287,7 +287,7 @@ public class SpawnerMenuUI {
         // Create material-to-amount map for quick lookups
         Map<Material, Long> materialAmountMap = new HashMap<>();
         for (Map.Entry<ItemSignature, Long> entry : storedItems.entrySet()) {
-            Material material = entry.getKey().getTemplateRef().getType();
+            Material material = entry.getKey().getMaterial();
             materialAmountMap.merge(material, entry.getValue(), Long::sum);
         }
 
@@ -333,8 +333,7 @@ public class SpawnerMenuUI {
             sortedItems.sort(Comparator.comparing(e -> e.getKey().getMaterialName()));
 
             for (Map.Entry<ItemSignature, Long> entry : sortedItems) {
-                ItemStack templateItem = entry.getKey().getTemplateRef();
-                Material material = templateItem.getType();
+                Material material = entry.getKey().getMaterial();
                 long amount = entry.getValue();
 
                 String materialName = languageManager.getVanillaItemName(material);
@@ -606,7 +605,7 @@ public class SpawnerMenuUI {
     private List<Component> buildLootItemComponents(EntityType entityType, Map<ItemSignature, Long> storedItems) {
         Map<Material, Long> materialAmountMap = new HashMap<>();
         for (Map.Entry<ItemSignature, Long> entry : storedItems.entrySet()) {
-            Material material = entry.getKey().getTemplateRef().getType();
+            Material material = entry.getKey().getMaterial();
             materialAmountMap.merge(material, entry.getValue(), Long::sum);
         }
 
@@ -633,7 +632,7 @@ public class SpawnerMenuUI {
                     new ArrayList<>(storedItems.entrySet());
             sortedItems.sort(Comparator.comparing(e -> e.getKey().getMaterialName()));
             for (Map.Entry<ItemSignature, Long> entry : sortedItems) {
-                Material material = entry.getKey().getTemplateRef().getType();
+                Material material = entry.getKey().getMaterial();
                 long amount = entry.getValue();
                 String formattedAmount = languageManager.formatNumber(amount);
                 components.add(languageManager.buildTranslatableGuiLootLine(

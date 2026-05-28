@@ -565,12 +565,9 @@ public class SpawnerData {
 
         double addedValue = 0.0;
         for (Map.Entry<ItemSignature, Long> entry : itemsAdded.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                addedValue += itemPrice * amount;
+                addedValue += itemPrice * entry.getValue();
             }
         }
 
@@ -599,12 +596,9 @@ public class SpawnerData {
 
         double removedValue = 0.0;
         for (Map.Entry<ItemSignature, Long> entry : consolidated.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                removedValue += itemPrice * amount;
+                removedValue += itemPrice * entry.getValue();
             }
         }
 
@@ -630,12 +624,9 @@ public class SpawnerData {
         double totalValue = 0.0;
 
         for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
-            // Use getTemplateRef() to avoid cloning - we only need to read properties
-            ItemStack template = entry.getKey().getTemplateRef();
-            long amount = entry.getValue();
-            double itemPrice = findItemPrice(template, priceCache);
+            double itemPrice = findItemPrice(entry.getKey(), priceCache);
             if (itemPrice > 0.0) {
-                totalValue += itemPrice * amount;
+                totalValue += itemPrice * entry.getValue();
             }
         }
 
@@ -678,45 +669,51 @@ public class SpawnerData {
     /**
      * Finds item price using the cache
      */
-    private double findItemPrice(ItemStack item, Map<String, Double> priceCache) {
-        if (item == null || priceCache == null) {
+    private double findItemPrice(ItemSignature itemSignature, Map<String, Double> priceCache) {
+        if (priceCache == null) {
             return 0.0;
         }
-        String itemKey = createItemKey(item);
+        String itemKey = createItemKey(itemSignature);
         Double price = priceCache.get(itemKey);
         return price != null ? price : 0.0;
     }
 
     /**
-     * Creates a unique key for an item (same logic as SpawnerSellManager)
+     * Convenience overload
      */
-    private String createItemKey(ItemStack item) {
-        if (item == null) {
-            return "null";
-        }
+    private String createItemKey(ItemStack itemStack) {
+        if (itemStack == null) return "null";
 
+        return createItemKey(new ItemSignature(itemStack));
+    }
+
+    /**
+     * Creates a unique key for an item (same logic as SpawnerSellManager)
+     * TODO: this feels very wrong ngl
+     */
+    private String createItemKey(ItemSignature itemSignature) {
         StringBuilder key = new StringBuilder();
-        key.append(item.getType().name());
+        key.append(itemSignature.getMaterial().name());
 
         // Add enchantments if present
-        if (item.hasItemMeta() && item.getItemMeta().hasEnchants()) {
+        ItemMeta meta = itemSignature.getTemplateRef().getItemMeta(); // Read-only
+        if (itemSignature.hasItemMeta() && meta.hasEnchants()) {
             key.append("_enchants:");
-            item.getItemMeta().getEnchants().entrySet().stream()
+            meta.getEnchants().entrySet().stream()
                     .sorted(java.util.Map.Entry.comparingByKey(java.util.Comparator.comparing(enchantment -> enchantment.getKey().toString())))
                     .forEach(entry -> key.append(entry.getKey().getKey()).append(":").append(entry.getValue()).append(","));
         }
 
         // Add custom model data if present
-        if (item.hasItemMeta()) {
-            ItemMeta meta = item.getItemMeta();
+        if (itemSignature.hasItemMeta()) {
             if (VersionInitializer.hasCustomModelData(meta)) {
                 key.append("_cmd:").append(VersionInitializer.getCustomModelDataString(meta));
             }
         }
 
         // Add display name if present
-        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
-            key.append("_name:").append(item.getItemMeta().displayName());
+        if (itemSignature.hasItemMeta() && meta.hasDisplayName()) {
+            key.append("_name:").append(meta.displayName());
         }
 
         return key.toString();
