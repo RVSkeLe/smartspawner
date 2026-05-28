@@ -38,12 +38,14 @@ import java.util.logging.Logger;
 
 public class SpawnerBreakListener implements Listener {
     private static final int MAX_STACK_SIZE = 64;
+    private static final long LOOKUP_MISS_LOG_INTERVAL_MS = 5_000L;
     private final BreakPluginContext plugin;
     private final MessageService messageService;
     private final SpawnerManager spawnerManager;
     private final HopperService hopperService;
     private final SpawnerItemFactory spawnerItemFactory;
     private final SpawnerLocationLockManager locationLockManager;
+    private volatile long nextLookupMissLogAt;
 
     // Cached config values (reload via loadConfig())
     private volatile boolean breakEnabled;
@@ -118,6 +120,7 @@ public class SpawnerBreakListener implements Listener {
 
         if (!naturalBreakable) {
             if (spawner == null) {
+                logSpawnerLookupMiss(location);
                 block.setType(Material.AIR);
                 event.setCancelled(true);
                 messageService.sendMessage(player, "natural_spawner_break_blocked");
@@ -144,6 +147,30 @@ public class SpawnerBreakListener implements Listener {
 
         event.setCancelled(true);
         cleanupAssociatedHopper(block);
+    }
+
+    private void logSpawnerLookupMiss(Location location) {
+        long now = System.currentTimeMillis();
+        if (now < nextLookupMissLogAt) {
+            return;
+        }
+        nextLookupMissLogAt = now + LOOKUP_MISS_LOG_INTERVAL_MS;
+
+        SpawnerManager.LocationLookupDiagnostic diagnostic = spawnerManager.diagnoseLocationLookup(location);
+        plugin.getLogger().warning("Spawner lookup miss while blocking natural break at "
+            + formatLocation(location)
+            + " (indexHit=" + diagnostic.indexHit()
+            + ", foundInSpawnerMap=" + diagnostic.foundInSpawnerMap()
+            + ", spawnerId=" + diagnostic.spawnerId()
+            + ", totalSpawners=" + diagnostic.totalSpawners()
+            + ", locationIndexSize=" + diagnostic.locationIndexSize()
+            + ")");
+    }
+
+    private String formatLocation(Location location) {
+        World world = location.getWorld();
+        String worldName = world != null ? world.getName() : "null";
+        return worldName + "," + location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ();
     }
 
     private void handleSmartSpawnerBreak(Block block, SpawnerData spawner, Player player) {

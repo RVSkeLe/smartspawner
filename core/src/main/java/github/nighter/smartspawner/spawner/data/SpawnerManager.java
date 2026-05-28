@@ -130,6 +130,56 @@ public class SpawnerManager {
         return locationIndex.get(new LocationKey(location));
     }
 
+    /**
+     * Diagnostic for cases where the location index misses but the physical block is still a spawner.
+     */
+    public LocationLookupDiagnostic diagnoseLocationLookup(Location location) {
+        World world = location.getWorld();
+        if (world == null) {
+            return new LocationLookupDiagnostic(false, false, null, spawners.size(), locationIndex.size());
+        }
+
+        SpawnerData indexedSpawner = locationIndex.get(new LocationKey(location));
+        if (indexedSpawner != null) {
+            return new LocationLookupDiagnostic(true, true, indexedSpawner.getSpawnerId(), spawners.size(), locationIndex.size());
+        }
+
+        String worldName = world.getName();
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+
+        for (SpawnerData candidate : spawners.values()) {
+            Location candidateLocation = candidate.getSpawnerLocation();
+            if (candidateLocation == null) {
+                continue;
+            }
+
+            World candidateWorld = candidateLocation.getWorld();
+            if (candidateWorld == null) {
+                continue;
+            }
+
+            if (candidateLocation.getBlockX() == x
+                    && candidateLocation.getBlockY() == y
+                    && candidateLocation.getBlockZ() == z
+                    && candidateWorld.getName().equals(worldName)) {
+                return new LocationLookupDiagnostic(false, true, candidate.getSpawnerId(), spawners.size(), locationIndex.size());
+            }
+        }
+
+        return new LocationLookupDiagnostic(false, false, null, spawners.size(), locationIndex.size());
+    }
+
+    public record LocationLookupDiagnostic(
+            boolean indexHit,
+            boolean foundInSpawnerMap,
+            String spawnerId,
+            int totalSpawners,
+            int locationIndexSize
+    ) {
+    }
+
     public SpawnerData getSpawnerById(String id) {
         return spawners.get(id);
     }
