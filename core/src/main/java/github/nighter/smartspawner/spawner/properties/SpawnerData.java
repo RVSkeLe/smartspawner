@@ -696,7 +696,7 @@ public class SpawnerData {
         key.append(itemSignature.getMaterial().name());
 
         // Add enchantments if present
-        ItemMeta meta = itemSignature.getTemplateRef().getItemMeta(); // Read-only
+        ItemMeta meta = itemSignature.getUnsafeTemplateRef().getItemMeta(); // Read-only
         if (itemSignature.hasItemMeta() && meta.hasEnchants()) {
             key.append("_enchants:");
             meta.getEnchants().entrySet().stream()

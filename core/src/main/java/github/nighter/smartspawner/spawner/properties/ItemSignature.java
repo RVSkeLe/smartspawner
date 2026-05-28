@@ -77,7 +77,7 @@ public class ItemSignature {
     }
 
     // Non-cloning method for internal use
-    public ItemStack getTemplateRef() {
+    public ItemStack getUnsafeTemplateRef() {
         return template;
     }
 

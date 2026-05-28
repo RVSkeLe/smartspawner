@@ -48,7 +48,7 @@ public class ItemStackSerializer {
             ItemGroup group = groupedItems.computeIfAbsent(material, ItemGroup::new);
 
             if (material == Material.TIPPED_ARROW) {
-                PotionMeta meta = (PotionMeta) signature.getTemplateRef().getItemMeta(); // Read-only
+                PotionMeta meta = (PotionMeta) signature.getUnsafeTemplateRef().getItemMeta(); // Read-only
                 if (meta != null && meta.getBasePotionType() != null) {
                     group.addPotionArrow(meta.getBasePotionType(), entry.getValue().intValue());
                 } else {
