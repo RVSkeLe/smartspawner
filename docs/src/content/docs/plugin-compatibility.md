@@ -11,7 +11,7 @@ SmartSpawner seamlessly integrates with popular plugins to enhance server functi
 SmartSpawner supports multiple economy plugins to handle transactions and currency handling:
 
 - **[Vault](https://www.spigotmc.org/resources/vault.34315/)**
-- **[CoinsEngine](https://modrinth.com/plugin/coinsengine)**
+- **[ExcellentEconomy](https://www.spigotmc.org/resources/excellenteconomy.84121/)**
 
 ## Shop Systems
 Direct integration with popular shop plugins enables seamless selling from spawner storage:
@@ -20,7 +20,6 @@ Direct integration with popular shop plugins enables seamless selling from spawn
 - **[EconomyShopGUI Premium](https://www.spigotmc.org/resources/economyshopgui-premium.104414/)**
 - **[ShopGUI+](https://www.spigotmc.org/resources/shopgui-1-8-1-21.6515/)**
 - **[zShop](https://www.spigotmc.org/resources/zshop-advanced-shop-plugin.74073/)**
-- **[ExcellentShop](https://www.spigotmc.org/resources/excellentshop-%E2%AD%90-4-in-1-multi-currency-shop-chest-shop-overhaul.50696/)**
 
 ## Protection & Region Systems
 SmartSpawner respects all major protection plugins to ensure proper permissions and access control:

@@ -42,13 +42,9 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
-    ExcellentShop:
-      load: BEFORE
-      required: false
-      join-classpath: true
 
     # Economy Plugins
-    CoinsEngine:
+    ExcellentEconomy:
       load: BEFORE
       required: false
       join-classpath: true
@@ -167,6 +163,10 @@ permissions:
 
   smartspawner.command.near:
     description: "Allow highlighting nearby spawners through walls"
+    default: op
+
+  smartspawner.command.set:
+    description: "Allow setting SmartSpawner stack size, range, and delay"
     default: op
 
   # Feature permissions

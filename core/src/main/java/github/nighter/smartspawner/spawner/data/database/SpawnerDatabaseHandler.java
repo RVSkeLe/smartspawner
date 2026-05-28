@@ -464,13 +464,13 @@ public class SpawnerDatabaseHandler implements SpawnerStorage {
         spawner.setSpawnerActive(rs.getBoolean("spawner_active"));
         spawner.setSpawnerRange(rs.getInt("spawner_range"));
         spawner.getSpawnerStop().set(rs.getBoolean("spawner_stop"));
-        spawner.setSpawnDelayFromConfig(); // Use config delay
+        spawner.setSpawnDelay(Math.max(1L, rs.getLong("spawn_delay")));
         spawner.setMaxSpawnerLootSlots(rs.getInt("max_spawner_loot_slots"));
         spawner.setMaxStoredExp(rs.getLong("max_stored_exp"));
         spawner.setMinMobs(rs.getInt("min_mobs"));
         spawner.setMaxMobs(rs.getInt("max_mobs"));
-        spawner.setStackSize(rs.getInt("stack_size"), false); // Don't restart hopper during batch load
         spawner.setMaxStackSize(rs.getInt("max_stack_size"));
+        spawner.setStackSize(rs.getInt("stack_size"), false); // Don't restart hopper during batch load
         spawner.setLastSpawnTime(rs.getLong("last_spawn_time"));
         spawner.setIsAtCapacity(rs.getBoolean("is_at_capacity"));
 

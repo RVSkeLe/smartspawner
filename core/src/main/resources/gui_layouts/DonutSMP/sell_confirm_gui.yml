@@ -40,4 +40,3 @@ slot_17:
   material: LIME_STAINED_GLASS_PANE
   enabled: true
   click: "confirm"
-

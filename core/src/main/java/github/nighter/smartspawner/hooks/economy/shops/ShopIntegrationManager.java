@@ -4,7 +4,6 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.hooks.economy.shops.providers.ShopProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.economyshopgui.EconomyShopGUIProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.economyshopgui.ESGUICompatibilityHandler;
-import github.nighter.smartspawner.hooks.economy.shops.providers.excellentshop.ExcellentShopProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.ShopGuiPlusProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.SpawnerHook;
 import github.nighter.smartspawner.hooks.economy.shops.providers.zshop.ZShopProvider;
@@ -34,7 +33,7 @@ public class ShopIntegrationManager {
 
     private void detectAndRegisterActiveProviders() {
         // Check configuration for preferred plugin first
-        String configuredShop = plugin.getConfig().getString("custom_economy.shop_integration.preferred_plugin", "auto");
+        String configuredShop = plugin.getConfig().getString("sell_integration.shop_integration.preferred_plugin", "auto");
         boolean autoDetect = "auto".equalsIgnoreCase(configuredShop);
 
         // If a specific shop is configured, only try to load that one
@@ -82,7 +81,6 @@ public class ShopIntegrationManager {
         }
 
         // registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
-        registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
     }
 
     private boolean tryRegisterSpecificProvider(String providerName) {
@@ -124,12 +122,6 @@ public class ShopIntegrationManager {
                 case "zshop":
                     if (isPluginAvailable("ZShop")) {
                         registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
-                        return !availableProviders.isEmpty();
-                    }
-                    break;
-                case "excellentshop":
-                    if (isPluginAvailable("ExcellentShop")) {
-                        registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
                         return !availableProviders.isEmpty();
                     }
                     break;

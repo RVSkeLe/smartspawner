@@ -1,3 +1,42 @@
+── v1.6.7 (2026-05-23) ─────────────────────────────────────────────────────────
+
+  Summary: Version 1.6.7 released – fill in details here.
+           Compare: https://github.com/NighterDevelopment/SmartSpawner/compare/1.6.6...main
+
+  ADDED:
+    messages.yml:
+      - management (L128):
+      - management.removed (L129):
+      - management.removed.message (L130): "&#e6e6faꜱᴘᴀᴡɴᴇʀ &#ff5252ʀᴇᴍᴏᴠᴇᴅ &#e6e6faꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ!"
+      - management.removed.sound (L131): entity.item.break
+    command_messages.yml:
+      - set (L15):
+      - set.invalid (L19):
+      - set.invalid.message (L20): "&#ff5252Invalid value or SmartSpawner location."
+      - set.invalid.sound (L21): block.note_block.pling
+      - set.location_required (L25):
+      - set.location_required.message (L26): "&#ff5252Console must provide a location: &#f8f8ff/ss set <stack_size|…
+      - set.location_required.sound (L27): block.note_block.pling
+      - set.stack_size_exceeds_max (L22):
+      - set.stack_size_exceeds_max.message (L23): "&#ff5252Stack size &#f8f8ff{value} &#ff5252exceeds this spawner's max…
+      - set.stack_size_exceeds_max.sound (L24): block.note_block.pling
+      - set.success (L28):
+      - set.success.message (L29): "&#37eb9aSet &#f8f8ff{property} &#37eb9afrom &#f8f8ff{old_value} &#37e…
+      - set.success.sound (L30): entity.experience_orb.pickup
+      - set.usage (L16):
+      - set.usage.message (L17): "&#ff5252Usage: &#f8f8ff/ss set <stack_size|range|delay> <value> [worl…
+      - set.usage.sound (L18): block.note_block.hat
+
+  CHANGED:
+    (none)
+
+  REMOVED:
+    command_messages.yml:
+      - management (L140):
+      - management.removed (L141):
+      - management.removed.message (L142): "&#e6e6faꜱᴘᴀᴡɴᴇʀ &#ff5252ʀᴇᴍᴏᴠᴇᴅ &#e6e6faꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ!"
+      - management.removed.sound (L143): entity.item.break
+
 ── v1.6.5 (2026-04-06) ─────────────────────────────────────────────────────────
 
   Summary: Version 1.6.5 released – fill in details here.

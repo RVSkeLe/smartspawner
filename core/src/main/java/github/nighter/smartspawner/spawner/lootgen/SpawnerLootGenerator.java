@@ -174,35 +174,37 @@ public class SpawnerLootGenerator {
     }
 
     public LootResult generateLoot(int minMobs, int maxMobs, SpawnerData spawner) {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-
-        int mobCount = generateMobCount(minMobs, maxMobs, random);
+        int mobCount = ThreadLocalRandom.current().nextInt(maxMobs - minMobs + 1) + minMobs;
         long totalExperience = (long) spawner.getEntityExperienceValue() * mobCount;
 
+        // Get valid items from the spawner's EntityLootConfig
         List<LootItem> validItems = spawner.getValidLootItems();
 
         if (validItems.isEmpty()) {
             return new LootResult(Collections.emptyMap(), totalExperience);
         }
 
-        Map<ItemSignature, Integer> consolidatedLoot = new HashMap<>(validItems.size());
+        // Use a Map to consolidate identical drops instead of List
+        Map<ItemSignature, Integer> consolidatedLoot = new HashMap<>();
 
-        boolean optimizedLootgen = Config.get().isOptimizedLootgen();
+        boolean shouldApproximateLoot = Config.get().isApproximateLoot();
+        int approximationThreshold = Config.get().getApproximationThreshold();
 
+        // Process mobs in batch rather than individually
         for (LootItem lootItem : validItems) {
             int totalAmount;
 
-            if (optimizedLootgen && shouldApproximate(lootItem.chance(), mobCount)) {
-                totalAmount = generateApproximatedLoot(lootItem, mobCount, random);
+            if (shouldApproximateLoot && shouldApproximate(lootItem.chance(), mobCount, approximationThreshold)) {
+                totalAmount = generateApproximatedLoot(lootItem, mobCount);
             } else {
-                totalAmount = generateExactLoot(lootItem, mobCount, random);
+                totalAmount = generateExactLoot(lootItem, mobCount);
             }
 
             if (totalAmount <= 0) {
                 continue;
             }
 
-            ItemStack prototype = lootItem.createItemStack(random);
+            ItemStack prototype = lootItem.createItemStack();
             if (prototype == null || prototype.getType() == Material.AIR) {
                 continue;
             }
@@ -214,50 +216,38 @@ public class SpawnerLootGenerator {
         return new LootResult(consolidatedLoot, totalExperience);
     }
 
-    private int generateMobCount(int minMobs, int maxMobs, ThreadLocalRandom random) {
-        int lowerBound = Math.max(0, Math.min(minMobs, maxMobs));
-        int upperBound = Math.max(0, Math.max(minMobs, maxMobs));
-
-        if (upperBound == lowerBound) {
-            return upperBound;
-        }
-
-        return random.nextInt(lowerBound, upperBound + 1);
+    // Determines whether to use expected-value approximation
+    private boolean shouldApproximate(double chance, int mobCount, int approximationThreshold) {
+        // simple heuristic: use expected if at least threshold items can be generated
+        if (chance <= 0D) return false;
+        return mobCount > (97.5D / chance) * approximationThreshold;
     }
 
-    private int generateExactLoot(LootItem lootItem, int mobCount, ThreadLocalRandom random) {
+    // O(n) simulation: exact per-mob drop calculation
+    private int generateExactLoot(LootItem lootItem, int mobCount) {
         int successfulDrops = 0;
-
+        ThreadLocalRandom random = ThreadLocalRandom.current();
         double p = lootItem.chance() / 100.0;
-
         for (int i = 0; i < mobCount; i++) {
             if (random.nextDouble() < p) {
                 successfulDrops++;
             }
         }
-
-        if (successfulDrops == 0) {
-            return 0;
-        }
-
         int totalAmount = 0;
-
         for (int i = 0; i < successfulDrops; i++) {
             totalAmount += lootItem.generateAmount(random);
         }
-
         return totalAmount;
     }
 
-    private int generateApproximatedLoot(LootItem lootItem, int mobCount, ThreadLocalRandom random) {
+    // O(1) expected-value calculation with small jitter
+    private int generateApproximatedLoot(LootItem lootItem, int mobCount) {
         double p = lootItem.chance() / 100.0;
         double expectedDrops = mobCount * p;
         double avgAmount = lootItem.getAverageAmount();
-
         double jitter = p != 1.0
-                ? 0.95 + random.nextDouble() * 0.10
+                ? 0.95 + ThreadLocalRandom.current().nextDouble() * 0.10
                 : 1.0;
-
         return (int) Math.round(expectedDrops * avgAmount * jitter);
     }
 
@@ -366,13 +356,6 @@ public class SpawnerLootGenerator {
         }
 
         return copy;
-    }
-
-    // Determines whether to use expected-value approximation
-    private boolean shouldApproximate(double chance, int mobCount) {
-        // simple heuristic: use expected if at least one item can be generated
-        if (chance <= 0D) return false;
-        return mobCount > 97.5D / chance;
     }
 
     /**

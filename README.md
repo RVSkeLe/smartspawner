@@ -15,7 +15,7 @@
 
 - **Minecraft Version:** 1.21 - 26.1.2
 - **Server Software:** Paper, Folia or compatible forks
-- **Java Version:** 21+
+- **Java Version:** 25+
 
 ## Localization
 

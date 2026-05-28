@@ -1,6 +1,5 @@
 # SmartSpawner – items.yml
 # Spawner item display names and drop item names.
-# Small-caps placeholders (e.g. {ᴇɴᴛɪᴛʏ}) are auto-converted in-game.
 
 custom_item:
   # Appearance of smart spawner items in inventory and tooltips

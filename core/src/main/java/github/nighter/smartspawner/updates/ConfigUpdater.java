@@ -3,6 +3,7 @@ package github.nighter.smartspawner.updates;
 import github.nighter.smartspawner.SmartSpawner;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 public class ConfigUpdater {
@@ -25,7 +26,7 @@ public class ConfigUpdater {
     // ── Path migrations ──────────────────────────────────────────────────────
 
     private void migrateRenamedPaths(Map<String, Object> userValues) {
-        Map<String, String> renames = Map.ofEntries(
+        List<Map.Entry<String, String>> renames = List.of(
                 Map.entry("database.standalone.host",     "database.sql.host"),
                 Map.entry("database.standalone.port",     "database.sql.port"),
                 Map.entry("database.standalone.username", "database.sql.username"),
@@ -36,16 +37,35 @@ public class ConfigUpdater {
                 Map.entry("database.standalone.pool.max-lifetime",           "database.sql.pool.max-lifetime"),
                 Map.entry("database.standalone.pool.idle-timeout",           "database.sql.pool.idle-timeout"),
                 Map.entry("database.standalone.pool.keepalive-time",         "database.sql.pool.keepalive-time"),
-                Map.entry("database.standalone.pool.leak-detection-threshold", "database.sql.pool.leak-detection-threshold")
+                Map.entry("database.standalone.pool.leak-detection-threshold", "database.sql.pool.leak-detection-threshold"),
+                Map.entry("custom_economy.enabled", "sell_integration.enabled"),
+                Map.entry("custom_economy.currency", "sell_integration.currency"),
+                Map.entry("custom_economy.coinsengine_currency", "sell_integration.excellenteconomy_currency"),
+                Map.entry("custom_economy.price_source_mode", "sell_integration.price_source_mode"),
+                Map.entry("custom_economy.shop_integration.enabled", "sell_integration.shop_integration.enabled"),
+                Map.entry("custom_economy.shop_integration.preferred_plugin", "sell_integration.shop_integration.preferred_plugin"),
+                Map.entry("custom_economy.custom_prices.enabled", "sell_integration.custom_prices.enabled"),
+                Map.entry("custom_economy.custom_prices.default_price", "sell_integration.custom_prices.default_price")
         );
 
-        for (Map.Entry<String, String> rename : renames.entrySet()) {
+        for (Map.Entry<String, String> rename : renames) {
             String old = rename.getKey();
             String next = rename.getValue();
             if (userValues.containsKey(old) && !userValues.containsKey(next)) {
                 userValues.put(next, userValues.remove(old));
                 plugin.debug("Migrated config path: " + old + " → " + next);
             }
+        }
+
+        if (userValues.containsKey("sell_integration.coinsengine_currency")
+                && !userValues.containsKey("sell_integration.excellenteconomy_currency")) {
+            userValues.put("sell_integration.excellenteconomy_currency", userValues.remove("sell_integration.coinsengine_currency"));
+            plugin.debug("Migrated config path: sell_integration.coinsengine_currency → sell_integration.excellenteconomy_currency");
+        }
+
+        if ("COINSENGINE".equals(userValues.get("sell_integration.currency"))) {
+            userValues.put("sell_integration.currency", "EXCELLENTECONOMY");
+            plugin.getLogger().info("Migrated sell_integration.currency: COINSENGINE → EXCELLENTECONOMY");
         }
 
         // DATABASE → MYSQL mode rename

@@ -125,6 +125,11 @@ spawner_not_found:
   message: "&#ff5252ꜱᴘᴀᴡɴᴇʀ ɴᴏᴛ ꜰᴏᴜɴᴅ"
   sound: entity.enderman.teleport
 
+management:
+  removed:
+    message: "&#e6e6faꜱᴘᴀᴡɴᴇʀ &#ff5252ʀᴇᴍᴏᴠᴇᴅ &#e6e6faꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ!"
+    sound: entity.item.break
+
 # ──────────────────────────────────────────────────────
 #             Spawner - Egg Interaction
 # ──────────────────────────────────────────────────────

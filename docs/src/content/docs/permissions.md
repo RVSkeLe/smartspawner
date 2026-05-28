@@ -31,6 +31,7 @@ Understanding the **Default** column in the permissions table:
 | `smartspawner.command.prices`    | Allow viewing spawner prices GUI                       | `op`        |
 | `smartspawner.command.clear`     | Allow clearing holograms and ghost spawners            | `op`        |
 | `smartspawner.command.near`      | Allow scanning and highlighting nearby spawners        | `op`        |
+| `smartspawner.command.set`       | Allow setting SmartSpawner stack size, range, and delay | `op`        |
 
 #### Feature Permissions
 

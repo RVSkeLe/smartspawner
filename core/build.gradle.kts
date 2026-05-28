@@ -18,34 +18,34 @@ dependencies {
 
     shade("com.zaxxer:HikariCP:7.0.2")
     shade("org.mariadb.jdbc:mariadb-java-client:3.5.8")
-    compileOnly("org.xerial:sqlite-jdbc:3.53.0.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.53.1.0")
 
     compileOnly("org.geysermc.floodgate:api:2.2.5-SNAPSHOT")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.1.0-SNAPSHOT")
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") {
         exclude(group = "*")
     }
-    compileOnly("com.palmergames.bukkit.towny:towny:0.102.0.14")
+    compileOnly("com.palmergames.bukkit.towny:towny:0.103.0.0")
     compileOnly("com.bgsoftware:SuperiorSkyblockAPI:2026.1")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
-    compileOnly("su.nightexpress.coinsengine:CoinsEngine:2.6.0")
-    compileOnly("com.github.Gypopo:EconomyShopGUI-API:1.9.0")
-    compileOnly("world.bentobox:bentobox:3.15.0")
-    compileOnly("su.nightexpress.excellentshop:Core:4.22.0")
+    compileOnly("su.nightexpress.excellenteconomy:ExcellentEconomy:2.8.0")
+    compileOnly("su.nightexpress.nightcore:main:2.15.3")
+    compileOnly("com.github.Gypopo:EconomyShopGUI-API:1.10.0")
+    compileOnly("world.bentobox:bentobox:3.16.2")
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.12")
     compileOnly("pl.minecodes.plots:plugin-api:4.6.2")
     compileOnly("fr.maxlego08.shop:zshop-api:3.3.4")
-    compileOnly("fr.maxlego08.menu:zmenu-api:1.1.1.3")
+    compileOnly("fr.maxlego08.menu:zmenu-api:1.1.1.4")
 
     implementation("com.github.GriefPrevention:GriefPrevention:18.0.0")
     implementation("com.github.IncrediblePlugins:LandsAPI:7.25.4")
-    implementation("com.github.Xyness:SimpleClaimSystem-API:v2.3.4")
-    implementation("com.github.Xyness:SimpleClaimSystem:1.13.0.2")
+    implementation("com.github.Xyness:SimpleClaimSystem-API:v2.4.6")
+    implementation("com.github.Xyness:SimpleClaimSystem:1.13.0.8")
     implementation("com.github.Zrips:Residence:6.0.0.1") {
         exclude(group = "org.bukkit")
     }
 
-    compileOnly("io.lumine:Mythic-Dist:5.11.2")
+    compileOnly("io.lumine:Mythic-Dist:5.12.0")
     compileOnly("com.iridium:IridiumSkyblock:4.1.4")
 
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56"))
@@ -99,7 +99,7 @@ tasks.shadowJar {
     exclude("org/slf4j/**")
     mergeServiceFiles()
 
-    // destinationDirectory.set(file("C:\\Users\\USER\\Desktop\\TestServer\\plugins"))
+    // destinationDirectory.set(file("C:\\Users\\Admin\\Desktop\\TestServer\\plugins"))
 }
 
 tasks.build {
@@ -354,4 +354,3 @@ tasks.register("generateLanguageChangelog") {
         println("[changelog] ✓ Prepended entry for v$currentVersion into language/CHANGELOG.txt")
     }
 }
-

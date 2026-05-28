@@ -104,7 +104,7 @@ Fully compatible and integrated with **popular economy/shop plugins**, allowing 
 <summary>Economy</summary>
 
 - [Vault](https://www.spigotmc.org/resources/vault.34315/) - Universal economy API
-- [CoinsEngine](https://modrinth.com/plugin/coinsengine) - Multi-currency system
+- [ExcellentEconomy](https://www.spigotmc.org/resources/excellenteconomy.84121/) - Multi-currency system
 
 </details>
 
@@ -115,7 +115,6 @@ Fully compatible and integrated with **popular economy/shop plugins**, allowing 
 - [EconomyShopGUI Premium](https://www.spigotmc.org/resources/economyshopgui-premium.104414/) - Premium version with advanced features
 - [ShopGUI+](https://www.spigotmc.org/resources/shopgui-1-8-1-21.6515/) - Popular GUI shop plugin
 - [zShop](https://www.spigotmc.org/resources/zshop-advanced-shop-plugin.74073/) - Advanced shop management
-- [ExcellentShop](https://www.spigotmc.org/resources/excellentshop-%E2%AD%90-4-in-1-multi-currency-shop-chest-shop-overhaul.50696/) - 4-in-1 shop solution
 
 </details>
 

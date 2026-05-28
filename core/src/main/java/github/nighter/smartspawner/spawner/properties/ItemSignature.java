@@ -13,25 +13,29 @@ public class ItemSignature {
     @Getter private final Material material;
     @Getter private final int maxStackSize;
     @Getter private final int damage;
+    @Getter private final boolean hasItemMeta;
 
     public ItemSignature(ItemStack item) {
         this.template = item.clone();
         this.template.setAmount(1);
         this.material = template.getType();
-        this.maxStackSize = item.getMaxStackSize();
-        this.damage = getItemDamage(template);
-        this.hashCode = calculateHashCode();
+        this.maxStackSize = template.getMaxStackSize();
+
+        ItemMeta meta = template.hasItemMeta() ? template.getItemMeta() : null;
+
+        this.hasItemMeta = meta != null;
+        this.damage = extractDamage(meta);
+        this.hashCode = calculateHashCode(meta);
     }
 
     // Replace the current calculateHashCode() method with:
-    private int calculateHashCode() {
+    private int calculateHashCode(ItemMeta meta) {
         // Use a faster hash algorithm and cache more item properties
         int result = 31 * this.material.ordinal(); // Using ordinal() instead of name() hashing
         result = 31 * result + this.damage;
 
         // Only access ItemMeta when needed
-        if (template.hasItemMeta()) {
-            ItemMeta meta = template.getItemMeta();
+        if (this.hasItemMeta) {
             // Extract only the essential meta properties that determine similarity
             result = 31 * result + (meta.hasDisplayName() ? meta.displayName().hashCode() : 0);
             result = 31 * result + (meta.hasLore() ? meta.lore().hashCode() : 0);
@@ -50,16 +54,12 @@ public class ItemSignature {
             return false;
         }
 
-        // Only check ItemMeta if types match
-        boolean thisHasMeta = template.hasItemMeta();
-        boolean thatHasMeta = that.template.hasItemMeta();
-
-        if (thisHasMeta != thatHasMeta) {
+        if (this.hasItemMeta != that.hasItemMeta) {
             return false;
         }
 
         // If both have no meta, they're similar enough
-        if (!thisHasMeta) {
+        if (!this.hasItemMeta) {
             return true;
         }
 
@@ -85,11 +85,7 @@ public class ItemSignature {
         return material.name();
     }
 
-    private int getItemDamage(ItemStack item) {
-        if (!item.hasItemMeta()) {
-            return 0;
-        }
-        ItemMeta meta = item.getItemMeta();
+    private int extractDamage(ItemMeta meta) {
         if (meta instanceof Damageable damageable) {
             return damageable.getDamage();
         }

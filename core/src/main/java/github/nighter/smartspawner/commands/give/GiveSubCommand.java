@@ -20,8 +20,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jspecify.annotations.NullMarked;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @NullMarked
@@ -164,13 +166,7 @@ public class GiveSubCommand extends BaseSubCommand {
                 spawnerItem = spawnerItemFactory.createSmartSpawnerItem(entityType, amount);
             }
 
-            // Give the item to the player
-            if (target.getInventory().firstEmpty() == -1) {
-                target.getWorld().dropItem(target.getLocation(), spawnerItem);
-                plugin.getMessageService().sendMessage(target, "give.inventory_full");
-            } else {
-                target.getInventory().addItem(spawnerItem);
-            }
+            giveOrDropOverflow(target, spawnerItem);
 
             // Play sound
             target.playSound(target.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.0f);
@@ -240,13 +236,7 @@ public class GiveSubCommand extends BaseSubCommand {
             // Create item spawner
             ItemStack spawnerItem = spawnerItemFactory.createItemSpawnerItem(itemMaterial, amount);
 
-            // Give the item to the player
-            if (target.getInventory().firstEmpty() == -1) {
-                target.getWorld().dropItem(target.getLocation(), spawnerItem);
-                plugin.getMessageService().sendMessage(target, "give.inventory_full");
-            } else {
-                target.getInventory().addItem(spawnerItem);
-            }
+            giveOrDropOverflow(target, spawnerItem);
 
             // Play sound
             target.playSound(target.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.0f);
@@ -277,5 +267,45 @@ public class GiveSubCommand extends BaseSubCommand {
             plugin.getLogger().severe("Error executing give item spawner command: " + e.getMessage());
             return 0;
         }
+    }
+
+    private void giveOrDropOverflow(Player target, ItemStack itemStack) {
+        boolean droppedItems = false;
+
+        for (ItemStack stack : splitIntoValidStacks(itemStack)) {
+            Map<Integer, ItemStack> leftovers = target.getInventory().addItem(stack.clone());
+            if (leftovers.isEmpty()) {
+                continue;
+            }
+
+            droppedItems = true;
+            for (ItemStack leftover : leftovers.values()) {
+                for (ItemStack dropStack : splitIntoValidStacks(leftover)) {
+                    target.getWorld().dropItem(target.getLocation(), dropStack);
+                }
+            }
+        }
+
+        if (droppedItems) {
+            plugin.getMessageService().sendMessage(target, "give.inventory_full");
+        }
+
+        target.updateInventory();
+    }
+
+    private List<ItemStack> splitIntoValidStacks(ItemStack itemStack) {
+        List<ItemStack> stacks = new ArrayList<>();
+        int maxStackSize = Math.max(1, itemStack.getMaxStackSize());
+        int remainingAmount = itemStack.getAmount();
+
+        while (remainingAmount > 0) {
+            int stackAmount = Math.min(maxStackSize, remainingAmount);
+            ItemStack stack = itemStack.clone();
+            stack.setAmount(stackAmount);
+            stacks.add(stack);
+            remainingAmount -= stackAmount;
+        }
+
+        return stacks;
     }
 }

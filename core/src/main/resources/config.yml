@@ -90,20 +90,20 @@ natural_spawner:
   protect_from_explosions: false
 
 #---------------------------------------------------
-#                Economy Settings
+#            Storage Selling Settings
 #---------------------------------------------------
-# Economy Configuration for selling items from spawners inventory
-custom_economy:
+# Sell integration for items stored inside Smart Spawner storage
+sell_integration:
 
-  # Enable or disable selling items from spawners
+  # Enable or disable selling items from spawner storage
   enabled: true
 
-  # Supported types: VAULT, COINSENGINE (more will be added in the future)
+  # Supported types: VAULT, EXCELLENTECONOMY (more will be added in the future)
   currency: VAULT
 
-  # Specifies the name of the currency used by COINSENGINE
-  # This setting is only required when using COINSENGINE as the economy currency
-  coinsengine_currency: coins
+  # Specifies the name of the currency used by EXCELLENTECONOMY
+  # This setting is only required when using EXCELLENTECONOMY as the economy currency
+  excellenteconomy_currency: money
 
   # SHOP_ONLY:
   #   - Uses ONLY shop integration prices (e.g., ShopGUI+, EconomyShopGUI, etc.)
@@ -133,15 +133,13 @@ custom_economy:
   # Shop plugin integration
   shop_integration:
     enabled: true
-    # Supported shop plugins: auto, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, zShop, ExcellentShop
+    # Supported shop plugins: auto, EconomyShopGUI, EconomyShopGUI-Premium, ShopGUIPlus, zShop
     # 'auto' will attempt to detect your installed shop plugin automatically
     preferred_plugin: auto
 
   # Custom sell price configuration
   custom_prices:
     enabled: true
-    # Path to custom item prices file
-    price_file_name: "item_prices.yml"
 
     # Default price for items without specific custom prices
     # Set to 0.0 to disable selling items without custom prices
@@ -221,9 +219,6 @@ logging:
   
   # Also output logs to console (useful for debugging)
   console_output: false
-  
-  # Directory where log files are stored (relative to plugin folder)
-  log_directory: "logs"
   
   # Maximum number of log files to keep (oldest files deleted first)
   max_log_files: 10
@@ -346,3 +341,36 @@ database:
       # Time (ms) before logging a potential connection leak warning
       # Useful for debugging connection issues (0 = disabled)
       leak-detection-threshold: 0
+
+#---------------------------------------------------
+#              Performance Settings
+#---------------------------------------------------
+# Internal performance tuning for large stacked spawners.
+#
+# These settings can be reloaded without restarting.
+# Please check the docs for more details.
+performance:
+  loot_generation:
+
+    # true:
+    #   Uses exact loot simulation for small batches, then switches to
+    #   a fast average-based calculation for very large batches.
+    #   Recommended for most servers because it keeps large stacks smooth.
+    #
+    # false:
+    #   Always rolls loot exactly, one mob at a time.
+    #   This is the closest behavior to vanilla randomness, but very large
+    #   stacks can cost more CPU during loot generation.
+    approximate_loot: true
+
+    # Controls how late the plugin switches to approximation mode.
+    #
+    # Lower values:
+    #   Switch earlier, use less CPU, and trade a little precision on huge drops.
+    #
+    # Higher values:
+    #   Stay exact for longer, which preserves randomness more closely but costs
+    #   more CPU when a spawner stack generates loot for many mobs at once.
+    #
+    # Recommended: 1000-10000
+    approximation_threshold: 1000
