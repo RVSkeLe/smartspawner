@@ -25,7 +25,7 @@ dependencies {
     compileOnly("com.github.brcdev-minecraft:shopgui-api:3.2.0") {
         exclude(group = "*")
     }
-    compileOnly("com.palmergames.bukkit.towny:towny:0.103.0.0")
+    compileOnly("com.palmergames.bukkit.towny:towny:0.103.0.1")
     compileOnly("com.bgsoftware:SuperiorSkyblockAPI:2026.1")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("su.nightexpress.excellenteconomy:ExcellentEconomy:2.8.0")
@@ -39,13 +39,13 @@ dependencies {
 
     implementation("com.github.GriefPrevention:GriefPrevention:18.0.0")
     implementation("com.github.IncrediblePlugins:LandsAPI:7.25.4")
-    implementation("com.github.Xyness:SimpleClaimSystem-API:v2.4.6")
+    implementation("com.github.Xyness:SimpleClaimSystem-API:v2.5.0")
     implementation("com.github.Xyness:SimpleClaimSystem:1.13.0.8")
     implementation("com.github.Zrips:Residence:6.0.0.1") {
         exclude(group = "org.bukkit")
     }
 
-    compileOnly("io.lumine:Mythic-Dist:5.12.0")
+    compileOnly("io.lumine:Mythic-Dist:5.12.1")
     compileOnly("com.iridium:IridiumSkyblock:4.1.4")
 
     implementation(platform("com.intellectualsites.bom:bom-newest:1.56"))

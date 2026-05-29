@@ -206,9 +206,6 @@ public class SpawnerSellManager {
         for (Map.Entry<ItemSignature, Long> entry : items.entrySet()) {
             ItemSignature signature = entry.getKey();
             Long amount = entry.getValue();
-            if (signature == null || amount == null || amount <= 0) {
-                continue;
-            }
 
             ItemStack stack = signature.getTemplate();
             stack.setAmount((int) Math.min(amount, Integer.MAX_VALUE));
