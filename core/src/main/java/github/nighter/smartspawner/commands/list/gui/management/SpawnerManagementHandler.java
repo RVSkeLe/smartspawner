@@ -97,7 +97,7 @@ public class SpawnerManagementHandler implements Listener {
 
     private void handleRemoveSpawner(Player player, SpawnerData spawner, String worldName, int listPage) {
         plugin.getSpawnerRemovalService().removeSpawner(spawner).whenComplete((removed, error) ->
-                Scheduler.runEntityTask(player, () -> {
+                Scheduler.runEntityTaskLater(player, () -> {
                     if (!player.isOnline()) {
                         return;
                     }
@@ -112,7 +112,7 @@ public class SpawnerManagementHandler implements Listener {
                     messageService.sendMessage(player, "list.spawner_removed", placeholders);
                     player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
                     handleBack(player, worldName, listPage);
-                })
+                }, 1L)
         );
     }
 

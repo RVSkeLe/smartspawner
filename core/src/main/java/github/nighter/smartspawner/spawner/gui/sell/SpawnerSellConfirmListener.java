@@ -203,10 +203,10 @@ public class SpawnerSellConfirmListener implements Listener {
             }
             // player.openInventory() -> ServerPlayer.initMenu() must run on the PLAYER's own
             // region thread on Folia/Canvas, NOT the global region thread (the sell completes on
-            // the spawner location's thread, which may be a different region). Dispatch via the
-            // player's entity scheduler; on Paper this falls back to the main thread. If the
-            // player logged off mid-sell, the entity task simply never runs.
-            Scheduler.runEntityTask(player, () -> reopenPreviousGui(player, spawner, previousGui));
+            // the spawner location's thread, which may be a different region). Delay one tick
+            // because sellAllItems can complete synchronously from an InventoryClickEvent path.
+            // If the player logged off mid-sell, the entity task simply never runs.
+            Scheduler.runEntityTaskLater(player, () -> reopenPreviousGui(player, spawner, previousGui), 1L);
         };
 
         plugin.getSpawnerSellManager().sellAllItems(

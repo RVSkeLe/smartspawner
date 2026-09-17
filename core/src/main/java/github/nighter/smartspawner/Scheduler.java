@@ -43,17 +43,19 @@ public final class Scheduler {
 
     /**
      * Runs a task on the main thread (or global region in Folia).
+     * If already on that thread, the task runs immediately. Use {@link #runTaskLater(Runnable, long)}
+     * when a tick boundary is required.
      *
      * @param runnable The task to run
      * @return A Task object representing the scheduled task
      */
     public static Task runTask(Runnable runnable) {
-        if (isFolia) {
-            if (Bukkit.isGlobalTickThread()) {
-                runnable.run();
-                return new Task(null);
-            }
+        if (isGlobalThread()) {
+            runnable.run();
+            return new Task(null);
+        }
 
+        if (isFolia) {
             try {
                 io.papermc.paper.threadedregions.scheduler.ScheduledTask task =
                         Bukkit.getGlobalRegionScheduler().run(plugin, scheduledTask -> runnable.run());
@@ -189,6 +191,7 @@ public final class Scheduler {
 
     /**
      * Runs a task in the region of a specific entity.
+     * If already on that entity's thread, the task runs immediately.
      * Falls back to regular scheduling on non-Folia servers.
      *
      * @param entity   The entity in whose region to run the task
@@ -196,12 +199,12 @@ public final class Scheduler {
      * @return A Task object representing the scheduled task
      */
     public static Task runEntityTask(Entity entity, Runnable runnable) {
-        if (isFolia && entity != null) {
-            if (Bukkit.isOwnedByCurrentRegion(entity)) {
-                runnable.run();
-                return new Task(null);
-            }
+        if (isEntityThread(entity)) {
+            runnable.run();
+            return new Task(null);
+        }
 
+        if (isFolia && entity != null) {
             try {
                 io.papermc.paper.threadedregions.scheduler.ScheduledTask task =
                         entity.getScheduler().run(plugin, scheduledTask -> runnable.run(), null);
@@ -266,6 +269,7 @@ public final class Scheduler {
 
     /**
      * Runs a task in the region of a specific location.
+     * If already on that location's thread, the task runs immediately.
      * Falls back to regular scheduling on non-Folia servers.
      *
      * @param location The location in whose region to run the task
@@ -273,12 +277,12 @@ public final class Scheduler {
      * @return A Task object representing the scheduled task
      */
     public static Task runLocationTask(Location location, Runnable runnable) {
-        if (isFolia && location != null && location.getWorld() != null) {
-            if (Bukkit.isOwnedByCurrentRegion(location)) {
-                runnable.run();
-                return new Task(null);
-            }
+        if (isLocationThread(location)) {
+            runnable.run();
+            return new Task(null);
+        }
 
+        if (isFolia && location != null && location.getWorld() != null) {
             try {
                 io.papermc.paper.threadedregions.scheduler.ScheduledTask task =
                         Bukkit.getRegionScheduler().run(plugin, location, scheduledTask -> runnable.run());
@@ -294,6 +298,7 @@ public final class Scheduler {
 
     /**
      * Runs a task in the region of a specific chunk in a world.
+     * If already on that chunk's thread, the task runs immediately.
      * If the server is running Folia, the task will be scheduled on the chunk's region thread.
      * On non-Folia servers or in case of an error, the task will fall back to global scheduling.
      *
@@ -304,12 +309,12 @@ public final class Scheduler {
      * @return A Task object representing the scheduled task.
      */
     public static Task runChunkTask(World world, int chunkX, int chunkZ, Runnable runnable) {
-        if (isFolia && world != null) {
-            if (Bukkit.isOwnedByCurrentRegion(world, chunkX, chunkZ)) {
-                runnable.run();
-                return new Task(null);
-            }
+        if (isChunkThread(world, chunkX, chunkZ)) {
+            runnable.run();
+            return new Task(null);
+        }
 
+        if (isFolia && world != null) {
             try {
                 io.papermc.paper.threadedregions.scheduler.ScheduledTask task =
                         Bukkit.getRegionScheduler().run(plugin, world, chunkX, chunkZ, scheduledTask -> runnable.run());
@@ -383,6 +388,11 @@ public final class Scheduler {
         CompletableFuture<T> future = new CompletableFuture<>();
 
         try {
+            if (isGlobalThread()) {
+                future.complete(supplier.get());
+                return future;
+            }
+
             if (isFolia) {
                 Bukkit.getGlobalRegionScheduler().run(plugin, task -> {
                     try {
@@ -407,6 +417,34 @@ public final class Scheduler {
         }
 
         return future;
+    }
+
+    private static boolean isGlobalThread() {
+        return isFolia ? Bukkit.isGlobalTickThread() : Bukkit.isPrimaryThread();
+    }
+
+    private static boolean isEntityThread(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        return isFolia ? Bukkit.isOwnedByCurrentRegion(entity) : Bukkit.isPrimaryThread();
+    }
+
+    private static boolean isLocationThread(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+
+        return isFolia ? Bukkit.isOwnedByCurrentRegion(location) : Bukkit.isPrimaryThread();
+    }
+
+    private static boolean isChunkThread(World world, int chunkX, int chunkZ) {
+        if (world == null) {
+            return false;
+        }
+
+        return isFolia ? Bukkit.isOwnedByCurrentRegion(world, chunkX, chunkZ) : Bukkit.isPrimaryThread();
     }
 
     /**
