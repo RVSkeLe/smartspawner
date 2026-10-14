@@ -4,6 +4,7 @@ import github.nighter.smartspawner.SmartSpawner;
 import github.nighter.smartspawner.hooks.economy.shops.providers.ShopProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.economyshopgui.EconomyShopGUIProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.economyshopgui.ESGUICompatibilityHandler;
+import github.nighter.smartspawner.hooks.economy.shops.providers.excellentshop.ExcellentShopProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.ShopGuiPlusProvider;
 import github.nighter.smartspawner.hooks.economy.shops.providers.shopguiplus.SpawnerHook;
 import github.nighter.smartspawner.hooks.economy.shops.providers.zshop.ZShopProvider;
@@ -81,6 +82,8 @@ public class ShopIntegrationManager {
             });
         }
 
+        registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
+
         // registerProviderIfAvailable("ZShop", () -> new ZShopProvider(plugin));
     }
 
@@ -116,6 +119,12 @@ public class ShopIntegrationManager {
                             }
                             return new ShopGuiPlusProvider(plugin);
                         });
+                        return !availableProviders.isEmpty();
+                    }
+                    break;
+                case "excellentshop":
+                    if (isPluginAvailable("ExcellentShop")) {
+                        registerProviderIfAvailable("ExcellentShop", () -> new ExcellentShopProvider(plugin));
                         return !availableProviders.isEmpty();
                     }
                     break;

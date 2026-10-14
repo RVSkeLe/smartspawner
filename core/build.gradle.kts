@@ -33,6 +33,7 @@ dependencies {
     compileOnly(libs.superiorskyblock)
     compileOnly(libs.vault)
     compileOnly(libs.excellenteconomy)
+    compileOnly(libs.excellentshop)
     compileOnly(libs.nightcore)
     compileOnly(libs.economyshopgui)
     compileOnly(libs.bentobox)

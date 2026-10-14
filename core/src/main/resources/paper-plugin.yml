@@ -29,6 +29,10 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
+    ExcellentShop:
+      load: BEFORE
+      required: false
+      join-classpath: true
     zShop:
       load: BEFORE
       required: false
